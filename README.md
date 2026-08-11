@@ -1,36 +1,190 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SADPF — Sistema de Arquivo Digital de Pastas Funcionais
 
-## Getting Started
+Sistema de gestão documental corporativa da **SECRETARIA DE ESTADO DE SEGURANÇA PÚBLICA DO DF**. Plataforma web para digitalização, busca, auditoria e encaminhamento de pastas funcionais de servidores públicos.
 
-First, run the development server:
+---
+
+## Stack
+
+| Camada        | Tecnologia                                                   |
+| ------------- | ------------------------------------------------------------ |
+| Framework     | **Next.js 16** (App Router, Turbopack, `proxy.ts`)           |
+| Linguagem     | TypeScript 5                                                 |
+| UI            | Tailwind CSS 4, `@base-ui/react`, `class-variance-authority` |
+| Forms         | `react-hook-form` v7 + Zod v4                                |
+| ORM           | Prisma v7 (`@prisma/adapter-pg`)                             |
+| Banco         | PostgreSQL                                                   |
+| Senhas        | bcryptjs                                                     |
+| Auth          | JWT HMAC-SHA256 custom (cookie `sadpf_session`)              |
+| Lint / Format | ESLint 9 + Prettier                                          |
+
+---
+
+## Estrutura do Projeto
+
+```
+sadpf/
+├── prisma/
+│   ├── schema.prisma          # Schema Prisma (models, enums)
+│   ├── seed.ts                # Seed de teste (ADMIN + OPERADOR)
+│   └── migrations/
+├── lib/
+│   ├── server/
+│   │   ├── auth.ts            # JWT signing/verification, session helpers
+│   │   ├── db.ts              # Funções de acesso ao banco (getServidores, etc.)
+│   │   └── prisma.ts          # Instância Prisma singleton
+│   ├── validations/           # Schemas Zod por domínio (auth, servidor, documento, etc.)
+│   ├── storage/               # Abstração de storage (local, Supabase)
+│   ├── types.ts               # Tipos TypeScript compartilhados
+│   └── utils.ts               # cn() helper (clsx + tailwind-merge)
+├── app/
+│   ├── layout.tsx             # Layout raiz (Sidebar + Topbar)
+│   ├── globals.css
+│   ├── login/page.tsx         # Tela de login
+│   ├── dashboard/page.tsx     # Painel principal
+│   ├── servidores/            # Pastas funcionais de servidores
+│   │   ├── page.tsx           #   Listagem + criação
+│   │   └── [id]/page.tsx      #   Capa da pasta (CapaPasta)
+│   ├── documentos/            # Documentos PDF
+│   │   ├── novo/page.tsx      #   Upload com OCR
+│   │   └── [id]/page.tsx      #   Detalhe
+│   ├── usuarios/page.tsx      # Gerenciamento de usuários (ADMIN only)
+│   ├── configuracoes/page.tsx # Configurações do sistema (ADMIN only)
+│   ├── logs/page.tsx          # Trilha de auditoria (ADMIN only)
+│   ├── pesquisa/page.tsx      # Busca OCR
+│   ├── relatorios/page.tsx    # Relatórios
+│   ├── encaminhamentos/       # Encaminhamento de pastas
+│   ├── impressoes/page.tsx    # Impressão de documentos
+│   └── pastas/page.tsx        # Visualização de pastas
+├── app/api/
+│   ├── auth/login/route.ts    # POST login
+│   ├── auth/session/route.ts  # GET sessão / DELETE logout
+│   ├── servidores/route.ts    # GET/POST/PUT servidores
+│   ├── upload/route.ts        # Upload de PDFs
+│   ├── logs/route.ts          # Logs de auditoria
+│   ├── encaminhamentos/route.ts
+│   ├── pesquisa/route.ts      # Busca OCR
+│   ├── search/route.ts        # Busca global rápida
+│   └── health/route.ts        # Healthcheck
+├── app/components/
+│   ├── Sidebar.tsx            # Menu lateral (filtra itens por role)
+│   ├── Topbar.tsx             # Barra superior (nome, role, logout)
+│   ├── CapaPasta.tsx          # Componente da capa da pasta funcional
+│   ├── DocumentCard.tsx       # Card de documento PDF
+│   ├── UploadForm.tsx         # Formulário de upload com OCR
+│   ├── EncaminharModal.tsx    # Modal de encaminhamento de pasta
+│   ├── PrintModal.tsx         # Modal de impressão
+│   ├── PDFViewer.tsx          # Visualizador de PDF embutido
+│   ├── ExportButton.tsx       # Botão de exportação de relatórios
+│   └── ui/                    # Shims de @base-ui/react (button, dialog, select...)
+├── proxy.ts                   # Proxy (middleware) com RBAC
+├── .prettierrc
+└── .prettierignore
+```
+
+---
+
+## Início Rápido
+
+### 1. Subir o banco de dados
+
+```bash
+npm run db:up          # Docker Compose — PostgreSQL
+```
+
+### 2. Variáveis de ambiente
+
+Copie o `.env` (já existente no projeto) e ajuste se necessário:
+
+```env
+DATABASE_URL="postgresql://postgres:postgrespassword@localhost:5432/sadpf_db"
+SADPF_SECRET="sua_chave_de_assinatura_jwt_com_minimo_32_caracteres"
+NODE_ENV=development
+STORAGE_PROVIDER=local
+```
+
+### 3. Aplicar schema e seed
+
+```bash
+npm run db:push        # Aplica schema ao banco
+npm run db:seed        # Cria usuário ADMIN e OPERADOR de teste
+```
+
+### 4. Rodar em dev
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Usuários de teste (seed)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Usuário  | Matrícula  | CPF           | Role     | Senha          |
+| -------- | ---------- | ------------- | -------- | -------------- |
+| Admin    | `000001-1` | `12345678900` | ADMIN    | `123456Senha!` |
+| Operador | `000002-2` | `12345678900` | OPERADOR | `123456Senha!` |
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## RBAC — Controle de Acesso por Papel (Role)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+O sistema possui três papéis definidos no enum Prisma:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Role       | Descrição                        | Acesso                                                 |
+| ---------- | -------------------------------- | ------------------------------------------------------ |
+| `ADMIN`    | Administrador do sistema         | Todas as páginas                                       |
+| `OPERADOR` | Operador do RH                   | Tudo **exceto** `/logs`, `/usuarios`, `/configuracoes` |
+| `PASTA`    | Acesso somente à pasta funcional | Sem login no sistema (perfil de servidor)              |
 
-## Deploy on Vercel
+### Como funciona
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **`proxy.ts`** (middleware do Next.js 16): intercepta todas as requisições. Para `OPERADOR`, bloqueia `/logs`, `/usuarios`, `/configuracoes` e `/api/logs` com redirect para `/dashboard`.
+- **`app/components/Sidebar.tsx`**: busca a sessão via `/api/auth/session` e filtra os itens do menu por `adminOnly`.
+- **`app/api/servidores/route.ts` (PUT)**: rota de atualização restrita a `ADMIN`. Inclui proteção contra auto-rebaixamento.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Scripts Disponíveis
+
+```bash
+npm run dev          # Servidor de desenvolvimento (Turbopack)
+npm run build        # Build de produção (prisma generate + next build)
+npm run start        # Iniciar servidor de produção
+npm run lint         # ESLint (.ts, .tsx)
+npm run format       # Prettier — formata todos os arquivos
+npm run db:up        # Docker Compose — sobe PostgreSQL
+npm run db:down      # Docker Compose — desce PostgreSQL
+npm run db:push      # Aplica schema Prisma ao banco
+npm run db:seed      # Roda seed (cria usuários de teste)
+npm run prisma:generate  # Gera Prisma Client
+```
+
+---
+
+## Storage (Upload de PDFs)
+
+O projeto suporta storage via variável de ambiente `STORAGE_PROVIDER`:
+
+| Provider   | Descrição                                                                           |
+| ---------- | ----------------------------------------------------------------------------------- |
+| `local`    | Arquivos em `public/uploads/` (padrão)                                              |
+| `supabase` | Supabase Storage (requer `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET`) |
+
+```bash
+npm install @supabase/supabase-js   #必要时 instalar para Supabase
+```
+
+---
+
+## Variáveis de Ambiente
+
+| Variável               | Obrigatória | Descrição                                                       |
+| ---------------------- | :---------: | --------------------------------------------------------------- |
+| `DATABASE_URL`         |     Sim     | URL de conexão PostgreSQL (Prisma)                              |
+| `SADPF_SECRET`         |     Sim     | Chave HMAC-SHA256 para assinatura de JWT (mínimo 32 caracteres) |
+| `NODE_ENV`             |     Não     | `development` / `production`                                    |
+| `STORAGE_PROVIDER`     |     Não     | `local` (padrão) ou `supabase`                                  |
+| `SUPABASE_URL`         | Condicional | URL do projeto Supabase (quando `STORAGE_PROVIDER=supabase`)    |
+| `SUPABASE_SERVICE_KEY` | Condicional | Service role key do Supabase                                    |
+| `SUPABASE_BUCKET`      |     Não     | Nome do bucket (padrão: `documents`)                            |

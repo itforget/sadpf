@@ -1,0 +1,93 @@
+generator client {
+    provider = "prisma-client-js"
+    output   = "./generated"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+enum StatusServidor {
+    Ativo
+    Inativo
+}
+
+enum Role {
+    ADMIN
+    OPERADOR
+    PASTA
+}
+
+enum CategoriaDocumento {
+    Dados_Pessoais
+    Posse_e_Exercicio
+    Vida_Funcional
+    Licencas_e_Afastamentos
+    Avaliacao_de_Desempenho
+}
+
+enum AcaoAuditoria {
+    CONSULTA
+    UPLOAD
+    IMPRESSAO
+    EXPORTACAO
+    ENCAMINHAMENTO
+    PESQUISA_OCR
+}
+
+model Servidor {
+    id           String         @id @default(uuid())
+    matricula    String         @unique
+    nome         String
+    cpf          String         @unique
+    fotoUrl      String?
+    cargoEfetivo String
+    cargoOcupado String
+    lotacao      String
+    status       StatusServidor @default(Ativo)
+    role         Role           @default(PASTA)
+    dataIngresso String
+    email        String
+    telefone     String
+    senhaHash    String?
+    createdAt    DateTime       @default(now())
+    updatedAt    DateTime       @updatedAt
+
+    documentos DocumentoPDF[]
+
+    @@map("servidores")
+}
+
+model DocumentoPDF {
+    id          String             @id @default(uuid())
+    servidorId  String
+    titulo      String
+    categoria   CategoriaDocumento
+    dataUpload  String
+    tamanho     String
+    paginas     Int                @default(1)
+    processoSEI String?
+    arquivoUrl  String
+    textoOCR    String             @db.Text
+    operadorRH  String
+    createdAt   DateTime           @default(now())
+    updatedAt   DateTime           @updatedAt
+
+    servidor Servidor @relation(fields: [servidorId], references: [id], onDelete: Cascade)
+
+    @@index([servidorId])
+    @@map("documentos_pdf")
+}
+
+model LogAuditoria {
+    id                String        @id @default(uuid())
+    dataHora          DateTime      @default(now())
+    operador          String
+    operadorMatricula String
+    acao              AcaoAuditoria
+    detalhes          String        @db.Text
+    ip                String
+    createdAt         DateTime      @default(now())
+
+    @@map("logs_auditoria")
+}

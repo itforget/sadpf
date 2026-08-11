@@ -1,0 +1,6 @@
+node_modules
+.next
+public/uploads
+prisma/generated
+next-env.d.ts
+*.lock
