@@ -11,42 +11,28 @@ async function main() {
 
   const senhaHash = await bcrypt.hash('123456Senha!', 10);
 
+  // Remove o usuário admin caso já exista
   await prisma.servidor.deleteMany({
     where: {
-      OR: [
-        { matricula: { in: ['000001-1', '000002-2'] } },
-        { cpf: { in: ['12345678900', '12345678901'] } },
-      ],
+      OR: [{ matricula: '1.706.719-7' }, { cpf: '12345678900' }],
     },
   });
 
-  const admin = await prisma.servidor.upsert({
-    where: { matricula: '000001-1' },
-    update: {
-      cpf: '12345678900',
-      nome: 'Administrador do Sistema',
-      cargoEfetivo: 'Administrador',
-      cargoOcupado: 'Administrador do Sistema',
-      lotacao: 'Diretoria de Tecnologia - DITEC',
-      status: 'Ativo',
-      role: 'ADMIN',
-      email: 'admin@sadpf.local',
-      telefone: '(61) 99999-9999',
-      senhaHash,
-    },
-    create: {
-      matricula: '000001-1',
-      nome: 'Administrador do Sistema',
+  // Cria apenas o usuário administrador
+  const admin = await prisma.servidor.create({
+    data: {
+      matricula: '1.706.719-7',
+      nome: 'Ítalo Cordeiro de Souza',
       cpf: '12345678900',
       fotoUrl: null,
-      cargoEfetivo: 'Administrador',
-      cargoOcupado: 'Administrador do Sistema',
-      lotacao: 'Diretoria de Tecnologia - DITEC',
+      cargoEfetivo: '',
+      cargoOcupado: 'Assessor',
+      lotacao: 'GRF - Gerencia de Registros Financeiros',
       status: 'Ativo',
       role: 'ADMIN',
       dataIngresso: new Date().toLocaleDateString('pt-BR'),
-      email: 'admin@sadpf.local',
-      telefone: '(61) 99999-9999',
+      email: 'italo.souza@ssp.df.gov.br',
+      telefone: '(61) 988811354',
       senhaHash,
     },
   });
@@ -57,45 +43,6 @@ async function main() {
     cpf: admin.cpf,
     matricula: admin.matricula,
     role: admin.role,
-  });
-
-  const operador = await prisma.servidor.upsert({
-    where: { matricula: '000002-2' },
-    update: {
-      cpf: '12345678901',
-      nome: 'Operador de Teste',
-      cargoEfetivo: 'Técnico Administrativo',
-      cargoOcupado: 'Operador do Sistema',
-      lotacao: 'Coordenação de Gestão de Pessoas - COGEP',
-      status: 'Ativo',
-      role: 'OPERADOR',
-      email: 'operador@sadpf.local',
-      telefone: '(61) 98888-8888',
-      senhaHash,
-    },
-    create: {
-      matricula: '000002-2',
-      nome: 'Operador de Teste',
-      cpf: '12345678901',
-      fotoUrl: null,
-      cargoEfetivo: 'Técnico Administrativo',
-      cargoOcupado: 'Operador do Sistema',
-      lotacao: 'Coordenação de Gestão de Pessoas - COGEP',
-      status: 'Ativo',
-      role: 'OPERADOR',
-      dataIngresso: new Date().toLocaleDateString('pt-BR'),
-      email: 'operador@sadpf.local',
-      telefone: '(61) 98888-8888',
-      senhaHash,
-    },
-  });
-
-  console.log('✅ Usuário operador criado:', {
-    id: operador.id,
-    nome: operador.nome,
-    cpf: operador.cpf,
-    matricula: operador.matricula,
-    role: operador.role,
   });
 
   console.log('🌱 Seed finalizado com sucesso!');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { UserCog, Plus, Search, Pencil, Power, Users, Shield, KeyRound } from 'lucide-react';
+import { UserCog, Plus, Search, Pencil, Power, Users, KeyRound } from 'lucide-react';
 import type { Servidor } from '@/lib/types';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';

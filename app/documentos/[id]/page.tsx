@@ -11,7 +11,6 @@ import {
   Search,
   CheckCircle2,
   Download,
-  Shield,
 } from 'lucide-react';
 import PDFViewer from '@/app/components/PDFViewer';
 import PrintModal from '@/app/components/PrintModal';

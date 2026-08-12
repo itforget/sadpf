@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   Users,
-  FolderOpen,
   FileText,
   Search,
   BarChart,
@@ -15,7 +14,6 @@ import {
   ScrollText,
   UserCog,
   Settings,
-  Shield,
 } from 'lucide-react';
 import Image from 'next/image';
 
