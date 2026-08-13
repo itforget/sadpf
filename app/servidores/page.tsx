@@ -58,7 +58,6 @@ export default function ServidoresListPage() {
   });
 
   const status = useWatch({ control, name: 'status' });
-  const role = useWatch({ control, name: 'role' });
 
   const requestServidores = useCallback(async (): Promise<Servidor[]> => {
     const url = new URL('/api/servidores', window.location.origin);
@@ -105,6 +104,8 @@ export default function ServidoresListPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
+          role: 'PASTA',
+          senha: '',
           fotoUrl: '',
         }),
       });
@@ -214,36 +215,6 @@ export default function ServidoresListPage() {
                   {...register('cargoOcupado')}
                   placeholder="Ex.: Chefe de Núcleo (FG-02)"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Função de Acesso</Label>
-                <Select
-                  value={role}
-                  onValueChange={(value) => {
-                    if (value) setValue('role', value);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a função" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PASTA">Pasta</SelectItem>
-                    <SelectItem value="ADMIN">Administrador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="senha">Senha de Acesso</Label>
-                <Input
-                  id="senha"
-                  type="password"
-                  {...register('senha')}
-                  placeholder="Senha para login de administrador"
-                  className={errors.senha ? 'border-destructive' : ''}
-                />
-                {errors.senha && <p className="text-sm text-destructive">{errors.senha.message}</p>}
               </div>
             </div>
 

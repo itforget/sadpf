@@ -52,7 +52,7 @@ const usuarioEditSchema = z.object({
   role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {
     message: 'Função de acesso é obrigatória',
   }),
-  senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional().or(z.literal('')),
+  senha: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres').optional().or(z.literal('')),
 });
 type UsuarioEditData = z.infer<typeof usuarioEditSchema>;
 

@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import AcoesRapidas from './acoes-rapidas';
 
 async function getStorageStats() {
-  const uploadDir = join(process.cwd(), 'public', 'uploads');
+  const uploadDir = join(process.cwd(), 'storage', 'uploads');
   let count = 0;
   let bytes = 0;
 
@@ -212,7 +212,7 @@ export default async function ConfiguracoesPage() {
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Tamanho mínimo de senha</span>
-              <span className="font-semibold text-foreground">6 caracteres</span>
+              <span className="font-semibold text-foreground">12 caracteres</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Perfis de acesso</span>

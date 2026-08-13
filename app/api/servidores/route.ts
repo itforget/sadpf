@@ -42,6 +42,12 @@ export async function POST(request: Request) {
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }
+    if (!['ADMIN', 'OPERADOR'].includes(String(session.role))) {
+      return NextResponse.json(
+        { error: 'Apenas administradores e operadores podem cadastrar pastas funcionais.' },
+        { status: 403 }
+      );
+    }
 
     const body = await request.json();
 
@@ -55,7 +61,14 @@ export async function POST(request: Request) {
 
     const data = validationResult.data;
 
-    const senhaHash = data.senha ? await bcrypt.hash(data.senha, 10) : undefined;
+    if (session.role === 'OPERADOR' && data.role !== 'PASTA') {
+      return NextResponse.json(
+        { error: 'Operadores podem cadastrar somente pastas funcionais.' },
+        { status: 403 }
+      );
+    }
+
+    const senhaHash = data.senha ? await bcrypt.hash(data.senha, 12) : undefined;
 
     const newServidor = await addServidor({
       matricula: data.matricula,
@@ -123,7 +136,7 @@ export async function PUT(request: Request) {
 
     const senhaHash =
       typeof data.senha === 'string' && data.senha !== ''
-        ? await bcrypt.hash(data.senha, 10)
+        ? await bcrypt.hash(data.senha, 12)
         : undefined;
 
     const updated = await updateServidor(id, {

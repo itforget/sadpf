@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
 import type { DocumentoPDF } from '@/lib/types';
-import { addDocumento, addLog } from '@/lib/server/db';
+import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
 import { enqueueOCR, extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
+import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
 
 const categoriasOCR: DocumentoPDF['categoria'][] = [
   'Dados Pessoais',
@@ -12,8 +14,13 @@ const categoriasOCR: DocumentoPDF['categoria'][] = [
   'Avaliação de Desempenho',
 ];
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const session = getSessionFromToken(await getSessionToken(request));
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+
     const formData = await request.formData();
 
     const file = formData.get('file') as File | null;
@@ -24,9 +31,6 @@ export async function POST(request: Request) {
       ? (rawCategoria as DocumentoPDF['categoria'])
       : 'Vida Funcional';
     const processoSEI = (formData.get('processoSEI') as string) || undefined;
-    const operadorNome = (formData.get('operadorNome') as string) || '';
-    const operadorMatricula = (formData.get('operadorMatricula') as string) || '';
-    const operadorIp = (formData.get('operadorIp') as string) || '';
 
     if (!file) {
       return NextResponse.json({ error: 'Arquivo PDF não fornecido.' }, { status: 400 });
@@ -34,6 +38,17 @@ export async function POST(request: Request) {
 
     if (!servidorId) {
       return NextResponse.json({ error: 'servidorId é obrigatório.' }, { status: 400 });
+    }
+
+    const servidor = await getServidorById(servidorId);
+    if (!servidor) {
+      return NextResponse.json({ error: 'Servidor não encontrado.' }, { status: 404 });
+    }
+    if (servidor.status !== 'Ativo') {
+      return NextResponse.json(
+        { error: 'Documentos só podem ser incluídos em pastas funcionais de servidores ativos.' },
+        { status: 400 }
+      );
     }
 
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
@@ -48,13 +63,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Arquivo deve ter no máximo 50MB.' }, { status: 400 });
     }
 
-    const timestamp = Date.now();
-    const safeFilename = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const buffer = Buffer.from(await file.arrayBuffer());
+    if (!buffer.subarray(0, 5).equals(Buffer.from('%PDF-'))) {
+      return NextResponse.json(
+        { error: 'O conteúdo enviado não é um PDF válido.' },
+        { status: 400 }
+      );
+    }
+
+    const storageKey = `documentos/${servidor.id}/${randomBytes(24).toString('hex')}.pdf`;
 
     const storage = getStorage();
-    const uploadRes = await storage.upload(buffer, safeFilename, file.type);
-    const arquivoUrl = uploadRes.url;
+    const storedFile = await storage.upload(buffer, storageKey, file.type);
 
     let textoOCR = '';
     let paginas = 1;
@@ -66,32 +86,38 @@ export async function POST(request: Request) {
       console.error('[upload] falha ao extrair texto OCR:', ocrError);
     }
 
-    const doc = await addDocumento({
-      servidorId,
-      titulo,
-      categoria,
-      dataUpload: new Date().toLocaleDateString('pt-BR'),
-      tamanho: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      paginas,
-      processoSEI,
-      arquivoUrl,
-      textoOCR,
-      operadorRH: operadorNome,
-    });
+    let doc: DocumentoPDF;
+    try {
+      doc = await addDocumento({
+        servidorId,
+        titulo,
+        categoria,
+        dataUpload: new Date().toLocaleDateString('pt-BR'),
+        tamanho: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        paginas,
+        processoSEI,
+        arquivoUrl: storedFile.key,
+        storageBackend: storedFile.backend,
+        storageKey: storedFile.key,
+        textoOCR,
+        operadorRH: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
+      });
+    } catch (error) {
+      await storage.delete(storedFile.key);
+      throw error;
+    }
 
-    await enqueueOCR({ id: doc.id, arquivo_url: arquivoUrl }).catch((error) => {
+    await enqueueOCR({ id: doc.id, arquivo_url: storedFile.key }).catch((error) => {
       console.error('[upload] erro ao enfileirar OCR:', error);
     });
 
-    if (operadorNome && operadorMatricula && operadorIp) {
-      await addLog({
-        operador: operadorNome,
-        operadorMatricula,
-        acao: 'UPLOAD',
-        detalhes: `Anexou documento PDF '${titulo}' na pasta do servidor ${servidorId}`,
-        ip: operadorIp,
-      }).catch((err) => console.error('[upload] erro ao registrar log:', err));
-    }
+    await addLog({
+      operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
+      operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
+      acao: 'UPLOAD',
+      detalhes: `Anexou documento PDF '${titulo}' na pasta do servidor ${servidor.nome} (Mat. ${servidor.matricula})`,
+      ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'N/A',
+    });
 
     return NextResponse.json(doc, { status: 201 });
   } catch (error: unknown) {

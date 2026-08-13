@@ -9,39 +9,51 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('🌱 Iniciando seed...');
 
-  const senhaHash = await bcrypt.hash('123456Senha!', 10);
+  const required = [
+    'INITIAL_ADMIN_NOME',
+    'INITIAL_ADMIN_MATRICULA',
+    'INITIAL_ADMIN_CPF',
+    'INITIAL_ADMIN_EMAIL',
+    'INITIAL_ADMIN_PASSWORD',
+  ] as const;
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Defina as variáveis de seed: ${missing.join(', ')}`);
+  }
+  if (process.env.INITIAL_ADMIN_PASSWORD!.length < 12) {
+    throw new Error('INITIAL_ADMIN_PASSWORD deve ter no mínimo 12 caracteres.');
+  }
 
-  // Remove o usuário admin caso já exista
+  const senhaHash = await bcrypt.hash(process.env.INITIAL_ADMIN_PASSWORD!, 12);
+  const matricula = process.env.INITIAL_ADMIN_MATRICULA!;
+  const cpf = process.env.INITIAL_ADMIN_CPF!;
+
   await prisma.servidor.deleteMany({
     where: {
-      OR: [{ matricula: '1.706.719-7' }, { cpf: '12345678900' }],
+      OR: [{ matricula }, { cpf }],
     },
   });
 
-  // Cria apenas o usuário administrador
   const admin = await prisma.servidor.create({
     data: {
-      matricula: '1.706.719-7',
-      nome: 'Ítalo Cordeiro de Souza',
-      cpf: '12345678900',
+      matricula,
+      nome: process.env.INITIAL_ADMIN_NOME!,
+      cpf,
       fotoUrl: null,
       cargoEfetivo: '',
-      cargoOcupado: 'Assessor',
-      lotacao: 'GRF - Gerencia de Registros Financeiros',
+      cargoOcupado: 'Não informado',
+      lotacao: 'Não informada',
       status: 'Ativo',
       role: 'ADMIN',
       dataIngresso: new Date().toLocaleDateString('pt-BR'),
-      email: 'italo.souza@ssp.df.gov.br',
-      telefone: '(61) 988811354',
+      email: process.env.INITIAL_ADMIN_EMAIL!,
+      telefone: '',
       senhaHash,
     },
   });
 
   console.log('✅ Usuário admin criado:', {
     id: admin.id,
-    nome: admin.nome,
-    cpf: admin.cpf,
-    matricula: admin.matricula,
     role: admin.role,
   });
 

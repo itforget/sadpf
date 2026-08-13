@@ -1,9 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getLogs, addLog } from '@/lib/server/db';
-import { logSchema } from '@/lib/validations/log';
+import { auditLogSchema } from '@/lib/validations/log';
+import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const session = getSessionFromToken(await getSessionToken(request));
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Acesso restrito a administradores.' }, { status: 403 });
+    }
+
     const logs = await getLogs();
     return NextResponse.json(logs);
   } catch (error: unknown) {
@@ -12,11 +21,16 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const session = getSessionFromToken(await getSessionToken(request));
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+
     const body = await request.json();
 
-    const validationResult = logSchema.safeParse(body);
+    const validationResult = auditLogSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
         { error: validationResult.error.issues[0]?.message || 'Dados inválidos.' },
@@ -24,9 +38,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const { operador, operadorMatricula, acao, detalhes, ip } = validationResult.data;
+    const { acao, detalhes } = validationResult.data;
 
-    const newLog = await addLog({ operador, operadorMatricula, acao, detalhes, ip });
+    const newLog = await addLog({
+      operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
+      operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
+      acao,
+      detalhes,
+      ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'N/A',
+    });
     return NextResponse.json(newLog, { status: 201 });
   } catch (error: unknown) {
     console.error('[POST /api/logs]', error);

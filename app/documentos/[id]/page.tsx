@@ -3,15 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  FileText,
-  Printer,
-  Send,
-  Search,
-  CheckCircle2,
-  Download,
-} from 'lucide-react';
+import { ArrowLeft, FileText, Printer, Send, Search, CheckCircle2, Download } from 'lucide-react';
 import PDFViewer from '@/app/components/PDFViewer';
 import PrintModal from '@/app/components/PrintModal';
 import EncaminharModal from '@/app/components/EncaminharModal';
@@ -117,7 +109,6 @@ export default function DocumentoDetailPage() {
         <EncaminharModal
           servidor={servidor}
           documento={documento}
-          operador={operador}
           onClose={() => setShowEncaminharModal(false)}
         />
       )}

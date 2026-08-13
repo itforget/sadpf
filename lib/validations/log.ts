@@ -20,4 +20,9 @@ export const logSchema = z.object({
   ip: z.string().min(1, 'IP é obrigatório'),
 });
 
+export const auditLogSchema = z.object({
+  acao: z.enum(['CONSULTA', 'UPLOAD', 'IMPRESSAO', 'EXPORTACAO', 'ENCAMINHAMENTO', 'PESQUISA_OCR']),
+  detalhes: z.string().min(1).max(2000),
+});
+
 export type LogFormData = z.infer<typeof logSchema>;

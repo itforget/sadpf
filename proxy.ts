@@ -7,13 +7,14 @@ const PUBLIC_PATHS = [
   '/api/auth/session',
   '/api/health',
   '/health',
+  '/privacidade',
   '/favicon.ico',
   '/robots.txt',
 ];
 
-const STATIC_PATHS = ['/_next', '/static', '/public', '/uploads'];
+const STATIC_PATHS = ['/_next', '/static', '/public'];
 
-const ADMIN_ONLY_PATHS = ['/logs', '/usuarios', '/configuracoes', '/api/logs'];
+const ADMIN_ONLY_PATHS = ['/logs', '/usuarios', '/configuracoes'];
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -60,5 +61,5 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|logo-sspdf.png|uploads/).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|logo-sspdf.png).*)'],
 };

@@ -166,16 +166,11 @@ npm run prisma:generate  # Gera Prisma Client
 
 O projeto suporta storage via variável de ambiente `STORAGE_PROVIDER`:
 
-| Provider   | Descrição                                                                           |
-| ---------- | ----------------------------------------------------------------------------------- |
-| `local`    | Arquivos em `public/uploads/` (padrão)                                              |
-| `supabase` | Supabase Storage (requer `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET`) |
-
-```bash
-npm install @supabase/supabase-js   #必要时 instalar para Supabase
-```
-
----
+| Provider     | Descrição                                                                         |
+| ------------ | --------------------------------------------------------------------------------- |
+| `local`      | Arquivos privados em `storage/uploads/` (padrão)                                  |
+| `supabase`   | Supabase Storage (requer `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STORAGE_BUCKET`) |
+| `s3`/`minio` | Storage compatível com S3 no servidor da Secretaria (requer as variáveis `S3_*`)  |
 
 ## Variáveis de Ambiente
 
@@ -184,7 +179,11 @@ npm install @supabase/supabase-js   #必要时 instalar para Supabase
 | `DATABASE_URL`         |     Sim     | URL de conexão PostgreSQL (Prisma)                              |
 | `SADPF_SECRET`         |     Sim     | Chave HMAC-SHA256 para assinatura de JWT (mínimo 32 caracteres) |
 | `NODE_ENV`             |     Não     | `development` / `production`                                    |
-| `STORAGE_PROVIDER`     |     Não     | `local` (padrão) ou `supabase`                                  |
+| `STORAGE_PROVIDER`     |     Não     | `local` (padrão), `supabase`, `s3` ou `minio`                   |
 | `SUPABASE_URL`         | Condicional | URL do projeto Supabase (quando `STORAGE_PROVIDER=supabase`)    |
-| `SUPABASE_SERVICE_KEY` | Condicional | Service role key do Supabase                                    |
-| `SUPABASE_BUCKET`      |     Não     | Nome do bucket (padrão: `documents`)                            |
+| `SUPABASE_SECRET_KEY`  | Condicional | Secret/service role key do Supabase                             |
+| `STORAGE_BUCKET`       |     Não     | Bucket (padrão: `sadpf-documentos`)                             |
+| `S3_ENDPOINT`          | Condicional | Endpoint S3/MinIO                                               |
+| `S3_ACCESS_KEY_ID`     | Condicional | Chave de acesso S3/MinIO                                        |
+| `S3_SECRET_ACCESS_KEY` | Condicional | Chave secreta S3/MinIO                                          |
+| `S3_REGION`            |     Não     | Região S3 (padrão: `us-east-1`)                                 |

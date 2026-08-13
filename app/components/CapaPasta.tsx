@@ -25,20 +25,9 @@ import Image from 'next/image';
 interface CapaPastaProps {
   servidor: Servidor;
   documentos: DocumentoPDF[];
-  operador?: { nome: string; matricula: string; ip: string };
 }
 
-const OPERADOR_DESCONHECIDO = {
-  nome: 'Operador não identificado',
-  matricula: 'N/A',
-  ip: 'N/A',
-};
-
-export default function CapaPasta({
-  servidor,
-  documentos,
-  operador = OPERADOR_DESCONHECIDO,
-}: CapaPastaProps) {
+export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
   const [showImprimirCapa, setShowImprimirCapa] = useState(false);
   const [showEncaminharModal, setShowEncaminharModal] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('Todos');
@@ -96,11 +85,7 @@ export default function CapaPasta({
         <ImprimirCapaModal servidor={servidor} onClose={() => setShowImprimirCapa(false)} />
       )}
       {showEncaminharModal && (
-        <EncaminharModal
-          servidor={servidor}
-          operador={operador}
-          onClose={() => setShowEncaminharModal(false)}
-        />
+        <EncaminharModal servidor={servidor} onClose={() => setShowEncaminharModal(false)} />
       )}
 
       <div className="flex flex-wrap justify-between items-center gap-4 border-b border-border pb-4">

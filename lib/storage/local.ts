@@ -1,9 +1,27 @@
-import { writeFile, unlink, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
+import { dirname, join } from 'path';
 import { existsSync } from 'fs';
-import type { StorageProvider } from './index';
+import type { StorageDriver } from './index';
 
-const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads');
+const UPLOAD_DIR = join(process.cwd(), 'storage', 'uploads');
+const LEGACY_UPLOAD_DIR = join(process.cwd(), 'public', 'uploads');
+
+function getKey(value: string): string {
+  const key = value.startsWith('storage://uploads/')
+    ? value.slice('storage://uploads/'.length)
+    : value.startsWith('/uploads/')
+    ? value.slice('/uploads/'.length)
+    : value;
+  if (!key.split('/').every((part) => /^[a-zA-Z0-9._-]+$/.test(part))) {
+    throw new Error('Chave de arquivo inválida.');
+  }
+  return key;
+}
+
+function getFilePath(key: string): string {
+  const directory = key.startsWith('/uploads/') ? LEGACY_UPLOAD_DIR : UPLOAD_DIR;
+  return join(directory, getKey(key));
+}
 
 async function ensureUploadDir() {
   if (!existsSync(UPLOAD_DIR)) {
@@ -11,17 +29,23 @@ async function ensureUploadDir() {
   }
 }
 
-export const localStorage: StorageProvider = {
-  async upload(buffer: Buffer, filename: string) {
+export const localStorage: StorageDriver = {
+  backend: 'local',
+
+  async upload(buffer: Buffer, key: string) {
+    const filepath = getFilePath(key);
     await ensureUploadDir();
-    const filepath = join(UPLOAD_DIR, filename);
+    await mkdir(dirname(filepath), { recursive: true });
     await writeFile(filepath, buffer);
-    return { url: `/uploads/${filename}` };
+    return { backend: 'local', key };
   },
 
-  async delete(url: string) {
-    const filename = url.replace('/uploads/', '');
-    const filepath = join(UPLOAD_DIR, filename);
+  async download(key: string) {
+    return readFile(getFilePath(key));
+  },
+
+  async delete(key: string) {
+    const filepath = getFilePath(key);
     try {
       await unlink(filepath);
     } catch {}

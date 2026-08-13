@@ -150,7 +150,7 @@ export default function LoginPage() {
         </div>
 
         <div className="absolute bottom-6 right-8 text-xs font-medium text-muted-foreground">
-          SADPF v1.0.0
+          SADPF {new Date().getFullYear()}
         </div>
       </div>
     </div>

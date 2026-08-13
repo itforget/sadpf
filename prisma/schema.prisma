@@ -26,6 +26,12 @@ enum CategoriaDocumento {
   Avaliacao_de_Desempenho
 }
 
+enum StorageBackend {
+  LOCAL
+  SUPABASE
+  S3
+}
+
 enum AcaoAuditoria {
   CONSULTA
   UPLOAD
@@ -60,19 +66,21 @@ model Servidor {
 }
 
 model DocumentoPDF {
-  id          String             @id @default(uuid())
-  servidorId  String
-  titulo      String
-  categoria   CategoriaDocumento
-  dataUpload  String
-  tamanho     String
-  paginas     Int                @default(1)
-  processoSEI String?
-  arquivoUrl  String
-  textoOCR    String             @db.Text
-  operadorRH  String
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id             String             @id @default(uuid())
+  servidorId     String
+  titulo         String
+  categoria      CategoriaDocumento
+  dataUpload     String
+  tamanho        String
+  paginas        Int                @default(1)
+  processoSEI    String?
+  arquivoUrl     String
+  storageBackend StorageBackend?
+  storageKey     String?
+  textoOCR       String             @db.Text
+  operadorRH     String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   servidor        Servidor         @relation(fields: [servidorId], references: [id], onDelete: Cascade)
   encaminhamentos Encaminhamento[]
@@ -84,7 +92,7 @@ model DocumentoPDF {
 model Encaminhamento {
   id            String   @id @default(uuid())
   servidorId    String
-  documentoId   String? // Pode ser null se for encaminhamento da pasta
+  documentoId   String?
   destinatario  String
   justificativa String
   validadeDias  Int

@@ -1,6 +1,44 @@
 import { prisma } from './prisma';
-import type { Prisma, StatusServidor, CategoriaDocumento, AcaoAuditoria } from '@/prisma/generated';
-import type { Servidor, DocumentoPDF, LogAuditoria } from '../types';
+import type {
+  Prisma,
+  StatusServidor,
+  CategoriaDocumento,
+  AcaoAuditoria,
+  StorageBackend,
+} from '@/prisma/generated';
+import type { Servidor, DocumentoPDF, LogAuditoria, NovoDocumentoPDF } from '../types';
+
+const SERVIDOR_SELECT = {
+  id: true,
+  matricula: true,
+  nome: true,
+  cpf: true,
+  fotoUrl: true,
+  cargoEfetivo: true,
+  cargoOcupado: true,
+  lotacao: true,
+  status: true,
+  role: true,
+  dataIngresso: true,
+  email: true,
+  telefone: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ServidorSelect;
+
+export interface EncaminhamentoResumo {
+  id: string;
+  dataHora: string;
+  destinatario: string;
+  servidor: string;
+  validade: string;
+  status: 'Ativo' | 'Expirado';
+  justificativa: string;
+}
+
+export interface EncaminhamentoCriado extends EncaminhamentoResumo {
+  token: string;
+}
 
 export async function getServidores(filter?: {
   status?: StatusServidor | 'Todos';
@@ -31,6 +69,7 @@ export async function getServidores(filter?: {
   const list = await prisma.servidor.findMany({
     where,
     orderBy: { createdAt: 'desc' },
+    select: SERVIDOR_SELECT,
   });
 
   return list.map((s) => ({
@@ -38,7 +77,6 @@ export async function getServidores(filter?: {
     fotoUrl: s.fotoUrl ?? '',
     status: s.status as Servidor['status'],
     role: s.role as Servidor['role'],
-    senhaHash: s.senhaHash ?? undefined,
   }));
 }
 
@@ -47,6 +85,7 @@ export async function getServidorById(id: string): Promise<Servidor | null> {
     where: {
       OR: [{ id }, { matricula: id }],
     },
+    select: SERVIDOR_SELECT,
   });
 
   if (!s) return null;
@@ -56,7 +95,6 @@ export async function getServidorById(id: string): Promise<Servidor | null> {
     fotoUrl: s.fotoUrl ?? '',
     status: s.status as Servidor['status'],
     role: s.role as Servidor['role'],
-    senhaHash: s.senhaHash ?? undefined,
   };
 }
 
@@ -79,6 +117,7 @@ export async function addServidor(
       telefone: data.telefone,
       senhaHash: data.senhaHash ?? null,
     },
+    select: SERVIDOR_SELECT,
   });
 
   return {
@@ -86,13 +125,12 @@ export async function addServidor(
     fotoUrl: created.fotoUrl ?? '',
     status: created.status as Servidor['status'],
     role: created.role as Servidor['role'],
-    senhaHash: created.senhaHash ?? undefined,
   };
 }
 
 export async function updateServidor(
   id: string,
-  data: Partial<Omit<Servidor, 'id'>>
+  data: Partial<Omit<Servidor, 'id'>> & { senhaHash?: string }
 ): Promise<Servidor | null> {
   const updated = await prisma.servidor.update({
     where: { id },
@@ -107,6 +145,7 @@ export async function updateServidor(
       ...(data.role !== undefined && { role: data.role }),
       ...(data.senhaHash !== undefined && { senhaHash: data.senhaHash }),
     },
+    select: SERVIDOR_SELECT,
   });
 
   return {
@@ -114,7 +153,6 @@ export async function updateServidor(
     fotoUrl: updated.fotoUrl ?? '',
     status: updated.status as Servidor['status'],
     role: updated.role as Servidor['role'],
-    senhaHash: updated.senhaHash ?? undefined,
   };
 }
 
@@ -137,35 +175,54 @@ function mapCategoria(raw: string): DocumentoPDF['categoria'] {
   );
 }
 
+function mapDocumento(
+  documento: Omit<DocumentoPDF, 'categoria' | 'processoSEI' | 'arquivoUrl'> & {
+    categoria: string;
+    processoSEI: string | null;
+    arquivoUrl: string;
+  }
+): DocumentoPDF {
+  return {
+    ...documento,
+    categoria: mapCategoria(documento.categoria),
+    processoSEI: documento.processoSEI ?? undefined,
+    arquivoUrl: `/api/documentos/${documento.id}/arquivo`,
+  };
+}
+
 export async function getDocumentosByServidor(servidorId: string): Promise<DocumentoPDF[]> {
   const docs = await prisma.documentoPDF.findMany({
     where: { servidorId },
     orderBy: { createdAt: 'desc' },
   });
 
-  return docs.map((d) => ({
-    ...d,
-    categoria: mapCategoria(d.categoria),
-    processoSEI: d.processoSEI ?? undefined,
-  }));
+  return docs.map(mapDocumento);
 }
 
 export async function getDocumentoById(id: string): Promise<DocumentoPDF | null> {
   const d = await prisma.documentoPDF.findUnique({ where: { id } });
   if (!d) return null;
 
-  return {
-    ...d,
-    categoria: mapCategoria(d.categoria),
-    processoSEI: d.processoSEI ?? undefined,
-  };
+  return mapDocumento(d);
+}
+
+export async function getDocumentoArquivoById(id: string): Promise<{
+  titulo: string;
+  arquivoUrl: string;
+  storageBackend: StorageBackend | null;
+  storageKey: string | null;
+} | null> {
+  return prisma.documentoPDF.findUnique({
+    where: { id },
+    select: { titulo: true, arquivoUrl: true, storageBackend: true, storageKey: true },
+  });
 }
 
 function mapCategoriaToEnum(categoria: DocumentoPDF['categoria']): CategoriaDocumento {
   return CATEGORIA_ENUM[categoria] ?? (categoria.replace(/ /g, '_') as CategoriaDocumento);
 }
 
-export async function addDocumento(docData: Omit<DocumentoPDF, 'id'>): Promise<DocumentoPDF> {
+export async function addDocumento(docData: NovoDocumentoPDF): Promise<DocumentoPDF> {
   const catEnum = mapCategoriaToEnum(docData.categoria);
 
   const created = await prisma.documentoPDF.create({
@@ -178,16 +235,14 @@ export async function addDocumento(docData: Omit<DocumentoPDF, 'id'>): Promise<D
       paginas: docData.paginas || 1,
       processoSEI: docData.processoSEI ?? null,
       arquivoUrl: docData.arquivoUrl,
+      storageBackend: docData.storageBackend.toUpperCase() as StorageBackend,
+      storageKey: docData.storageKey,
       textoOCR: docData.textoOCR,
       operadorRH: docData.operadorRH,
     },
   });
 
-  return {
-    ...created,
-    categoria: docData.categoria,
-    processoSEI: created.processoSEI ?? undefined,
-  };
+  return mapDocumento(created);
 }
 
 export async function pesquisarOCR(query: string): Promise<DocumentoPDF[]> {
@@ -207,11 +262,7 @@ export async function pesquisarOCR(query: string): Promise<DocumentoPDF[]> {
     orderBy: { createdAt: 'desc' },
   });
 
-  return docs.map((d) => ({
-    ...d,
-    categoria: mapCategoria(d.categoria),
-    processoSEI: d.processoSEI ?? undefined,
-  }));
+  return docs.map(mapDocumento);
 }
 
 export async function getTodosDocumentos(): Promise<DocumentoPDF[]> {
@@ -219,11 +270,7 @@ export async function getTodosDocumentos(): Promise<DocumentoPDF[]> {
     orderBy: { createdAt: 'desc' },
   });
 
-  return docs.map((d) => ({
-    ...d,
-    categoria: mapCategoria(d.categoria),
-    processoSEI: d.processoSEI ?? undefined,
-  }));
+  return docs.map(mapDocumento);
 }
 
 export async function getLogs(): Promise<LogAuditoria[]> {
@@ -266,4 +313,101 @@ export async function addLog(
     detalhes: created.detalhes,
     ip: created.ip,
   };
+}
+
+function formatarDataHora(data: Date): string {
+  return `${data.toLocaleDateString('pt-BR')} ${data.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+function mapEncaminhamentoResumo(encaminhamento: {
+  id: string;
+  destinatario: string;
+  justificativa: string;
+  validadeDias: number;
+  dataGeracao: Date;
+  dataExpiracao: Date;
+  servidor: { nome: string; matricula: string };
+}): EncaminhamentoResumo {
+  const expirado = encaminhamento.dataExpiracao <= new Date();
+
+  return {
+    id: encaminhamento.id,
+    dataHora: formatarDataHora(encaminhamento.dataGeracao),
+    destinatario: encaminhamento.destinatario,
+    servidor: `${encaminhamento.servidor.nome} (Mat. ${encaminhamento.servidor.matricula})`,
+    validade: `${encaminhamento.dataExpiracao.toLocaleDateString('pt-BR')} (${
+      encaminhamento.validadeDias
+    } ${encaminhamento.validadeDias === 1 ? 'Dia' : 'Dias'})`,
+    status: expirado ? 'Expirado' : 'Ativo',
+    justificativa: encaminhamento.justificativa,
+  };
+}
+
+export async function getEncaminhamentos(): Promise<EncaminhamentoResumo[]> {
+  const encaminhamentos = await prisma.encaminhamento.findMany({
+    include: { servidor: { select: { nome: true, matricula: true } } },
+    orderBy: { dataGeracao: 'desc' },
+  });
+
+  return encaminhamentos.map(mapEncaminhamentoResumo);
+}
+
+export async function addEncaminhamento(data: {
+  servidorId: string;
+  documentoId?: string;
+  destinatario: string;
+  justificativa: string;
+  validadeDias: number;
+  requerSenha: boolean;
+  token: string;
+  operador: string;
+  operadorMatricula: string;
+  ip: string;
+}): Promise<EncaminhamentoCriado> {
+  const dataExpiracao = new Date();
+  dataExpiracao.setDate(dataExpiracao.getDate() + data.validadeDias);
+
+  const encaminhamento = await prisma.$transaction(async (tx) => {
+    if (data.documentoId) {
+      const documento = await tx.documentoPDF.findFirst({
+        where: { id: data.documentoId, servidorId: data.servidorId },
+        select: { id: true },
+      });
+
+      if (!documento) {
+        throw new Error('Documento não encontrado para o servidor informado.');
+      }
+    }
+
+    const created = await tx.encaminhamento.create({
+      data: {
+        servidorId: data.servidorId,
+        documentoId: data.documentoId ?? null,
+        destinatario: data.destinatario,
+        justificativa: data.justificativa,
+        validadeDias: data.validadeDias,
+        requerSenha: data.requerSenha,
+        token: data.token,
+        dataExpiracao,
+      },
+      include: { servidor: { select: { nome: true, matricula: true } } },
+    });
+
+    await tx.logAuditoria.create({
+      data: {
+        operador: data.operador,
+        operadorMatricula: data.operadorMatricula,
+        acao: 'ENCAMINHAMENTO',
+        detalhes: `Gerou link seguro de encaminhamento para '${data.destinatario}' referente à pasta de ${created.servidor.nome} (Mat. ${created.servidor.matricula}). Motivo: ${data.justificativa}`,
+        ip: data.ip,
+      },
+    });
+
+    return created;
+  });
+
+  return { ...mapEncaminhamentoResumo(encaminhamento), token: encaminhamento.token };
 }

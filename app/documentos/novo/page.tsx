@@ -59,7 +59,7 @@ function NovoDocumentoForm() {
   const categoria = useWatch({ control, name: 'categoria' });
 
   useEffect(() => {
-    fetch('/api/servidores')
+    fetch('/api/servidores?status=Ativo')
       .then((res) => res.json())
       .then((data) => {
         setServidores(data);

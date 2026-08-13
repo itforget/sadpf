@@ -23,7 +23,7 @@ export default function Topbar() {
   const [session, setSession] = useState<SessionUser | null>(null);
 
   useEffect(() => {
-    if (pathname === '/login') return;
+    if (pathname === '/login' || pathname === '/privacidade') return;
     let cancelled = false;
     fetch('/api/auth/session')
       .then((res) => res.json())
@@ -45,7 +45,7 @@ export default function Topbar() {
     }
   };
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/privacidade') return null;
 
   const displayName = session?.nome || 'Usuário';
   const displayRole = session ? ROLE_LABELS[session.role] ?? session.role : 'Operador do RH';

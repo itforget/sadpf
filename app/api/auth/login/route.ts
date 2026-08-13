@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/server/prisma';
 import { generateJWT, setSessionCookie } from '@/lib/server/auth';
 import { loginSchema } from '@/lib/validations/auth';
+import { checkRateLimit, resetRateLimit } from '@/lib/server/rate-limit';
 
 export async function POST(req: Request) {
   try {
@@ -17,6 +18,15 @@ export async function POST(req: Request) {
     }
 
     const { username, password } = validationResult.data;
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rateLimitKey = `${clientIp}:${username.trim().toLowerCase()}`;
+    const rateLimit = checkRateLimit(rateLimitKey);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Muitas tentativas. Tente novamente mais tarde.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
+    }
 
     const user = await prisma.servidor.findFirst({
       where: {
@@ -25,6 +35,10 @@ export async function POST(req: Request) {
     });
 
     if (!user || !user.senhaHash) {
+      return NextResponse.json({ error: 'Usuário ou senha inválidos.' }, { status: 401 });
+    }
+
+    if (user.status !== 'Ativo') {
       return NextResponse.json({ error: 'Usuário ou senha inválidos.' }, { status: 401 });
     }
 
@@ -39,6 +53,8 @@ export async function POST(req: Request) {
     if (!valid) {
       return NextResponse.json({ error: 'Usuário ou senha inválidos.' }, { status: 401 });
     }
+
+    resetRateLimit(rateLimitKey);
 
     const token = generateJWT({
       id: user.id,

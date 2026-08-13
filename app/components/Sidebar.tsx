@@ -68,7 +68,7 @@ export default function Sidebar() {
     };
   }, [pathname]);
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/privacidade') return null;
 
   const isAdmin = session?.role === 'ADMIN';
   const visibleItems = MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin);

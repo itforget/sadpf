@@ -1,31 +1,19 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+import { getDocumentoById, pesquisarOCR } from '@/lib/server/db';
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    const indexPath = path.join(UPLOAD_DIR, 'index.json');
-    let list: { id: string; titulo: string; [key: string]: unknown }[] = [];
-    try {
-      const raw = await fs.readFile(indexPath, 'utf8');
-      list = JSON.parse(raw);
-    } catch {
-      list = [];
-    }
-
     if (id) {
-      return NextResponse.json(list.filter((d) => d.id === id));
+      const documento = await getDocumentoById(id);
+      return NextResponse.json(documento ? [documento] : []);
     }
     const q = searchParams.get('q') || '';
-    const results = list.filter((d) => String(d.titulo).toLowerCase().includes(q.toLowerCase()));
-    return NextResponse.json(results);
+    return NextResponse.json(await pesquisarOCR(q));
   } catch (err) {
-    const error = err as Error;
-    return new NextResponse(error.message || String(err), { status: 500 });
+    console.error('[GET /api/search]', err);
+    return NextResponse.json({ error: 'Erro ao pesquisar documentos.' }, { status: 500 });
   }
 }

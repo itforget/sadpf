@@ -1,26 +1,59 @@
-import { NextResponse } from 'next/server';
-
-const ENC_CAMINHAMENTOS = [
-  {
-    id: 'enc-1',
-    dataHora: '29/07/2026 10:15',
-    destinatario: 'Corregedoria Geral de Segurança Pública - CGP',
-    servidor: 'Carlos Mendes da Silva (Mat. 123.456-7)',
-    validade: '05/08/2026 (7 Dias)',
-    status: 'Ativo',
-    justificativa: 'Instrução do Processo Disciplinar SEI 00050-000123/2026',
-  },
-  {
-    id: 'enc-2',
-    dataHora: '20/07/2026 14:00',
-    destinatario: 'Junta Médica Oficial do DF - JMO',
-    servidor: 'Ana Paula Souza (Mat. 234.567-8)',
-    validade: '27/07/2026 (Expirado)',
-    status: 'Expirado',
-    justificativa: 'Averbação de Licença para Tratamento de Saúde',
-  },
-];
+import { randomBytes } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
+import { addEncaminhamento, getEncaminhamentos } from '@/lib/server/db';
+import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { encaminhamentoSchema } from '@/lib/validations/encaminhamento';
 
 export async function GET() {
-  return NextResponse.json(ENC_CAMINHAMENTOS);
+  try {
+    return NextResponse.json(await getEncaminhamentos());
+  } catch (error) {
+    console.error('[GET /api/encaminhamentos]', error);
+    return NextResponse.json({ error: 'Erro ao consultar encaminhamentos.' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = getSessionFromToken(await getSessionToken(request));
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const validationResult = encaminhamentoSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: validationResult.error.issues[0]?.message || 'Dados inválidos.' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof body.servidorId !== 'string' || body.servidorId.length === 0) {
+      return NextResponse.json({ error: 'Servidor é obrigatório.' }, { status: 400 });
+    }
+    if (body.documentoId !== undefined && typeof body.documentoId !== 'string') {
+      return NextResponse.json({ error: 'Documento inválido.' }, { status: 400 });
+    }
+
+    const data = validationResult.data;
+    const encaminhamento = await addEncaminhamento({
+      servidorId: body.servidorId,
+      documentoId: body.documentoId,
+      destinatario: data.destinatario,
+      justificativa: data.justificativa,
+      validadeDias: Number(data.validadeDias),
+      requerSenha: data.requerSenha,
+      token: randomBytes(32).toString('base64url'),
+      operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
+      operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
+      ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'N/A',
+    });
+
+    return NextResponse.json(encaminhamento, { status: 201 });
+  } catch (error) {
+    console.error('[POST /api/encaminhamentos]', error);
+    const message = error instanceof Error ? error.message : 'Erro ao criar encaminhamento.';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

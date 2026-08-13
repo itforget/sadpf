@@ -34,20 +34,10 @@ import {
 interface EncaminharModalProps {
   servidor: Servidor;
   documento?: DocumentoPDF;
-  operador: { nome: string; matricula: string; ip: string };
   onClose: () => void;
 }
 
-function generateShareToken(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-export default function EncaminharModal({
-  servidor,
-  documento,
-  operador,
-  onClose,
-}: EncaminharModalProps) {
+export default function EncaminharModal({ servidor, documento, onClose }: EncaminharModalProps) {
   const [enviando, setEnviando] = useState(false);
   const [linkGerado, setLinkGerado] = useState('');
   const [copiado, setCopiado] = useState(false);
@@ -77,28 +67,27 @@ export default function EncaminharModal({
     setEnviando(true);
 
     try {
-      await fetch('/api/logs', {
+      const response = await fetch('/api/encaminhamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          operador: operador.nome,
-          operadorMatricula: operador.matricula,
-          acao: 'ENCAMINHAMENTO',
-          detalhes: `Gerou link seguro de encaminhamento para '${data.destinatario}' referente à pasta de ${servidor.nome} (Mat. ${servidor.matricula}). Motivo: ${data.justificativa}`,
-          ip: operador.ip,
+          ...data,
+          servidorId: servidor.id,
+          documentoId: documento?.id,
         }),
       });
-    } catch (err) {
-      console.error('[EncaminharModal] erro ao registrar log:', err);
-    }
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.error || 'Não foi possível criar o encaminhamento.');
+      }
 
-    const token = generateShareToken();
-    const generatedUrl = `${window.location.origin}/compartilhado/${token}`;
-
-    setTimeout(() => {
       setEnviando(false);
-      setLinkGerado(generatedUrl);
-    }, 600);
+      setLinkGerado(`${window.location.origin}/compartilhado/${result.token}`);
+    } catch (err) {
+      console.error('[EncaminharModal] erro ao criar encaminhamento:', err);
+      alert(err instanceof Error ? err.message : 'Não foi possível criar o encaminhamento.');
+      setEnviando(false);
+    }
   };
 
   const handleCopy = () => {

@@ -9,7 +9,6 @@ export interface Servidor {
   lotacao: string;
   status: 'Ativo' | 'Inativo';
   role: 'ADMIN' | 'OPERADOR' | 'PASTA';
-  senhaHash?: string;
   dataIngresso: string;
   email: string;
   telefone: string;
@@ -32,6 +31,11 @@ export interface DocumentoPDF {
   arquivoUrl: string;
   textoOCR: string;
   operadorRH: string;
+}
+
+export interface NovoDocumentoPDF extends Omit<DocumentoPDF, 'id'> {
+  storageBackend: 'local' | 'supabase' | 's3';
+  storageKey: string;
 }
 
 export interface LogAuditoria {
