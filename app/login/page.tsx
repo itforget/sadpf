@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
-import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -19,6 +18,7 @@ export default function LoginPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordRequired, setPasswordRequired] = useState(false);
 
   const {
     register,
@@ -48,6 +48,11 @@ export default function LoginPage() {
 
       if (result?.firstAccess) {
         setNotice(result.message);
+        return;
+      }
+
+      if (result?.passwordRequired) {
+        setPasswordRequired(true);
         return;
       }
 
@@ -102,47 +107,40 @@ export default function LoginPage() {
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
+            {passwordRequired && (
+              <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
-                <Link
-                  href="/redefinir-senha"
-                  className="text-xs font-medium text-ssp-blue hover:text-ssp-blueDark transition-colors"
-                >
-                  Primeiro acesso?
-                </Link>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    {...register('password')}
+                    autoComplete="current-password"
+                    className={`pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </Button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
               </div>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  {...register('password')}
-                  autoComplete="current-password"
-                  placeholder="Deixe em branco no primeiro acesso"
-                  className={`pr-10 ${errors.password ? 'border-destructive' : ''}`}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </Button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
+            )}
 
             {error && <p className="text-sm text-status-danger">{error}</p>}
             {notice && <p className="text-sm text-status-success">{notice}</p>}
 
             <p className="text-xs text-muted-foreground">
-              No primeiro acesso, informe somente o e-mail e clique em entrar. Enviaremos um link
-              para você criar sua senha.
+              Informe seu e-mail para continuar. No primeiro acesso, enviaremos um link para você
+              criar sua senha.
             </p>
 
             <Button
@@ -150,7 +148,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-ssp-blue hover:bg-ssp-blueDark mt-4"
             >
-              {loading ? 'Entrando...' : 'Entrar no Sistema'}
+              {loading ? 'Verificando...' : passwordRequired ? 'Entrar no Sistema' : 'Continuar'}
             </Button>
           </form>
 

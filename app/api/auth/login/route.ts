@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     if (!user.senhaHash || !password) {
-      return NextResponse.json({ error: 'Informe sua senha para entrar.' }, { status: 400 });
+      return NextResponse.json({ ok: true, passwordRequired: true });
     }
 
     const valid = await bcrypt.compare(password, user.senhaHash);
