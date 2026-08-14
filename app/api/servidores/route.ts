@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { StatusServidor } from '@/prisma/generated';
 import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
 import { getServidores, addServidor, updateServidor } from '@/lib/server/db';
-import { servidorSchema } from '@/lib/validations/servidor';
+import { servidorSchema, servidorUpdateSchema } from '@/lib/validations/servidor';
 
 export async function GET(request: Request) {
   try {
@@ -124,7 +124,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    const validationResult = servidorSchema.partial().safeParse(body);
+    const validationResult = servidorUpdateSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
         { error: validationResult.error.issues[0]?.message || 'Dados inválidos.' },

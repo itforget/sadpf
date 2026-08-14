@@ -22,3 +22,8 @@ export const servidorSchema = z.object({
 });
 
 export type ServidorFormData = z.infer<typeof servidorSchema>;
+
+export const servidorUpdateSchema = servidorSchema.partial().extend({
+  cargoEfetivo: z.string().optional(),
+  lotacao: z.string().optional(),
+});
