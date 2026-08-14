@@ -4,6 +4,8 @@ import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
 const PUBLIC_PATHS = [
   '/login',
   '/api/auth/login',
+  '/api/auth/redefinir-senha',
+  '/redefinir-senha',
   '/api/auth/session',
   '/api/health',
   '/health',

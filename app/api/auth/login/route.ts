@@ -4,6 +4,7 @@ import { prisma } from '@/lib/server/prisma';
 import { generateJWT, setSessionCookie } from '@/lib/server/auth';
 import { loginSchema } from '@/lib/validations/auth';
 import { checkRateLimit, resetRateLimit } from '@/lib/server/rate-limit';
+import { sendFirstAccessEmail } from '@/lib/server/password-reset';
 
 export async function POST(req: Request) {
   try {
@@ -17,9 +18,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const { username, password } = validationResult.data;
+    const { email, password } = validationResult.data;
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rateLimitKey = `${clientIp}:${username.trim().toLowerCase()}`;
+    const normalizedEmail = email.trim().toLowerCase();
+    const rateLimitKey = `${clientIp}:${normalizedEmail}`;
     const rateLimit = checkRateLimit(rateLimitKey);
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -30,11 +32,11 @@ export async function POST(req: Request) {
 
     const user = await prisma.servidor.findFirst({
       where: {
-        OR: [{ matricula: username }, { cpf: username }, { email: username }],
+        email: { equals: normalizedEmail, mode: 'insensitive' },
       },
     });
 
-    if (!user || !user.senhaHash) {
+    if (!user) {
       return NextResponse.json({ error: 'Usuário ou senha inválidos.' }, { status: 401 });
     }
 
@@ -47,6 +49,20 @@ export async function POST(req: Request) {
         { error: 'Apenas administradores e operadores podem acessar o sistema.' },
         { status: 403 }
       );
+    }
+
+    if (!user.senhaDefinidaEm) {
+      await sendFirstAccessEmail(user);
+      resetRateLimit(rateLimitKey);
+      return NextResponse.json({
+        ok: true,
+        firstAccess: true,
+        message: 'Enviamos um link para definir sua senha ao e-mail informado.',
+      });
+    }
+
+    if (!user.senhaHash || !password) {
+      return NextResponse.json({ error: 'Informe sua senha para entrar.' }, { status: 400 });
     }
 
     const valid = await bcrypt.compare(password, user.senhaHash);

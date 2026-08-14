@@ -55,7 +55,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname === '/login') return;
+    if (pathname === '/login' || pathname === '/redefinir-senha') return;
     let cancelled = false;
     fetch('/api/auth/session')
       .then((res) => res.json())
@@ -68,7 +68,9 @@ export default function Sidebar() {
     };
   }, [pathname]);
 
-  if (pathname === '/login' || pathname === '/privacidade') return null;
+  if (pathname === '/login' || pathname === '/redefinir-senha' || pathname === '/privacidade') {
+    return null;
+  }
 
   const isAdmin = session?.role === 'ADMIN';
   const visibleItems = MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin);

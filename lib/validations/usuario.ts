@@ -8,7 +8,6 @@ export const usuarioSchema = z.object({
     .min(1, 'CPF é obrigatório')
     .regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido'),
   email: z.email('Email inválido'),
-  senha: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres'),
   status: z.enum(['Ativo', 'Inativo'], {
     message: 'Status é obrigatório',
   }),

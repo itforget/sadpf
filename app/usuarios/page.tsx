@@ -89,7 +89,6 @@ export default function UsuariosPage() {
       matricula: '',
       cpf: '',
       email: '',
-      senha: '',
       status: 'Ativo',
       role: 'OPERADOR',
     },
@@ -493,7 +492,10 @@ export default function UsuariosPage() {
               />
               <div>
                 <DialogTitle>Criar novo usuário</DialogTitle>
-                <DialogDescription>Defina as credenciais e o perfil de acesso.</DialogDescription>
+                <DialogDescription>
+                  Defina o perfil de acesso. O usuário receberá um link para criar a senha no
+                  primeiro acesso.
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -557,21 +559,6 @@ export default function UsuariosPage() {
                 {createForm.formState.errors.email && (
                   <p className="text-sm text-destructive">
                     {createForm.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="senha">Senha de acesso</Label>
-                <Input
-                  id="senha"
-                  type="password"
-                  {...createForm.register('senha')}
-                  className={createForm.formState.errors.senha ? 'border-destructive' : ''}
-                />
-                {createForm.formState.errors.senha && (
-                  <p className="text-sm text-destructive">
-                    {createForm.formState.errors.senha.message}
                   </p>
                 )}
               </div>

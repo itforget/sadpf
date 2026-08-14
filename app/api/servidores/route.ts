@@ -84,6 +84,7 @@ export async function POST(request: Request) {
       telefone: data.telefone || '',
       role: data.role,
       senhaHash,
+      senhaDefinidaEm: null,
     });
 
     return NextResponse.json(newServidor, { status: 201 });

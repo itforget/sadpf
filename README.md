@@ -16,6 +16,7 @@ Sistema de gestão documental corporativa da **SECRETARIA DE ESTADO DE SEGURANÇ
 | Banco         | PostgreSQL                                                   |
 | Senhas        | bcryptjs                                                     |
 | Auth          | JWT HMAC-SHA256 custom (cookie `sadpf_session`)              |
+| E-mail        | Resend API (primeiro acesso)                                 |
 | Lint / Format | ESLint 9 + Prettier                                          |
 
 ---
@@ -99,6 +100,9 @@ Copie o `.env` (já existente no projeto) e ajuste se necessário:
 ```env
 DATABASE_URL="postgresql://postgres:postgrespassword@localhost:5432/sadpf_db"
 SADPF_SECRET="sua_chave_de_assinatura_jwt_com_minimo_32_caracteres"
+APP_URL="http://localhost:3000"
+RESEND_API_KEY="re_..."
+EMAIL_FROM="SADPF <acesso@sua-organizacao.gov.br>"
 NODE_ENV=development
 STORAGE_PROVIDER=local
 ```
@@ -174,16 +178,19 @@ O projeto suporta storage via variável de ambiente `STORAGE_PROVIDER`:
 
 ## Variáveis de Ambiente
 
-| Variável               | Obrigatória | Descrição                                                       |
-| ---------------------- | :---------: | --------------------------------------------------------------- |
-| `DATABASE_URL`         |     Sim     | URL de conexão PostgreSQL (Prisma)                              |
-| `SADPF_SECRET`         |     Sim     | Chave HMAC-SHA256 para assinatura de JWT (mínimo 32 caracteres) |
-| `NODE_ENV`             |     Não     | `development` / `production`                                    |
-| `STORAGE_PROVIDER`     |     Não     | `local` (padrão), `supabase`, `s3` ou `minio`                   |
-| `SUPABASE_URL`         | Condicional | URL do projeto Supabase (quando `STORAGE_PROVIDER=supabase`)    |
-| `SUPABASE_SECRET_KEY`  | Condicional | Secret/service role key do Supabase                             |
-| `STORAGE_BUCKET`       |     Não     | Bucket (padrão: `sadpf-documentos`)                             |
-| `S3_ENDPOINT`          | Condicional | Endpoint S3/MinIO                                               |
-| `S3_ACCESS_KEY_ID`     | Condicional | Chave de acesso S3/MinIO                                        |
-| `S3_SECRET_ACCESS_KEY` | Condicional | Chave secreta S3/MinIO                                          |
-| `S3_REGION`            |     Não     | Região S3 (padrão: `us-east-1`)                                 |
+| Variável               |   Obrigatória   | Descrição                                                       |
+| ---------------------- | :-------------: | --------------------------------------------------------------- |
+| `DATABASE_URL`         |       Sim       | URL de conexão PostgreSQL (Prisma)                              |
+| `SADPF_SECRET`         |       Sim       | Chave HMAC-SHA256 para assinatura de JWT (mínimo 32 caracteres) |
+| `APP_URL`              | Primeiro acesso | URL pública do SADPF usada no link enviado por e-mail           |
+| `RESEND_API_KEY`       | Primeiro acesso | Chave da API do Resend                                          |
+| `EMAIL_FROM`           | Primeiro acesso | Remetente verificado no Resend                                  |
+| `NODE_ENV`             |       Não       | `development` / `production`                                    |
+| `STORAGE_PROVIDER`     |       Não       | `local` (padrão), `supabase`, `s3` ou `minio`                   |
+| `SUPABASE_URL`         |   Condicional   | URL do projeto Supabase (quando `STORAGE_PROVIDER=supabase`)    |
+| `SUPABASE_SECRET_KEY`  |   Condicional   | Secret/service role key do Supabase                             |
+| `STORAGE_BUCKET`       |       Não       | Bucket (padrão: `sadpf-documentos`)                             |
+| `S3_ENDPOINT`          |   Condicional   | Endpoint S3/MinIO                                               |
+| `S3_ACCESS_KEY_ID`     |   Condicional   | Chave de acesso S3/MinIO                                        |
+| `S3_SECRET_ACCESS_KEY` |   Condicional   | Chave secreta S3/MinIO                                          |
+| `S3_REGION`            |       Não       | Região S3 (padrão: `us-east-1`)                                 |

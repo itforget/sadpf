@@ -16,6 +16,7 @@ import Image from 'next/image';
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,23 +30,33 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
+    setNotice(null);
     setLoading(true);
 
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
 
-    const result = await response.json();
-    setLoading(false);
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result?.error || 'Erro de autenticação.');
+        return;
+      }
 
-    if (!response.ok) {
-      setError(result?.error || 'Erro de autenticação.');
-      return;
+      if (result?.firstAccess) {
+        setNotice(result.message);
+        return;
+      }
+
+      router.replace('/dashboard');
+    } catch {
+      setError('Não foi possível conectar ao servidor. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-
-    router.replace('/dashboard');
   };
 
   return (
@@ -79,28 +90,26 @@ export default function LoginPage() {
 
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-2">
-              <Label htmlFor="cpf">Usuário / CPF</Label>
+              <Label htmlFor="email">E-mail institucional</Label>
               <Input
-                id="cpf"
-                type="text"
-                {...register('username')}
-                autoComplete="username"
-                placeholder="00000000000"
-                className={errors.username ? 'border-destructive' : ''}
+                id="email"
+                type="email"
+                {...register('email')}
+                autoComplete="email"
+                placeholder="nome@ssp.df.gov.br"
+                className={errors.email ? 'border-destructive' : ''}
               />
-              {errors.username && (
-                <p className="text-sm text-destructive">{errors.username.message}</p>
-              )}
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="password">Senha</Label>
                 <Link
-                  href="/recuperar-senha"
+                  href="/redefinir-senha"
                   className="text-xs font-medium text-ssp-blue hover:text-ssp-blueDark transition-colors"
                 >
-                  Esqueci a senha
+                  Primeiro acesso?
                 </Link>
               </div>
               <div className="relative">
@@ -109,7 +118,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   {...register('password')}
                   autoComplete="current-password"
-                  placeholder="••••••••"
+                  placeholder="Deixe em branco no primeiro acesso"
                   className={`pr-10 ${errors.password ? 'border-destructive' : ''}`}
                 />
                 <Button
@@ -129,6 +138,12 @@ export default function LoginPage() {
             </div>
 
             {error && <p className="text-sm text-status-danger">{error}</p>}
+            {notice && <p className="text-sm text-status-success">{notice}</p>}
+
+            <p className="text-xs text-muted-foreground">
+              No primeiro acesso, informe somente o e-mail e clique em entrar. Enviaremos um link
+              para você criar sua senha.
+            </p>
 
             <Button
               type="submit"

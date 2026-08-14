@@ -99,7 +99,11 @@ export async function getServidorById(id: string): Promise<Servidor | null> {
 }
 
 export async function addServidor(
-  data: Omit<Servidor, 'id'> & { role?: Servidor['role']; senhaHash?: string }
+  data: Omit<Servidor, 'id'> & {
+    role?: Servidor['role'];
+    senhaHash?: string;
+    senhaDefinidaEm?: Date | null;
+  }
 ): Promise<Servidor> {
   const created = await prisma.servidor.create({
     data: {
@@ -116,6 +120,7 @@ export async function addServidor(
       email: data.email,
       telefone: data.telefone,
       senhaHash: data.senhaHash ?? null,
+      ...(data.senhaDefinidaEm !== undefined && { senhaDefinidaEm: data.senhaDefinidaEm }),
     },
     select: SERVIDOR_SELECT,
   });

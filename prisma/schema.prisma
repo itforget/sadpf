@@ -42,27 +42,43 @@ enum AcaoAuditoria {
 }
 
 model Servidor {
-  id           String         @id @default(uuid())
-  matricula    String         @unique
-  nome         String
-  cpf          String         @unique
-  fotoUrl      String?
-  cargoEfetivo String
-  cargoOcupado String
-  lotacao      String
-  status       StatusServidor @default(Ativo)
-  role         Role           @default(PASTA)
-  dataIngresso String
-  email        String
-  telefone     String
-  senhaHash    String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id              String         @id @default(uuid())
+  matricula       String         @unique
+  nome            String
+  cpf             String         @unique
+  fotoUrl         String?
+  cargoEfetivo    String
+  cargoOcupado    String
+  lotacao         String
+  status          StatusServidor @default(Ativo)
+  role            Role           @default(PASTA)
+  dataIngresso    String
+  email           String
+  telefone        String
+  senhaHash       String?
+  senhaDefinidaEm DateTime?      @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  documentos      DocumentoPDF[]
-  encaminhamentos Encaminhamento[]
+  documentos          DocumentoPDF[]
+  encaminhamentos     Encaminhamento[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("servidores")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+  servidorId String
+
+  servidor Servidor @relation(fields: [servidorId], references: [id], onDelete: Cascade)
+
+  @@index([servidorId, expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model DocumentoPDF {
