@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
+import { PDFDocument } from 'pdf-lib';
 import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
-import { getServidorById, getDocumentosByServidor, addLog } from '@/lib/server/db';
+import {
+  getServidorById,
+  getDocumentosByServidor,
+  getDocumentoArquivoById,
+  addLog,
+} from '@/lib/server/db';
+import { getStorage } from '@/lib/storage';
 import {
   criarDocumento,
   finalizarDocumento,
   desenharDadosServidor,
   desenharListaDocumentos,
 } from '@/lib/server/pdf';
+import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET(request: Request) {
   try {
@@ -18,6 +26,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const servidorId = searchParams.get('servidorId');
+    const paraImpressao = searchParams.get('modo') === 'imprimir';
     if (!servidorId) {
       return NextResponse.json({ error: 'servidorId é obrigatório.' }, { status: 400 });
     }
@@ -38,7 +47,7 @@ export async function GET(request: Request) {
       secao: 'PASTA FUNCIONAL',
     });
 
-    desenharDadosServidor(doc, servidor);
+    await desenharDadosServidor(doc, servidor);
 
     doc.moveDown(0.8);
     doc
@@ -56,7 +65,27 @@ export async function GET(request: Request) {
     for await (const chunk of doc) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
-    const buffer = Buffer.concat(chunks);
+    const resumoPasta = Buffer.concat(chunks);
+    const pastaCompleta = await PDFDocument.create();
+    const resumo = await PDFDocument.load(resumoPasta);
+    const paginasResumo = await pastaCompleta.copyPages(resumo, resumo.getPageIndices());
+    paginasResumo.forEach((pagina) => pastaCompleta.addPage(pagina));
+
+    for (const documento of documentos) {
+      const arquivo = await getDocumentoArquivoById(documento.id);
+      if (!arquivo) continue;
+
+      const storage = getStorage(arquivo.storageBackend ?? 'local');
+      const buffer = await storage.download(arquivo.storageKey ?? arquivo.arquivoUrl);
+      const pdfOriginal = await PDFDocument.load(buffer, { ignoreEncryption: true });
+      const paginasDocumento = await pastaCompleta.copyPages(
+        pdfOriginal,
+        pdfOriginal.getPageIndices()
+      );
+      paginasDocumento.forEach((pagina) => pastaCompleta.addPage(pagina));
+    }
+
+    const buffer = Buffer.from(await pastaCompleta.save());
 
     const nomeArquivo = `pasta-funcional-${servidor.matricula.replace(
       /[^a-zA-Z0-9-]/g,
@@ -66,16 +95,22 @@ export async function GET(request: Request) {
     addLog({
       operador: String(session.nome),
       operadorMatricula: String(session.matricula),
-      acao: 'EXPORTACAO',
-      detalhes: `Exportou a pasta funcional completa em PDF do servidor ${servidor.nome} (Mat. ${servidor.matricula})`,
-      ip: '',
+      acao: paraImpressao ? 'IMPRESSAO' : 'EXPORTACAO',
+      detalhes: `${
+        paraImpressao ? 'Abriu para impressão' : 'Exportou'
+        } a pasta funcional completa, com ${documentos.length} documento(s), do servidor ${
+        servidor.nome
+      } (Mat. ${servidor.matricula})`,
+      ip: getRequestIp(request),
     }).catch((err) => console.error('[pastas/exportar] erro ao registrar log:', err));
 
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${nomeArquivo}"`,
+        'Content-Disposition': `${
+          paraImpressao ? 'inline' : 'attachment'
+        }; filename="${nomeArquivo}"`,
         'Cache-Control': 'no-store',
       },
     });

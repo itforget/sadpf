@@ -38,7 +38,7 @@ export default function UploadForm() {
 
       if (res.ok) {
         reset();
-        router.push('/documentos');
+        router.push('/pesquisa');
       } else {
         const text = await res.text();
         setError(text || 'Erro no upload');

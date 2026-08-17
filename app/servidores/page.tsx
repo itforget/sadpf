@@ -321,6 +321,9 @@ export default function ServidoresListPage() {
                             alt={s.nome}
                             width={200}
                             height={200}
+                            unoptimized={
+                              s.fotoUrl.startsWith('/api/') || s.fotoUrl.startsWith('data:')
+                            }
                             className="w-10 h-10 rounded-full object-cover border border-border shadow-sm shrink-0"
                           />
                         ) : (

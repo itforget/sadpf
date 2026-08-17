@@ -4,6 +4,9 @@ export interface Servidor {
   nome: string;
   cpf: string;
   fotoUrl: string;
+  fotoStorageBackend?: 'local' | 'supabase' | 's3' | 'LOCAL' | 'SUPABASE' | 'S3' | null;
+  fotoStorageKey?: string | null;
+  fotoMimeType?: string | null;
   cargoEfetivo: string;
   cargoOcupado: string;
   lotacao: string;

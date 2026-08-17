@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { StatusServidor } from '@/prisma/generated';
 import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
-import { getServidores, addServidor, updateServidor } from '@/lib/server/db';
+import { getServidores, addServidor, updateServidor, getServidorById } from '@/lib/server/db';
 import { servidorSchema, servidorUpdateSchema } from '@/lib/validations/servidor';
 
 export async function GET(request: Request) {
@@ -103,9 +103,9 @@ export async function PUT(request: Request) {
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }
-    if (session.role !== 'ADMIN') {
+    if (!['ADMIN', 'OPERADOR'].includes(String(session.role))) {
       return NextResponse.json(
-        { error: 'Apenas administradores podem alterar usuários.' },
+        { error: 'Apenas administradores e operadores podem alterar pastas funcionais.' },
         { status: 403 }
       );
     }
@@ -117,13 +117,6 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-
-    if (session.id === id && (body.status === 'Inativo' || (body.role && body.role !== 'ADMIN'))) {
-      return NextResponse.json(
-        { error: 'Você não pode desativar ou rebaixar a própria conta.' },
-        { status: 400 }
-      );
-    }
 
     const validationResult = servidorUpdateSchema.safeParse(body);
     if (!validationResult.success) {
@@ -140,21 +133,33 @@ export async function PUT(request: Request) {
         ? await bcrypt.hash(data.senha, 12)
         : undefined;
 
+    const servidorAtual = await getServidorById(id);
+    if (!servidorAtual) {
+      return NextResponse.json({ error: 'Servidor não encontrado.' }, { status: 404 });
+    }
+
+    if (session.role !== 'ADMIN' && data.role !== undefined && data.role !== servidorAtual.role) {
+      return NextResponse.json(
+        { error: 'Somente administradores podem alterar o perfil do servidor.' },
+        { status: 403 }
+      );
+    }
+
     const updated = await updateServidor(id, {
+      matricula: data.matricula,
+      cpf: data.cpf,
       nome: data.nome,
       email: data.email ?? undefined,
       telefone: data.telefone ?? undefined,
+      fotoUrl: data.fotoUrl ?? undefined,
       cargoEfetivo: data.cargoEfetivo,
       cargoOcupado: data.cargoOcupado,
       lotacao: data.lotacao,
       status: data.status,
-      role: data.role,
+      ...(session.role === 'ADMIN' && data.role !== undefined ? { role: data.role } : {}),
+      dataIngresso: data.dataIngresso,
       senhaHash,
     });
-
-    if (!updated) {
-      return NextResponse.json({ error: 'Servidor não encontrado.' }, { status: 404 });
-    }
 
     return NextResponse.json(updated);
   } catch (error: unknown) {

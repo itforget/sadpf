@@ -1,0 +1,299 @@
+'use client';
+
+import { useEffect, useState, type FormEvent } from 'react';
+import type { Servidor } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
+interface EditarServidorModalProps {
+  servidor: Servidor;
+  modo: 'dados' | 'foto';
+  onClose: () => void;
+  onUpdated: () => void;
+}
+
+interface SessionUser {
+  role: string;
+}
+
+export default function EditarServidorModal({
+  servidor,
+  modo,
+  onClose,
+  onUpdated,
+}: EditarServidorModalProps) {
+  const [dados, setDados] = useState(servidor);
+  const [foto, setFoto] = useState<File | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
+  const [session, setSession] = useState<SessionUser | null>(null);
+  const editandoFoto = modo === 'foto';
+  const podeEditarPerfil = session?.role === 'ADMIN';
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch('/api/auth/session')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setSession(data?.user ?? null);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const atualizar = <K extends keyof Servidor>(campo: K, valor: Servidor[K]) => {
+    setDados((anterior) => ({ ...anterior, [campo]: valor }));
+  };
+
+  const salvar = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSalvando(true);
+    setErro('');
+    try {
+      if (editandoFoto) {
+        if (!foto) throw new Error('Selecione uma imagem para enviar.');
+        if (!['image/png', 'image/jpeg'].includes(foto.type)) {
+          throw new Error('Envie uma imagem PNG ou JPEG.');
+        }
+        if (foto.size > 5 * 1024 * 1024) throw new Error('A foto deve ter no máximo 5 MB.');
+        const formData = new FormData();
+        formData.append('foto', foto);
+        const response = await fetch(`/api/servidores/${servidor.id}/foto`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) {
+          const resposta = await response.json().catch(() => null);
+          throw new Error(resposta?.error || 'Não foi possível salvar a foto.');
+        }
+      } else {
+        const response = await fetch(`/api/servidores?id=${encodeURIComponent(servidor.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: dados.nome,
+            matricula: dados.matricula,
+            cpf: dados.cpf,
+            cargoEfetivo: dados.cargoEfetivo,
+            cargoOcupado: dados.cargoOcupado,
+            lotacao: dados.lotacao,
+            status: dados.status,
+            ...(podeEditarPerfil ? { role: dados.role } : {}),
+            dataIngresso: dados.dataIngresso,
+            email: dados.email,
+            telefone: dados.telefone,
+          }),
+        });
+        if (!response.ok) {
+          const resposta = await response.json().catch(() => null);
+          throw new Error(resposta?.error || 'Não foi possível salvar as alterações.');
+        }
+      }
+      onUpdated();
+      onClose();
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível salvar as alterações.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" showCloseButton={!salvando}>
+        <DialogHeader>
+          <DialogTitle>
+            {editandoFoto ? 'Adicionar ou editar foto' : 'Editar dados do servidor'}
+          </DialogTitle>
+          <DialogDescription>
+            {editandoFoto
+              ? 'Envie uma imagem para a pasta funcional e os PDFs.'
+              : 'Atualize os dados cadastrais do servidor.'}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={salvar} className="space-y-4">
+          {editandoFoto ? (
+            <div className="space-y-2">
+              <Label htmlFor="foto">Foto do servidor</Label>
+              <Input
+                id="foto"
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={(event) => setFoto(event.target.files?.[0] || null)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">PNG ou JPEG, até 5 MB.</p>
+            </div>
+          ) : (
+            <>
+              <Campo
+                id="nome"
+                label="Nome completo"
+                value={dados.nome}
+                onChange={(value) => atualizar('nome', value)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Campo
+                  id="matricula"
+                  label="Matrícula"
+                  value={dados.matricula}
+                  onChange={(value) => atualizar('matricula', value)}
+                />
+                <Campo
+                  id="cpf"
+                  label="CPF"
+                  value={dados.cpf}
+                  onChange={(value) => atualizar('cpf', value)}
+                />
+              </div>
+              <Campo
+                id="cargoEfetivo"
+                label="Cargo efetivo"
+                value={dados.cargoEfetivo}
+                onChange={(value) => atualizar('cargoEfetivo', value)}
+              />
+              <Campo
+                id="cargoOcupado"
+                label="Cargo ocupado"
+                value={dados.cargoOcupado}
+                onChange={(value) => atualizar('cargoOcupado', value)}
+              />
+              <Campo
+                id="lotacao"
+                label="Lotação"
+                value={dados.lotacao}
+                onChange={(value) => atualizar('lotacao', value)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Campo
+                  id="email"
+                  label="E-mail institucional"
+                  type="email"
+                  value={dados.email}
+                  onChange={(value) => atualizar('email', value)}
+                />
+                <Campo
+                  id="telefone"
+                  label="Telefone"
+                  value={dados.telefone}
+                  onChange={(value) => atualizar('telefone', value)}
+                />
+              </div>
+              <Campo
+                id="dataIngresso"
+                label="Data de ingresso"
+                value={dados.dataIngresso}
+                onChange={(value) => atualizar('dataIngresso', value)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Selecao
+                  id="status"
+                  label="Status"
+                  value={dados.status}
+                  opcoes={['Ativo', 'Inativo']}
+                  onChange={(value) => atualizar('status', value as Servidor['status'])}
+                />
+                {podeEditarPerfil ? (
+                  <Selecao
+                    id="role"
+                    label="Perfil"
+                    value={dados.role}
+                    opcoes={['ADMIN', 'OPERADOR', 'PASTA']}
+                    onChange={(value) => atualizar('role', value as Servidor['role'])}
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Perfil</Label>
+                    <Input id="role" value={dados.role} disabled />
+                    <p className="text-xs text-muted-foreground">
+                      Apenas administradores podem alterar este campo.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          {erro && <p className="text-sm text-status-danger">{erro}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={salvando}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={salvando} className="bg-ssp-blue hover:bg-ssp-blueDark">
+              {salvando ? 'Salvando...' : 'Salvar alterações'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Campo({
+  id,
+  label,
+  value,
+  onChange,
+  type = 'text',
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={id !== 'email' && id !== 'telefone'}
+      />
+    </div>
+  );
+}
+
+function Selecao({
+  id,
+  label,
+  value,
+  opcoes,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  opcoes: string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+      >
+        {opcoes.map((opcao) => (
+          <option key={opcao}>{opcao}</option>
+        ))}
+      </select>
+    </div>
+  );
+}

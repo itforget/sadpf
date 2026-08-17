@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getLogs, addLog } from '@/lib/server/db';
 import { auditLogSchema } from '@/lib/validations/log';
 import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
       acao,
       detalhes,
-      ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'N/A',
+      ip: getRequestIp(request),
     });
     return NextResponse.json(newLog, { status: 201 });
   } catch (error: unknown) {

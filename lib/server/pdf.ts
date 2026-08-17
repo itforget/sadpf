@@ -1,5 +1,8 @@
 import PDFDocument from 'pdfkit';
+import { readFile } from 'fs/promises';
+import { join, normalize } from 'path';
 import type { Servidor, DocumentoPDF } from '@/lib/types';
+import { getStorage } from '@/lib/storage';
 
 const AZUL_SSP = '#0a4d8c';
 const AZUL_ESCURO = '#083b6b';
@@ -280,7 +283,47 @@ export function desenharDestaqueVerde(doc: PDFKit.PDFDocument, texto: string): v
   doc.y += 32;
 }
 
-export function desenharDadosServidor(doc: PDFKit.PDFDocument, servidor: Servidor): void {
+async function obterFotoServidor(servidor: Servidor): Promise<Buffer | null> {
+  if (servidor.fotoStorageKey && servidor.fotoStorageBackend) {
+    try {
+      return await getStorage(servidor.fotoStorageBackend).download(servidor.fotoStorageKey);
+    } catch {
+      return null;
+    }
+  }
+
+  const fotoUrl = servidor.fotoUrl;
+  if (!fotoUrl) return null;
+
+  try {
+    if (fotoUrl.startsWith('data:image/')) {
+      const base64 = fotoUrl.split(',', 2)[1];
+      return base64 ? Buffer.from(base64, 'base64') : null;
+    }
+
+    if (fotoUrl.startsWith('/')) {
+      const caminho = normalize(fotoUrl).replace(/^[/\\]+/, '');
+      if (caminho.startsWith('..')) return null;
+      return await readFile(join(process.cwd(), 'public', caminho));
+    }
+
+    const url = new URL(fotoUrl);
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+
+    const resposta = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+    if (!resposta.ok) return null;
+
+    const conteudo = Buffer.from(await resposta.arrayBuffer());
+    return conteudo.length <= 5 * 1024 * 1024 ? conteudo : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function desenharDadosServidor(
+  doc: PDFKit.PDFDocument,
+  servidor: Servidor
+): Promise<void> {
   const campos: { rotulo: string; valor: string }[] = [
     { rotulo: 'Nome', valor: servidor.nome },
     { rotulo: 'Matrícula', valor: servidor.matricula },
@@ -295,8 +338,8 @@ export function desenharDadosServidor(doc: PDFKit.PDFDocument, servidor: Servido
   ];
 
   const colunas = [
-    { xRotulo: 55, xValor: 165 },
-    { xRotulo: 305, xValor: 415 },
+    { xRotulo: 55, xValor: 135 },
+    { xRotulo: 265, xValor: 345 },
   ];
   const alturaLinha = 17;
   const yInicial = doc.y;
@@ -310,20 +353,50 @@ export function desenharDadosServidor(doc: PDFKit.PDFDocument, servidor: Servido
       .fillColor(MUTED)
       .font('Helvetica')
       .fontSize(8)
-      .text(campo.rotulo, colunas[colunaIndex].xRotulo, y, { width: 100, lineBreak: false });
+      .text(campo.rotulo, colunas[colunaIndex].xRotulo, y, { width: 75, lineBreak: false });
     doc
       .fillColor(TEXTO)
       .font('Helvetica-Bold')
       .fontSize(8)
       .text(campo.valor, colunas[colunaIndex].xValor, y, {
-        width: 120,
+        width: 105,
         lineBreak: false,
         ellipsis: true,
       });
   });
 
+  const fotoX = 465;
+  const fotoY = yInicial;
+  const fotoLargura = 75;
+  const fotoAltura = 90;
+  doc.rect(fotoX, fotoY, fotoLargura, fotoAltura).fill('#f1f5f9').strokeColor(BORDA).stroke();
+
+  const foto = await obterFotoServidor(servidor);
+  if (foto) {
+    try {
+      doc.image(foto, fotoX + 3, fotoY + 3, {
+        fit: [fotoLargura - 6, fotoAltura - 6],
+        align: 'center',
+        valign: 'center',
+      });
+    } catch {
+      // Mantém o espaço reservado quando o arquivo não for uma imagem suportada pelo PDFKit.
+    }
+  }
+  if (!foto) {
+    doc
+      .fillColor(MUTED)
+      .font('Helvetica')
+      .fontSize(7)
+      .text('SEM FOTO', fotoX, fotoY + fotoAltura / 2 - 4, {
+        width: fotoLargura,
+        align: 'center',
+        lineBreak: false,
+      });
+  }
+
   doc.x = doc.page.margins.left;
-  doc.y = yInicial + Math.ceil(campos.length / 2) * alturaLinha + 10;
+  doc.y = Math.max(yInicial + Math.ceil(campos.length / 2) * alturaLinha, fotoY + fotoAltura) + 10;
 }
 
 export function desenharListaDocumentos(doc: PDFKit.PDFDocument, documentos: DocumentoPDF[]): void {

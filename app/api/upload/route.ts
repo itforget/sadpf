@@ -5,6 +5,7 @@ import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
 import { enqueueOCR, extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
 import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getRequestIp } from '@/lib/server/request-ip';
 
 const categoriasOCR: DocumentoPDF['categoria'][] = [
   'Dados Pessoais',
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
       operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
       acao: 'UPLOAD',
       detalhes: `Anexou documento PDF '${titulo}' na pasta do servidor ${servidor.nome} (Mat. ${servidor.matricula})`,
-      ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'N/A',
+      ip: getRequestIp(request),
     });
 
     return NextResponse.json(doc, { status: 201 });

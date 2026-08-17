@@ -103,31 +103,31 @@ export default async function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-lg font-semibold">Últimas Inserções</CardTitle>
             <Link
-              href="/documentos"
+              href="/pesquisa"
               className={buttonVariants({
                 variant: 'ghost',
                 size: 'sm',
                 className: 'text-xs text-ssp-blue',
               })}
             >
-              Ver todos os documentos →
+              Ir para Pesquisa OCR →
             </Link>
           </CardHeader>
           <CardContent className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center space-y-2 p-8">
               <FileText size={40} className="mx-auto opacity-30" />
               <p className="text-sm font-medium">
-                Acesse a página de Documentos para visualizar o acervo completo.
+                Acesse a Pesquisa OCR para localizar documentos e trechos indexados.
               </p>
               <Link
-                href="/documentos"
+                href="/pesquisa"
                 className={buttonVariants({
                   variant: 'ghost',
                   size: 'sm',
                   className: 'text-ssp-blue',
                 })}
               >
-                Ir para Documentos →
+                Ir para Pesquisa OCR →
               </Link>
             </div>
           </CardContent>

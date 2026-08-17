@@ -63,12 +63,12 @@ export default function LogsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <ScrollText size={26} className="text-ssp-blue" /> Trilha de Auditoria e Segurança
-            (LGPD)
+            <ScrollText size={26} className="text-ssp-blue" /> Trilha de Auditoria, Impressões e
+            Segurança (LGPD)
           </h1>
           <p className="text-sm text-muted-foreground">
             Registro imutável de todas as operações de visualização, OCR, download, impressão e
-            encaminhamento do RH.
+            encaminhamento do RH, reunido em uma única página.
           </p>
         </div>
 
@@ -87,9 +87,9 @@ export default function LogsPage() {
             Garantia de Integridade e Sigilo - Lei nº 13.709/2018 (LGPD)
           </p>
           <p className="text-blue-100">
-            Todas as pesquisas, acessos a assentamentos funcionais, exportações em PDF e impressões
-            realizadas no SADPF são auditadas individualmente com carimbo de data/hora, matrícula do
-            operador e endereço IP.
+            Todas as pesquisas, acessos a assentamentos funcionais, exportações em PDF, impressões
+            e demais eventos registrados no SADPF são auditados individualmente com carimbo de
+            data/hora, matrícula do operador e endereço IP.
           </p>
         </div>
       </div>

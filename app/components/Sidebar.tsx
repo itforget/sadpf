@@ -6,11 +6,9 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   Users,
-  FileText,
   Search,
   BarChart,
   Send,
-  Printer,
   ScrollText,
   UserCog,
   Settings,
@@ -27,11 +25,9 @@ type MenuItem = {
 const MENU_ITEMS: MenuItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Servidores', href: '/servidores', icon: Users },
-  { name: 'Documentos', href: '/documentos', icon: FileText },
   { name: 'Pesquisa OCR', href: '/pesquisa', icon: Search },
   { name: 'Relatórios', href: '/relatorios', icon: BarChart },
   { name: 'Encaminhamentos', href: '/encaminhamentos', icon: Send },
-  { name: 'Impressões', href: '/impressoes', icon: Printer },
   { name: 'Logs', href: '/logs', icon: ScrollText, adminOnly: true },
   { name: 'Usuários', href: '/usuarios', icon: UserCog, adminOnly: true },
   { name: 'Configurações', href: '/configuracoes', icon: Settings, adminOnly: true },

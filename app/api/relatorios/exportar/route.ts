@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
 import { getServidores, getTodosDocumentos, addLog } from '@/lib/server/db';
 import {
@@ -9,6 +9,7 @@ import {
   desenharTabela,
   type TabelaColuna,
 } from '@/lib/server/pdf';
+import { getRequestIp } from '@/lib/server/request-ip';
 import type { DocumentoPDF, Servidor } from '@/lib/types';
 
 const CATEGORIAS: DocumentoPDF['categoria'][] = [
@@ -19,7 +20,7 @@ const CATEGORIAS: DocumentoPDF['categoria'][] = [
   'Avaliação de Desempenho',
 ];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const token = await getSessionToken();
     const session = getSessionFromToken(token);
@@ -35,6 +36,11 @@ export async function GET() {
     const cobertura =
       totalServidores > 0 ? Math.round((servidoresComPasta / totalServidores) * 100) : 0;
     const totalPaginas = documentos.reduce((soma, d) => soma + (d.paginas || 1), 0);
+    const servidoresAtivos = servidores.filter((s) => s.status === 'Ativo').length;
+    const servidoresInativos = servidores.filter((s) => s.status === 'Inativo').length;
+    const mediaDocsPorServidor = totalServidores > 0 ? totalDocumentos / totalServidores : 0;
+    const mediaPaginasPorDocumento = totalDocumentos > 0 ? totalPaginas / totalDocumentos : 0;
+    const totalServidoresSemPasta = totalServidores - servidoresComPasta;
 
     const distribuicao = CATEGORIAS.map((categoria) => ({
       categoria,
@@ -42,6 +48,7 @@ export async function GET() {
     }));
 
     const servidorPorId = new Map(servidores.map((s) => [s.id, s]));
+    const lotacaoPorNome = new Map<string, number>();
 
     const acervoPorServidor = Array.from(
       documentos.reduce((mapa, d) => {
@@ -53,6 +60,9 @@ export async function GET() {
         atual.documentos += 1;
         atual.paginas += d.paginas || 1;
         mapa.set(d.servidorId, atual);
+        const servidor = servidorPorId.get(d.servidorId);
+        const lotacao = servidor?.lotacao?.trim() || 'Lotação não informada';
+        lotacaoPorNome.set(lotacao, (lotacaoPorNome.get(lotacao) ?? 0) + 1);
         return mapa;
       }, new Map<string, { servidorId: string; documentos: number; paginas: number }>())
     )
@@ -64,6 +74,11 @@ export async function GET() {
       .filter((item) => item.servidor)
       .sort((a, b) => b.qtd - a.qtd)
       .slice(0, 15);
+
+    const acervoPorLotacao = Array.from(lotacaoPorNome.entries())
+      .map(([lotacao, quantidade]) => ({ lotacao, quantidade }))
+      .sort((a, b) => b.quantidade - a.quantidade)
+      .slice(0, 5);
 
     const data = new Date();
     const dataFmt = data.toLocaleDateString('pt-BR');
@@ -96,10 +111,35 @@ export async function GET() {
 
     desenharBlocoEstatistica(
       doc,
-      'Conformidade LGPD',
-      '100% Auditado',
-      "Todas as impressões e acessos registrados com marca d'água"
+      'Média por Servidor',
+      mediaDocsPorServidor.toLocaleString('pt-BR', { maximumFractionDigits: 1 }),
+      'Média de documentos por servidor cadastrado'
     );
+
+    doc.moveDown(0.6);
+
+    desenharBlocoEstatistica(
+      doc,
+      'Páginas Indexadas',
+      totalPaginas.toLocaleString('pt-BR'),
+      `Média de ${mediaPaginasPorDocumento.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} páginas por documento`
+    );
+
+    desenharBlocoEstatistica(
+      doc,
+      'Pastas sem Acervo',
+      totalServidoresSemPasta.toLocaleString('pt-BR'),
+      'Servidores ainda sem documentos anexados'
+    );
+
+    desenharBlocoEstatistica(
+      doc,
+      'Servidores Ativos',
+      servidoresAtivos.toLocaleString('pt-BR'),
+      `${servidoresInativos.toLocaleString('pt-BR')} servidores inativos no cadastro`
+    );
+
+    doc.moveDown(0.6);
 
     doc.moveDown(1);
 
@@ -125,13 +165,13 @@ export async function GET() {
 
       desenharTabela(doc, colunasCategoria, linhasCategoria);
     } else {
-      doc
-        .fillColor('#6b7280')
-        .font('Helvetica')
-        .fontSize(9)
-        .text(
-          'Nenhum documento cadastrado ainda. Anexe documentos às pastas funcionais para gerar a distribuição por categoria.'
-        );
+        doc
+          .fillColor('#6b7280')
+          .font('Helvetica')
+          .fontSize(9)
+          .text(
+            'Nenhum documento cadastrado ainda. Anexe documentos às pastas funcionais para gerar a distribuição por categoria.'
+          );
     }
 
     if (acervoPorServidor.length > 0) {
@@ -160,6 +200,30 @@ export async function GET() {
       desenharTabela(doc, colunasAcervo, linhasAcervo);
     }
 
+    if (acervoPorLotacao.length > 0) {
+      doc.moveDown(1.6);
+      doc
+        .fillColor('#0a4d8c')
+        .font('Helvetica-Bold')
+        .fontSize(12)
+        .text('Documentos por Lotação');
+      doc.moveDown(0.6);
+
+      const colunasLotacao: TabelaColuna[] = [
+        { rotulo: 'LOTAÇÃO', largura: 290 },
+        { rotulo: 'DOCUMENTOS', largura: 90, alinhamento: 'centro' },
+        { rotulo: 'PARTICIPAÇÃO', largura: 100, alinhamento: 'direita' },
+      ];
+
+      const linhasLotacao = acervoPorLotacao.map((item) => [
+        item.lotacao,
+        item.quantidade.toLocaleString('pt-BR'),
+        `${totalDocumentos > 0 ? Math.round((item.quantidade / totalDocumentos) * 100) : 0}%`,
+      ]);
+
+      desenharTabela(doc, colunasLotacao, linhasLotacao);
+    }
+
     finalizarDocumento(doc);
 
     const chunks: Buffer[] = [];
@@ -175,7 +239,7 @@ export async function GET() {
       operadorMatricula: String(session.matricula),
       acao: 'EXPORTACAO',
       detalhes: `Exportou o relatório sintético de gestão de pessoas em PDF (${dataFmt})`,
-      ip: '',
+      ip: getRequestIp(request),
     }).catch((err) => console.error('[relatorios/exportar] erro ao registrar log:', err));
 
     return new NextResponse(buffer, {

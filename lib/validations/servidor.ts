@@ -10,6 +10,7 @@ export const servidorSchema = z.object({
   cargoEfetivo: z.string().min(1, 'Cargo efetivo é obrigatório'),
   cargoOcupado: z.string().optional(),
   lotacao: z.string().min(1, 'Lotação é obrigatória'),
+  dataIngresso: z.string().min(1, 'Data de ingresso é obrigatória').optional(),
   status: z.enum(['Ativo', 'Inativo'], {
     message: 'Status é obrigatório',
   }),
@@ -26,4 +27,11 @@ export type ServidorFormData = z.infer<typeof servidorSchema>;
 export const servidorUpdateSchema = servidorSchema.partial().extend({
   cargoEfetivo: z.string().optional(),
   lotacao: z.string().optional(),
+  fotoUrl: z
+    .string()
+    .refine(
+      (value) => value === '' || /^data:image\/(png|jpeg|jpg);base64,/.test(value),
+      'Imagem inválida'
+    )
+    .optional(),
 });

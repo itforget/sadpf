@@ -47,6 +47,9 @@ model Servidor {
   nome            String
   cpf             String         @unique
   fotoUrl         String?
+  fotoStorageBackend StorageBackend?
+  fotoStorageKey  String?
+  fotoMimeType    String?
   cargoEfetivo    String
   cargoOcupado    String
   lotacao         String
@@ -95,13 +98,14 @@ model DocumentoPDF {
   storageKey     String?
   textoOCR       String             @db.Text
   operadorRH     String
+  ordem          Int                @default(0)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
   servidor        Servidor         @relation(fields: [servidorId], references: [id], onDelete: Cascade)
   encaminhamentos Encaminhamento[]
 
-  @@index([servidorId])
+  @@index([servidorId, ordem])
   @@map("documentos_pdf")
 }
 

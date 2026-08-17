@@ -14,6 +14,9 @@ const SERVIDOR_SELECT = {
   nome: true,
   cpf: true,
   fotoUrl: true,
+  fotoStorageBackend: true,
+  fotoStorageKey: true,
+  fotoMimeType: true,
   cargoEfetivo: true,
   cargoOcupado: true,
   lotacao: true,
@@ -74,7 +77,7 @@ export async function getServidores(filter?: {
 
   return list.map((s) => ({
     ...s,
-    fotoUrl: s.fotoUrl ?? '',
+    fotoUrl: s.fotoStorageKey ? `/api/servidores/${s.id}/foto` : s.fotoUrl ?? '',
     status: s.status as Servidor['status'],
     role: s.role as Servidor['role'],
   }));
@@ -92,7 +95,7 @@ export async function getServidorById(id: string): Promise<Servidor | null> {
 
   return {
     ...s,
-    fotoUrl: s.fotoUrl ?? '',
+    fotoUrl: s.fotoStorageKey ? `/api/servidores/${s.id}/foto` : s.fotoUrl ?? '',
     status: s.status as Servidor['status'],
     role: s.role as Servidor['role'],
   };
@@ -140,14 +143,18 @@ export async function updateServidor(
   const updated = await prisma.servidor.update({
     where: { id },
     data: {
+      ...(data.matricula !== undefined && { matricula: data.matricula }),
+      ...(data.cpf !== undefined && { cpf: data.cpf }),
       ...(data.nome !== undefined && { nome: data.nome }),
       ...(data.email !== undefined && { email: data.email }),
       ...(data.telefone !== undefined && { telefone: data.telefone }),
+      ...(data.fotoUrl !== undefined && { fotoUrl: data.fotoUrl || null }),
       ...(data.cargoEfetivo !== undefined && { cargoEfetivo: data.cargoEfetivo }),
       ...(data.cargoOcupado !== undefined && { cargoOcupado: data.cargoOcupado }),
       ...(data.lotacao !== undefined && { lotacao: data.lotacao }),
       ...(data.status !== undefined && { status: data.status }),
       ...(data.role !== undefined && { role: data.role }),
+      ...(data.dataIngresso !== undefined && { dataIngresso: data.dataIngresso }),
       ...(data.senhaHash !== undefined && { senhaHash: data.senhaHash }),
     },
     select: SERVIDOR_SELECT,
@@ -159,6 +166,35 @@ export async function updateServidor(
     status: updated.status as Servidor['status'],
     role: updated.role as Servidor['role'],
   };
+}
+
+export async function getFotoServidorById(id: string): Promise<{
+  fotoUrl: string | null;
+  fotoStorageBackend: StorageBackend | null;
+  fotoStorageKey: string | null;
+  fotoMimeType: string | null;
+} | null> {
+  return prisma.servidor.findUnique({
+    where: { id },
+    select: {
+      fotoUrl: true,
+      fotoStorageBackend: true,
+      fotoStorageKey: true,
+      fotoMimeType: true,
+    },
+  });
+}
+
+export async function updateFotoServidor(
+  id: string,
+  data: {
+    fotoUrl?: string | null;
+    fotoStorageBackend?: StorageBackend | null;
+    fotoStorageKey?: string | null;
+    fotoMimeType?: string | null;
+  }
+): Promise<void> {
+  await prisma.servidor.update({ where: { id }, data });
 }
 
 const CATEGORIA_ENUM: Record<DocumentoPDF['categoria'], CategoriaDocumento> = {
@@ -198,10 +234,34 @@ function mapDocumento(
 export async function getDocumentosByServidor(servidorId: string): Promise<DocumentoPDF[]> {
   const docs = await prisma.documentoPDF.findMany({
     where: { servidorId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ ordem: 'asc' }, { createdAt: 'desc' }],
   });
 
   return docs.map(mapDocumento);
+}
+
+export async function reordenarDocumentosDoServidor(
+  servidorId: string,
+  documentoIds: string[]
+): Promise<boolean> {
+  const documentos = await prisma.documentoPDF.findMany({
+    where: { servidorId },
+    select: { id: true },
+  });
+
+  if (
+    documentos.length !== documentoIds.length ||
+    new Set(documentoIds).size !== documentoIds.length ||
+    documentos.some((documento) => !documentoIds.includes(documento.id))
+  ) {
+    return false;
+  }
+
+  await prisma.$transaction(
+    documentoIds.map((id, ordem) => prisma.documentoPDF.update({ where: { id }, data: { ordem } }))
+  );
+
+  return true;
 }
 
 export async function getDocumentoById(id: string): Promise<DocumentoPDF | null> {
@@ -221,6 +281,36 @@ export async function getDocumentoArquivoById(id: string): Promise<{
     where: { id },
     select: { titulo: true, arquivoUrl: true, storageBackend: true, storageKey: true },
   });
+}
+
+export async function updateDocumento(
+  id: string,
+  data: Pick<DocumentoPDF, 'titulo' | 'categoria'> & { processoSEI?: string }
+): Promise<DocumentoPDF | null> {
+  const documento = await prisma.documentoPDF.update({
+    where: { id },
+    data: {
+      titulo: data.titulo,
+      categoria: mapCategoriaToEnum(data.categoria),
+      processoSEI: data.processoSEI || null,
+    },
+  });
+
+  return mapDocumento(documento);
+}
+
+export async function deleteDocumento(id: string): Promise<{
+  titulo: string;
+  arquivoUrl: string;
+  storageBackend: StorageBackend | null;
+  storageKey: string | null;
+} | null> {
+  const documento = await prisma.documentoPDF.delete({
+    where: { id },
+    select: { titulo: true, arquivoUrl: true, storageBackend: true, storageKey: true },
+  });
+
+  return documento;
 }
 
 function mapCategoriaToEnum(categoria: DocumentoPDF['categoria']): CategoriaDocumento {
