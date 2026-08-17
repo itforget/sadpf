@@ -7,7 +7,7 @@ const scriptSrc = `script-src 'self' 'unsafe-inline'${
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse', 'pdfkit'],
   experimental: {
-    proxyClientMaxBodySize: '55mb',
+    proxyClientMaxBodySize: '100mb',
   },
   images: {
     remotePatterns: [

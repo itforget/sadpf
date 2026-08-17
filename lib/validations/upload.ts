@@ -7,8 +7,8 @@ export const uploadSchema = z.object({
     .refine((file) => file.type === 'application/pdf', {
       message: 'Apenas arquivos PDF são permitidos',
     })
-    .refine((file) => file.size <= 10 * 1024 * 1024, {
-      message: 'Arquivo deve ter no máximo 10MB',
+    .refine((file) => file.size <= 100 * 1024 * 1024, {
+      message: 'Arquivo deve ter no máximo 100MB',
     }),
 });
 

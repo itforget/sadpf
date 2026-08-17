@@ -278,7 +278,7 @@ function NovoDocumentoForm() {
                       Clique ou arraste um arquivo PDF para anexar
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Tamanho máximo: 50MB. O OCR será processado automaticamente.
+                      Tamanho máximo: 100MB. O OCR será processado automaticamente.
                     </p>
                   </div>
                 )}
