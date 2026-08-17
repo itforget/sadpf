@@ -1,15 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  AlertTriangle,
-  BarChart,
-  FileBarChart,
-  FileText,
-  Plus,
-  UploadCloud,
-  Users,
-} from 'lucide-react';
+import { AlertTriangle, BarChart, FileBarChart, FileText, UploadCloud, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,12 +64,6 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <Link href="/relatorios" className={buttonVariants({ variant: 'outline' })}>
             <FileBarChart size={16} className="mr-2" /> Relatório Sintético
-          </Link>
-          <Link
-            href="/documentos/novo"
-            className={buttonVariants({ className: 'bg-ssp-blue hover:bg-ssp-blueDark' })}
-          >
-            <Plus size={16} className="mr-2" /> Lote de Upload
           </Link>
         </div>
       </div>

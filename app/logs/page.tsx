@@ -3,15 +3,17 @@
 import { useState } from 'react';
 import { ScrollText, Search, RefreshCw, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import type { LogAuditoria } from '@/lib/types';
-
 import { fetchLogs } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 
 export default function LogsPage() {
   const [filterAction, setFilterAction] = useState('TODAS');
   const [search, setSearch] = useState('');
-  const { data: logs = [], isLoading, refetch } = useQuery({
+  const {
+    data: logs = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.logs,
     queryFn: fetchLogs,
   });
@@ -72,8 +74,8 @@ export default function LogsPage() {
             Garantia de Integridade e Sigilo - Lei nº 13.709/2018 (LGPD)
           </p>
           <p className="text-blue-100">
-            Todas as pesquisas, acessos a assentamentos funcionais, exportações em PDF, impressões
-            e demais eventos registrados no SADPF são auditados individualmente com carimbo de
+            Todas as pesquisas, acessos a assentamentos funcionais, exportações em PDF, impressões e
+            demais eventos registrados no SADPF são auditados individualmente com carimbo de
             data/hora, matrícula do operador e endereço IP.
           </p>
         </div>

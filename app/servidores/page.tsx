@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Users, User, Search, Plus, Filter, ChevronRight, UserPlus } from 'lucide-react';
-import type { Servidor } from '@/lib/types';
 import Image from 'next/image';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -253,21 +252,21 @@ export default function ServidoresListPage() {
           />
         </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <Filter size={16} className="text-muted-foreground shrink-0" />
-              <span className="text-xs font-semibold text-muted-foreground">Status:</span>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Filter size={16} className="text-muted-foreground shrink-0" />
+          <span className="text-xs font-semibold text-muted-foreground">Status:</span>
           {(['Todos', 'Ativo', 'Inativo'] as const).map((st) => (
-              <Button
-                key={st}
-                variant={statusFilter === st ? 'default' : 'outline'}
-                size="sm"
+            <Button
+              key={st}
+              variant={statusFilter === st ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setStatusFilter(st)}
-                className={statusFilter === st ? 'bg-ssp-blue hover:bg-ssp-blueDark' : ''}
-              >
-                {st}
-              </Button>
+              className={statusFilter === st ? 'bg-ssp-blue hover:bg-ssp-blueDark' : ''}
+            >
+              {st}
+            </Button>
           ))}
-            </div>
+        </div>
       </div>
 
       <div className="bg-card rounded-2xl border border-border shadow-corporate overflow-hidden">

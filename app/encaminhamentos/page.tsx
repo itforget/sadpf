@@ -16,16 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchEncaminhamentos } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 
-interface Encaminhamento {
-  id: string;
-  dataHora: string;
-  destinatario: string;
-  servidor: string;
-  validade: string;
-  status: string;
-  justificativa: string;
-}
-
 export default function EncaminhamentosPage() {
   const { data: encaminhamentos = [], isLoading } = useQuery({
     queryKey: queryKeys.encaminhamentos,

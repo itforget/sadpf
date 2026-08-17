@@ -3,7 +3,7 @@ import { join } from 'path';
 
 import { prisma } from './prisma';
 import { getServidores, getTodosDocumentos } from './db';
-import type { DocumentoPDF, Servidor } from '@/lib/types';
+import type { DocumentoPDF } from '@/lib/types';
 import type {
   DashboardSummary,
   ConfiguracoesSummary,
@@ -56,7 +56,8 @@ export async function getRelatoriosSummary(): Promise<RelatoriosSummary> {
   const servidoresComPasta = new Set(documentos.map((d) => d.servidorId)).size;
   const totalDocumentos = documentos.length;
   const totalPaginas = documentos.reduce((soma, d) => soma + (d.paginas || 1), 0);
-  const cobertura = totalServidores > 0 ? Math.round((servidoresComPasta / totalServidores) * 100) : 0;
+  const cobertura =
+    totalServidores > 0 ? Math.round((servidoresComPasta / totalServidores) * 100) : 0;
   const servidoresAtivos = servidores.filter((s) => s.status === 'Ativo').length;
   const servidoresInativos = servidores.filter((s) => s.status === 'Inativo').length;
   const mediaDocsPorServidor = totalServidores > 0 ? totalDocumentos / totalServidores : 0;

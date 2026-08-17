@@ -21,15 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { documentoSchema, type DocumentoFormData } from '@/lib/validations/documento';
-import { fetchJson, fetchServidoresAtivos } from '@/lib/client/api';
+import { fetchJson, fetchServidorProfile, fetchServidoresAtivos } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
-
-interface ServidorOption {
-  id: string;
-  matricula: string;
-  nome: string;
-  cargoEfetivo: string;
-}
 
 function NovoDocumentoForm() {
   const router = useRouter();
@@ -65,11 +58,30 @@ function NovoDocumentoForm() {
     queryFn: fetchServidoresAtivos,
   });
 
+  const { data: servidorDaPasta } = useQuery({
+    queryKey: queryKeys.servidor(defaultServidorId),
+    queryFn: () => fetchServidorProfile(defaultServidorId),
+    enabled: Boolean(defaultServidorId),
+  });
+
+  const servidorSelecionado =
+    servidorDaPasta?.servidor ?? servidores.find((servidor) => servidor.id === defaultServidorId);
+  const servidoresDisponiveis = defaultServidorId
+    ? servidorSelecionado
+      ? [servidorSelecionado]
+      : []
+    : servidores;
+
   useEffect(() => {
+    if (defaultServidorId) {
+      setValue('servidorId', defaultServidorId);
+      return;
+    }
+
     if (!servidorId && servidores.length > 0) {
       setValue('servidorId', servidores[0].id);
     }
-  }, [servidorId, servidores, setValue]);
+  }, [defaultServidorId, servidorId, servidores, setValue]);
 
   const uploadMutation = useMutation({
     mutationFn: async (data: DocumentoFormData) => {
@@ -159,23 +171,34 @@ function NovoDocumentoForm() {
               <Label htmlFor="servidorId">
                 Servidor / Pasta Funcional Destino <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={servidorId}
-                onValueChange={(value) => {
-                  if (value) setValue('servidorId', value);
-                }}
-              >
-                <SelectTrigger className={errors.servidorId ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Selecione um servidor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {servidores.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.nome} (Matrícula: {s.matricula}) - {s.cargoEfetivo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {defaultServidorId ? (
+                <>
+                  <input type="hidden" {...register('servidorId')} />
+                  <div className="flex min-h-8 items-center rounded-lg border border-input bg-muted/40 px-3 py-2 text-sm text-foreground">
+                    {servidorSelecionado
+                      ? `${servidorSelecionado.nome} (Matrícula: ${servidorSelecionado.matricula}) - ${servidorSelecionado.cargoEfetivo}`
+                      : 'Carregando servidor...'}
+                  </div>
+                </>
+              ) : (
+                <Select
+                  value={servidorId}
+                  onValueChange={(value) => {
+                    if (value) setValue('servidorId', value);
+                  }}
+                >
+                  <SelectTrigger className={errors.servidorId ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Selecione um servidor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {servidoresDisponiveis.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.nome} (Matrícula: {s.matricula}) - {s.cargoEfetivo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {errors.servidorId && (
                 <p className="text-sm text-destructive">{errors.servidorId.message}</p>
               )}

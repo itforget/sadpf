@@ -10,7 +10,6 @@ import { useQuery } from '@tanstack/react-query';
 import PDFViewer from '@/app/components/PDFViewer';
 import PrintModal from '@/app/components/PrintModal';
 import EncaminharModal from '@/app/components/EncaminharModal';
-import type { DocumentoPDF, Servidor } from '@/lib/types';
 import { fetchDocumentoById, fetchServidores, fetchSession } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 
