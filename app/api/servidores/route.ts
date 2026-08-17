@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { StatusServidor } from '@/prisma/generated';
 import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
-import { getServidores, addServidor, updateServidor, getServidorById } from '@/lib/server/db';
+import {
+  getServidores,
+  addServidor,
+  updateServidor,
+  deleteServidor,
+  getServidorById,
+} from '@/lib/server/db';
 import { servidorSchema, servidorUpdateSchema } from '@/lib/validations/servidor';
 
 export async function GET(request: Request) {
@@ -165,5 +171,32 @@ export async function PUT(request: Request) {
   } catch (error: unknown) {
     console.error('[PUT /api/servidores]', error);
     return NextResponse.json({ error: 'Erro ao atualizar servidor.' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const token = await getSessionToken();
+    const session = getSessionFromToken(token);
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Somente administradores podem excluir usuários.' },
+        { status: 403 }
+      );
+    }
+
+    const id = new URL(request.url).searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'ID do usuário é obrigatório.' }, { status: 400 });
+    }
+
+    const deleted = await deleteServidor(id);
+    return NextResponse.json(deleted);
+  } catch (error: unknown) {
+    console.error('[DELETE /api/servidores]', error);
+    return NextResponse.json({ error: 'Erro ao excluir usuário.' }, { status: 500 });
   }
 }

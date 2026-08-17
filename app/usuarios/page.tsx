@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { UserCog, Plus, Search, Pencil, Power, Users, KeyRound } from 'lucide-react';
+import { UserCog, Search, Pencil, Power, Trash2, Users, KeyRound } from 'lucide-react';
 import type { Servidor } from '@/lib/types';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,8 +37,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { usuarioSchema, type UsuarioFormData } from '@/lib/validations/usuario';
-import Image from 'next/image';
 import { fetchJson, fetchServidores } from '@/lib/client/api';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 
@@ -76,7 +74,6 @@ const ROLE_FILTERS = ['Todos', 'ADMIN', 'OPERADOR', 'PASTA'] as const;
 export default function UsuariosPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('Todos');
-  const [showCreate, setShowCreate] = useState(false);
   const [editingUser, setEditingUser] = useState<Servidor | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(
@@ -84,24 +81,10 @@ export default function UsuariosPage() {
   );
   const queryClient = useQueryClient();
 
-  const createForm = useForm<UsuarioFormData>({
-    resolver: zodResolver(usuarioSchema),
-    defaultValues: {
-      nome: '',
-      matricula: '',
-      cpf: '',
-      email: '',
-      status: 'Ativo',
-      role: 'OPERADOR',
-    },
-  });
-
   const editForm = useForm<UsuarioEditData>({
     resolver: zodResolver(usuarioEditSchema),
   });
 
-  const createStatus = useWatch({ control: createForm.control, name: 'status' });
-  const createRole = useWatch({ control: createForm.control, name: 'role' });
   const editStatus = useWatch({ control: editForm.control, name: 'status' });
   const editRole = useWatch({ control: editForm.control, name: 'role' });
 
@@ -122,21 +105,6 @@ export default function UsuariosPage() {
     await refetch();
   };
 
-  const createMutation = useMutation({
-    mutationFn: async (data: UsuarioFormData) => {
-      await fetchJson('/api/servidores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          cargoEfetivo: 'Sem cargo registrado',
-          cargoOcupado: 'Sem cargo comissionado',
-          lotacao: 'Não informada',
-        }),
-      });
-    },
-  });
-
   const editMutation = useMutation({
     mutationFn: async (data: UsuarioEditData) => {
       if (!editingUser) throw new Error('Usuário não encontrado.');
@@ -149,12 +117,24 @@ export default function UsuariosPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ user, nextStatus }: { user: Servidor; nextStatus: Servidor['status'] }) => {
+    mutationFn: async ({
+      user,
+      nextStatus,
+    }: {
+      user: Servidor;
+      nextStatus: Servidor['status'];
+    }) => {
       await fetchJson(`/api/servidores?id=${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),
       });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (user: Servidor) => {
+      await fetchJson(`/api/servidores?id=${user.id}`, { method: 'DELETE' });
     },
   });
 
@@ -183,25 +163,6 @@ export default function UsuariosPage() {
   const showFeedback = (kind: 'success' | 'error', message: string) => {
     setFeedback({ kind, message });
     window.setTimeout(() => setFeedback(null), 5000);
-  };
-
-  const onSubmitCreate = async (data: UsuarioFormData) => {
-    try {
-      await createMutation.mutateAsync(data);
-      showFeedback('success', `Usuário ${data.nome} criado com sucesso.`);
-      setShowCreate(false);
-      createForm.reset();
-      await invalidateUsuarios();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro inesperado ao criar usuário.';
-      showFeedback('error', message);
-    }
-  };
-
-  const handleCloseCreate = () => {
-    setShowCreate(false);
-    createForm.reset();
-    setFeedback(null);
   };
 
   const openEdit = (user: Servidor) => {
@@ -258,6 +219,22 @@ export default function UsuariosPage() {
     }
   };
 
+  const deleteUser = async (user: Servidor) => {
+    if (!window.confirm(`Excluir permanentemente o usuário ${user.nome}?`)) return;
+
+    setBusyId(user.id);
+    try {
+      await deleteMutation.mutateAsync(user);
+      showFeedback('success', `Usuário ${user.nome} excluído com sucesso.`);
+      await invalidateUsuarios();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado ao excluir usuário.';
+      showFeedback('error', message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
@@ -269,10 +246,6 @@ export default function UsuariosPage() {
             Controle total de contas, perfis de acesso e status dos usuários do SADPF.
           </p>
         </div>
-
-        <Button onClick={() => setShowCreate(true)} className="bg-ssp-blue hover:bg-ssp-blueDark">
-          <Plus size={16} className="mr-2" /> Novo Usuário
-        </Button>
       </div>
 
       {feedback && (
@@ -445,6 +418,17 @@ export default function UsuariosPage() {
                         >
                           <Power size={16} />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busyId === user.id}
+                          onClick={() => deleteUser(user)}
+                          title="Excluir usuário"
+                          aria-label={`Excluir ${user.nome}`}
+                          className="text-status-danger hover:text-status-danger"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -463,140 +447,6 @@ export default function UsuariosPage() {
           </Table>
         </CardContent>
       </Card>
-
-      <Dialog open={showCreate} onOpenChange={handleCloseCreate}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <Image
-                src="/logo-sspdf.png"
-                alt="Logo SSP-DF"
-                width={120}
-                height={120}
-                className="mb-6 h-auto w-auto"
-              />
-              <div>
-                <DialogTitle>Criar novo usuário</DialogTitle>
-                <DialogDescription>
-                  Defina o perfil de acesso. O usuário receberá um link para criar a senha no
-                  primeiro acesso.
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <form onSubmit={createForm.handleSubmit(onSubmitCreate)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome completo</Label>
-                <Input
-                  id="nome"
-                  {...createForm.register('nome')}
-                  className={createForm.formState.errors.nome ? 'border-destructive' : ''}
-                />
-                {createForm.formState.errors.nome && (
-                  <p className="text-sm text-destructive">
-                    {createForm.formState.errors.nome.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="matricula">Matrícula</Label>
-                <Input
-                  id="matricula"
-                  {...createForm.register('matricula')}
-                  className={`font-mono ${
-                    createForm.formState.errors.matricula ? 'border-destructive' : ''
-                  }`}
-                />
-                {createForm.formState.errors.matricula && (
-                  <p className="text-sm text-destructive">
-                    {createForm.formState.errors.matricula.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cpf">CPF</Label>
-                <Input
-                  id="cpf"
-                  {...createForm.register('cpf')}
-                  className={`font-mono ${
-                    createForm.formState.errors.cpf ? 'border-destructive' : ''
-                  }`}
-                />
-                {createForm.formState.errors.cpf && (
-                  <p className="text-sm text-destructive">
-                    {createForm.formState.errors.cpf.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...createForm.register('email')}
-                  className={createForm.formState.errors.email ? 'border-destructive' : ''}
-                />
-                {createForm.formState.errors.email && (
-                  <p className="text-sm text-destructive">
-                    {createForm.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Perfil de acesso</Label>
-                <Select
-                  value={createRole}
-                  onValueChange={(value) => {
-                    if (value) createForm.setValue('role', value as Servidor['role']);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o perfil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ADMIN">Administrador</SelectItem>
-                    <SelectItem value="OPERADOR">Operador</SelectItem>
-                    <SelectItem value="PASTA">Pasta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={createStatus}
-                  onValueChange={(value) => {
-                    if (value) createForm.setValue('status', value as 'Ativo' | 'Inativo');
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Inativo">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseCreate}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-ssp-blue hover:bg-ssp-blueDark">
-                Criar Usuário
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={Boolean(editingUser)} onOpenChange={handleCloseEdit}>
         <DialogContent className="max-w-2xl">

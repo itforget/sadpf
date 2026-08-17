@@ -168,6 +168,20 @@ export async function updateServidor(
   };
 }
 
+export async function deleteServidor(id: string): Promise<Servidor | null> {
+  const deleted = await prisma.servidor.delete({
+    where: { id },
+    select: SERVIDOR_SELECT,
+  });
+
+  return {
+    ...deleted,
+    fotoUrl: deleted.fotoUrl ?? '',
+    status: deleted.status as Servidor['status'],
+    role: deleted.role as Servidor['role'],
+  };
+}
+
 export async function getFotoServidorById(id: string): Promise<{
   fotoUrl: string | null;
   fotoStorageBackend: StorageBackend | null;
