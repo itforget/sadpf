@@ -52,6 +52,7 @@ export default function ServidoresListPage() {
       cargoEfetivo: '',
       cargoOcupado: '',
       lotacao: '',
+      email: '',
       status: 'Ativo',
       role: 'PASTA',
       senha: '',
@@ -155,6 +156,18 @@ export default function ServidoresListPage() {
                   className={`font-mono ${errors.cpf ? 'border-destructive' : ''}`}
                 />
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail institucional</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...register('email')}
+                  placeholder="nome@ssp.df.gov.br"
+                  className={errors.email ? 'border-destructive' : ''}
+                />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
 
               <div className="space-y-2">
