@@ -5,6 +5,7 @@ import { Send, ShieldAlert, CheckCircle2, Copy, Link as LinkIcon } from 'lucide-
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Servidor, DocumentoPDF } from '@/lib/types';
+import { useMutation } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ import {
   encaminhamentoSchema,
   type EncaminhamentoFormData,
 } from '@/lib/validations/encaminhamento';
+import { fetchJson } from '@/lib/client/api';
 
 interface EncaminharModalProps {
   servidor: Servidor;
@@ -62,12 +64,9 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
   const validadeDias = useWatch({ control, name: 'validadeDias' });
   const requerSenha = useWatch({ control, name: 'requerSenha' });
   const destinatario = useWatch({ control, name: 'destinatario' });
-
-  const onSubmit = async (data: EncaminhamentoFormData) => {
-    setEnviando(true);
-
-    try {
-      const response = await fetch('/api/encaminhamentos', {
+  const encaminharMutation = useMutation({
+    mutationFn: async (data: EncaminhamentoFormData) => {
+      return fetchJson<{ token: string }>('/api/encaminhamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,11 +75,14 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
           documentoId: documento?.id,
         }),
       });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(result?.error || 'Não foi possível criar o encaminhamento.');
-      }
+    },
+  });
 
+  const onSubmit = async (data: EncaminhamentoFormData) => {
+    setEnviando(true);
+
+    try {
+      const result = await encaminharMutation.mutateAsync(data);
       setEnviando(false);
       setLinkGerado(`${window.location.origin}/compartilhado/${result.token}`);
     } catch (err) {

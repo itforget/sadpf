@@ -4,6 +4,7 @@ import './globals.css';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import { cn } from '@/lib/utils';
+import Providers from './providers';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -24,13 +25,15 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans flex h-screen overflow-hidden bg-background text-foreground print:block print:h-auto print:overflow-visible`}
       >
-        <Sidebar />
+        <Providers>
+          <Sidebar />
 
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden print:hidden">
-          <Topbar />
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden print:hidden">
+            <Topbar />
 
-          <main className="flex-1 overflow-y-auto p-6 scroll-smooth">{children}</main>
-        </div>
+            <main className="flex-1 overflow-y-auto p-6 scroll-smooth">{children}</main>
+          </div>
+        </Providers>
       </body>
     </html>
   );

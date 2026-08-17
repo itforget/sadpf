@@ -1,50 +1,52 @@
-import {
-  Users,
-  FileText,
-  UploadCloud,
-  AlertTriangle,
-  Plus,
-  FileBarChart,
-  BarChart,
-} from 'lucide-react';
+'use client';
+
 import Link from 'next/link';
-import { getServidores, getTodosDocumentos } from '@/lib/server/db';
+import {
+  AlertTriangle,
+  BarChart,
+  FileBarChart,
+  FileText,
+  Plus,
+  UploadCloud,
+  Users,
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
-import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
+import { fetchDashboardSummary } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
-export default async function DashboardPage() {
-  let totalServidores = 0;
-  let servidoresAtivos = 0;
-  let totalDocumentos = 0;
+const emptyDashboard = {
+  servidoresAtivos: 0,
+  totalDocumentos: 0,
+  totalServidores: 0,
+};
 
-  try {
-    const [servidores, documentos] = await Promise.all([getServidores(), getTodosDocumentos()]);
-    totalServidores = servidores.length;
-    servidoresAtivos = servidores.filter((s) => s.status === 'Ativo').length;
-    totalDocumentos = documentos.length;
-  } catch (e) {
-    console.error('[DashboardPage] erro ao buscar dados:', e);
-  }
+export default function DashboardPage() {
+  const { data = emptyDashboard } = useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: fetchDashboardSummary,
+  });
 
   const kpis = [
     {
       title: 'Servidores Ativos',
-      value: servidoresAtivos.toLocaleString('pt-BR'),
+      value: data.servidoresAtivos.toLocaleString('pt-BR'),
       icon: Users,
       color: 'text-status-success',
       bg: 'bg-status-success/10',
     },
     {
       title: 'Total de Documentos',
-      value: totalDocumentos.toLocaleString('pt-BR'),
+      value: data.totalDocumentos.toLocaleString('pt-BR'),
       icon: FileText,
       color: 'text-ssp-blue',
       bg: 'bg-ssp-blue/10',
     },
     {
       title: 'Total de Servidores',
-      value: totalServidores.toLocaleString('pt-BR'),
+      value: data.totalServidores.toLocaleString('pt-BR'),
       icon: UploadCloud,
       color: 'text-indigo-600',
       bg: 'bg-indigo-100',

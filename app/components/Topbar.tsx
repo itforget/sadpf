@@ -1,8 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Search, Bell, LogOut } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useMutation, useQuery } from '@tanstack/react-query';
+
+import { fetchJson, fetchSession } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -10,35 +14,23 @@ const ROLE_LABELS: Record<string, string> = {
   PASTA: 'Pasta',
 };
 
-interface SessionUser {
-  nome: string;
-  matricula: string;
-  email: string;
-  role: string;
-}
-
 export default function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [session, setSession] = useState<SessionUser | null>(null);
-
-  useEffect(() => {
-    if (pathname === '/login' || pathname === '/redefinir-senha' || pathname === '/privacidade') {
-      return;
-    }
-    let cancelled = false;
-    fetch('/api/auth/session')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled && data?.user) setSession(data.user);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
+  const { data } = useQuery({
+    queryKey: queryKeys.session,
+    queryFn: fetchSession,
+    enabled: pathname !== '/login' && pathname !== '/redefinir-senha' && pathname !== '/privacidade',
+  });
 
   const [quickQuery, setQuickQuery] = useState('');
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await fetchJson('/api/auth/session', {
+        method: 'DELETE',
+      });
+    },
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +43,7 @@ export default function Topbar() {
     return null;
   }
 
+  const session = data?.user ?? null;
   const displayName = session?.nome || 'Usuário';
   const displayRole = session ? ROLE_LABELS[session.role] ?? session.role : 'Operador do RH';
   const initials =
@@ -64,9 +57,7 @@ export default function Topbar() {
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
     try {
-      await fetch('/api/auth/session', {
-        method: 'DELETE',
-      });
+      await logoutMutation.mutateAsync();
     } catch (err) {
       console.error('[Topbar] erro ao encerrar sessão:', err);
     }

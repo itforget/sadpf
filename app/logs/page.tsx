@@ -1,35 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ScrollText, Search, RefreshCw, Lock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import type { LogAuditoria } from '@/lib/types';
 
+import { fetchLogs } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
+
 export default function LogsPage() {
-  const [logs, setLogs] = useState<LogAuditoria[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filterAction, setFilterAction] = useState('TODAS');
   const [search, setSearch] = useState('');
-
-  const fetchLogs = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/logs');
-      const data = await res.json();
-      setLogs(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const loadLogs = async () => {
-      await fetchLogs();
-    };
-
-    void loadLogs();
-  }, []);
+  const { data: logs = [], isLoading, refetch } = useQuery({
+    queryKey: queryKeys.logs,
+    queryFn: fetchLogs,
+  });
 
   const filteredLogs = logs.filter((log) => {
     const matchAction = filterAction === 'TODAS' || log.acao === filterAction;
@@ -73,7 +58,7 @@ export default function LogsPage() {
         </div>
 
         <button
-          onClick={fetchLogs}
+          onClick={() => refetch()}
           className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border hover:bg-muted text-foreground text-sm font-semibold rounded-lg shadow-sm transition-colors"
         >
           <RefreshCw size={16} /> Atualizar Log
@@ -136,7 +121,7 @@ export default function LogsPage() {
       </div>
 
       <div className="bg-card rounded-2xl border border-border shadow-corporate overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-sm font-semibold">Carregando trilha de auditoria...</p>

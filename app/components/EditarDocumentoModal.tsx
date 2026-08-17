@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import type { DocumentoPDF } from '@/lib/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { fetchJson } from '@/lib/client/api';
 
 interface EditarDocumentoModalProps {
   documento: DocumentoPDF;
@@ -38,23 +40,28 @@ export default function EditarDocumentoModal({
   const [processoSEI, setProcessoSEI] = useState(documento.processoSEI || '');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+  const queryClient = useQueryClient();
+  const salvarMutation = useMutation({
+    mutationFn: async () => {
+      await fetchJson(`/api/documentos/${documento.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: titulo.trim(), categoria, processoSEI: processoSEI.trim() }),
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['documento', documento.id] });
+      onUpdated();
+      onClose();
+    },
+  });
 
   const salvar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSalvando(true);
     setErro('');
     try {
-      const response = await fetch(`/api/documentos/${documento.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo: titulo.trim(), categoria, processoSEI: processoSEI.trim() }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error || 'Não foi possível editar o documento.');
-      }
-      onUpdated();
-      onClose();
+      await salvarMutation.mutateAsync();
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Não foi possível editar o documento.');
     } finally {

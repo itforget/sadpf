@@ -6,6 +6,7 @@ import { UploadCloud, FileText, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { documentoSchema, type DocumentoFormData } from '@/lib/validations/documento';
+import { fetchJson, fetchServidoresAtivos } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
 interface ServidorOption {
   id: string;
@@ -33,7 +36,6 @@ function NovoDocumentoForm() {
   const searchParams = useSearchParams();
   const defaultServidorId = searchParams.get('servidorId') || '';
 
-  const [servidores, setServidores] = useState<ServidorOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -58,24 +60,19 @@ function NovoDocumentoForm() {
   const servidorId = useWatch({ control, name: 'servidorId' });
   const categoria = useWatch({ control, name: 'categoria' });
 
+  const { data: servidores = [] } = useQuery({
+    queryKey: queryKeys.servidoresAtivos,
+    queryFn: fetchServidoresAtivos,
+  });
+
   useEffect(() => {
-    fetch('/api/servidores?status=Ativo')
-      .then((res) => res.json())
-      .then((data) => {
-        setServidores(data);
-        if (!servidorId && data.length > 0) {
-          setValue('servidorId', data[0].id);
-        }
-      })
-      .catch((err) => console.error(err));
-  }, [servidorId, setValue]);
+    if (!servidorId && servidores.length > 0) {
+      setValue('servidorId', servidores[0].id);
+    }
+  }, [servidorId, servidores, setValue]);
 
-  const onSubmit = async (data: DocumentoFormData) => {
-    setLoading(true);
-    setSuccessMsg('');
-    setErrorMsg('');
-
-    try {
+  const uploadMutation = useMutation({
+    mutationFn: async (data: DocumentoFormData) => {
       const formData = new FormData();
       formData.append('file', data.file);
       formData.append('servidorId', data.servidorId);
@@ -85,16 +82,20 @@ function NovoDocumentoForm() {
         formData.append('processoSEI', data.processoSEI);
       }
 
-      const res = await fetch('/api/upload', {
+      await fetchJson('/api/upload', {
         method: 'POST',
         body: formData,
       });
+    },
+  });
 
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Falha ao realizar upload');
-      }
+  const onSubmit = async (data: DocumentoFormData) => {
+    setLoading(true);
+    setSuccessMsg('');
+    setErrorMsg('');
 
+    try {
+      await uploadMutation.mutateAsync(data);
       setSuccessMsg('Documento PDF anexado e indexado com OCR com sucesso!');
       setTimeout(() => {
         router.push(`/servidores/${data.servidorId}`);

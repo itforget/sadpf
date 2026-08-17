@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { fetchJson } from '@/lib/client/api';
 import { passwordResetSchema, type PasswordResetFormData } from '@/lib/validations/auth';
 
 type Props = {
@@ -17,7 +19,6 @@ type Props = {
 export default function RedefinirSenhaForm({ token }: Props) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     register,
     handleSubmit,
@@ -27,28 +28,24 @@ export default function RedefinirSenhaForm({ token }: Props) {
     defaultValues: { token },
   });
 
-  const onSubmit = async (data: PasswordResetFormData) => {
-    setIsSubmitting(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch('/api/auth/redefinir-senha', {
+  const resetMutation = useMutation({
+    mutationFn: async (data: PasswordResetFormData) => {
+      await fetchJson('/api/auth/redefinir-senha', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const result = await response.json();
+    },
+  });
 
-      if (!response.ok) {
-        setMessage(result?.error || 'Não foi possível redefinir a senha.');
-        return;
-      }
+  const onSubmit = async (data: PasswordResetFormData) => {
+    setMessage(null);
 
+    try {
+      await resetMutation.mutateAsync(data);
       router.replace('/login');
-    } catch {
-      setMessage('Não foi possível conectar ao servidor. Tente novamente.');
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Não foi possível conectar ao servidor. Tente novamente.');
     }
   };
 
@@ -81,10 +78,10 @@ export default function RedefinirSenhaForm({ token }: Props) {
 
           <Button
             type="submit"
-            disabled={isSubmitting || !token}
+            disabled={resetMutation.isPending || !token}
             className="w-full bg-ssp-blue hover:bg-ssp-blueDark"
           >
-            {isSubmitting ? 'Salvando...' : 'Salvar senha'}
+            {resetMutation.isPending ? 'Salvando...' : 'Salvar senha'}
           </Button>
         </form>
 

@@ -1,6 +1,7 @@
-import { getServidorById, getDocumentosByServidor } from '@/lib/server/db';
-import CapaPasta from '@/app/components/CapaPasta';
 import { notFound } from 'next/navigation';
+
+import ServidorClient from './servidor-client';
+import { getDocumentosByServidor, getServidorById } from '@/lib/server/db';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -16,5 +17,5 @@ export default async function ServidorProfilePage({ params }: PageProps) {
 
   const documentos = await getDocumentosByServidor(servidor.id);
 
-  return <CapaPasta servidor={servidor} documentos={documentos} />;
+  return <ServidorClient id={servidor.id} initialData={{ servidor, documentos }} />;
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Printer, CheckCircle2 } from 'lucide-react';
 import type { Servidor, DocumentoPDF } from '@/lib/types';
+import { useMutation } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
+import { fetchJson } from '@/lib/client/api';
 
 interface PrintModalProps {
   servidor: Servidor;
@@ -28,12 +30,9 @@ export default function PrintModal({ servidor, documento, operador, onClose }: P
   const [impressoComSucesso, setImpressoComSucesso] = useState(false);
   const [hashValidacao] = useState(() => Math.random().toString(36).substring(2, 12).toUpperCase());
   const [dataHoraAtual] = useState(() => new Date().toLocaleString('pt-BR'));
-
-  const handlePrint = async () => {
-    setImprimindo(true);
-
-    try {
-      await fetch('/api/logs', {
+  const logMutation = useMutation({
+    mutationFn: async () => {
+      await fetchJson('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -46,6 +45,14 @@ export default function PrintModal({ servidor, documento, operador, onClose }: P
           ip: operador.ip,
         }),
       });
+    },
+  });
+
+  const handlePrint = async () => {
+    setImprimindo(true);
+
+    try {
+      await logMutation.mutateAsync();
     } catch (e) {
       console.error('[PrintModal] erro ao registrar log:', e);
     }

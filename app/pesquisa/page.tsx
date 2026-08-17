@@ -1,10 +1,19 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search as SearchIcon, FileText, ArrowRight, ExternalLink, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import type { DocumentoPDF } from '@/lib/types';
+
+import { fetchPesquisa } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
+
+type PesquisaResult = {
+  resultados: DocumentoPDF[];
+  tempoBusca: number;
+};
 
 function PesquisaContent() {
   const searchParams = useSearchParams();
@@ -12,41 +21,30 @@ function PesquisaContent() {
   const initialQuery = searchParams.get('q') || '';
 
   const [query, setQuery] = useState(initialQuery);
-  const [resultados, setResultados] = useState<DocumentoPDF[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [tempoBusca, setTempoBusca] = useState(0.12);
+  const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
 
-  const performSearch = async (searchTerm: string) => {
-    if (!searchTerm.trim()) return;
-    setLoading(true);
-    const start = performance.now();
-    try {
-      const res = await fetch(`/api/pesquisa?q=${encodeURIComponent(searchTerm)}`);
-      const data = await res.json();
-      setResultados(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
+  const { data, isFetching } = useQuery({
+    queryKey: queryKeys.pesquisa(submittedQuery),
+    queryFn: async (): Promise<PesquisaResult> => {
+      const start = performance.now();
+      const resultados = await fetchPesquisa(submittedQuery);
       const end = performance.now();
-      setTempoBusca(parseFloat(((end - start) / 1000).toFixed(2)) || 0.08);
-      setLoading(false);
-    }
-  };
+      return {
+        resultados,
+        tempoBusca: parseFloat(((end - start) / 1000).toFixed(2)) || 0.08,
+      };
+    },
+    enabled: submittedQuery.trim().length > 0,
+  });
 
-  useEffect(() => {
-    if (!initialQuery) return;
-
-    const searchOnLoad = async () => {
-      await performSearch(initialQuery);
-    };
-
-    void searchOnLoad();
-  }, [initialQuery]);
+  const resultados = data?.resultados ?? [];
+  const tempoBusca = data?.tempoBusca ?? 0.12;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(`/pesquisa?q=${encodeURIComponent(query)}`);
-    performSearch(query);
+    const value = query.trim();
+    setSubmittedQuery(value);
+    router.push(value ? `/pesquisa?q=${encodeURIComponent(value)}` : '/pesquisa');
   };
 
   const highlightMatch = (text: string, term: string) => {
@@ -92,10 +90,10 @@ function PesquisaContent() {
         />
         <button
           type="submit"
-          disabled={loading}
+          disabled={isFetching}
           className="absolute right-2.5 bg-ssp-blue text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-ssp-blueDark transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-ssp-blue flex items-center gap-2"
         >
-          {loading ? (
+          {isFetching ? (
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           ) : (
             'Pesquisar OCR'

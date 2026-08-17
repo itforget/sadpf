@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,6 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { fetchEncaminhamentos } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
 interface Encaminhamento {
   id: string;
@@ -25,18 +27,10 @@ interface Encaminhamento {
 }
 
 export default function EncaminhamentosPage() {
-  const [encaminhamentos, setEncaminhamentos] = useState<Encaminhamento[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/encaminhamentos')
-      .then((r) => r.json())
-      .then(setEncaminhamentos)
-      .catch((e) => {
-        console.error('[EncaminhamentosPage] erro ao buscar encaminhamentos:', e);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: encaminhamentos = [], isLoading } = useQuery({
+    queryKey: queryKeys.encaminhamentos,
+    queryFn: fetchEncaminhamentos,
+  });
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
@@ -51,7 +45,7 @@ export default function EncaminhamentosPage() {
           </p>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="p-12 text-center text-muted-foreground space-y-3">
               <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-sm font-semibold">Carregando encaminhamentos...</p>

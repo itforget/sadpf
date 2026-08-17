@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,6 +14,10 @@ import {
   Settings,
 } from 'lucide-react';
 import Image from 'next/image';
+import { useQuery } from '@tanstack/react-query';
+
+import { fetchSession } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
 type MenuItem = {
   name: string;
@@ -39,35 +43,20 @@ const ROLE_LABELS: Record<string, string> = {
   PASTA: 'Pasta',
 };
 
-interface SessionUser {
-  nome: string;
-  matricula: string;
-  role: string;
-}
-
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
-  const [session, setSession] = useState<SessionUser | null>(null);
   const pathname = usePathname();
-
-  useEffect(() => {
-    if (pathname === '/login' || pathname === '/redefinir-senha') return;
-    let cancelled = false;
-    fetch('/api/auth/session')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled && data?.user) setSession(data.user);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
+  const { data } = useQuery({
+    queryKey: queryKeys.session,
+    queryFn: fetchSession,
+    enabled: pathname !== '/login' && pathname !== '/redefinir-senha' && pathname !== '/privacidade',
+  });
 
   if (pathname === '/login' || pathname === '/redefinir-senha' || pathname === '/privacidade') {
     return null;
   }
 
+  const session = data?.user ?? null;
   const isAdmin = session?.role === 'ADMIN';
   const visibleItems = MENU_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 

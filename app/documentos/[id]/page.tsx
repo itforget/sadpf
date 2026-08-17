@@ -1,78 +1,57 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Printer, Send, Search, CheckCircle2, Download } from 'lucide-react';
+import Image from 'next/image';
+import { useQuery } from '@tanstack/react-query';
+
 import PDFViewer from '@/app/components/PDFViewer';
 import PrintModal from '@/app/components/PrintModal';
 import EncaminharModal from '@/app/components/EncaminharModal';
 import type { DocumentoPDF, Servidor } from '@/lib/types';
-import Image from 'next/image';
+import { fetchDocumentoById, fetchServidores, fetchSession } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
 export default function DocumentoDetailPage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [documento, setDocumento] = useState<DocumentoPDF | null>(null);
-  const [servidor, setServidor] = useState<Servidor | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showEncaminharModal, setShowEncaminharModal] = useState(false);
-  const [operador, setOperador] = useState({
-    nome: 'Operador não identificado',
-    matricula: 'N/A',
-    ip: 'N/A',
+
+  const { data: sessionData } = useQuery({
+    queryKey: queryKeys.session,
+    queryFn: fetchSession,
+  });
+  const documentoQuery = useQuery({
+    queryKey: queryKeys.documento(id),
+    queryFn: () => fetchDocumentoById(id),
+    enabled: Boolean(id),
+  });
+  const servidoresQuery = useQuery({
+    queryKey: queryKeys.servidores(),
+    queryFn: () => fetchServidores(),
+    enabled: Boolean(id),
   });
 
-  useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const res = await fetch('/api/auth/session');
-        const session = await res.json();
-        if (session?.authenticated && session.user) {
-          setOperador((prev) => ({
-            nome: session.user.nome || prev.nome,
-            matricula: session.user.matricula || prev.matricula,
-            ip: session.user.ip || prev.ip,
-          }));
-        }
-      } catch {}
-    };
-
-    void loadSession();
-  }, []);
-
-  useEffect(() => {
-    if (!id) return;
-
-    const loadDocument = async () => {
-      try {
-        const res = await fetch(`/api/pesquisa?id=${id}`);
-        const docs: DocumentoPDF[] = await res.json();
-        const foundDoc = docs[0] ?? null;
-
-        if (!foundDoc) {
-          setDocumento(null);
-          return;
-        }
-
-        setDocumento(foundDoc);
-
-        const resServ = await fetch(`/api/servidores`);
-        const servs: Servidor[] = await resServ.json();
-        const foundServ = servs.find((s) => s.id === foundDoc.servidorId) ?? null;
-        setServidor(foundServ);
-      } catch (e) {
-        console.error('[DocumentoDetailPage]', e);
-      } finally {
-        setLoading(false);
+  const documento = documentoQuery.data ?? null;
+  const servidores = servidoresQuery.data ?? [];
+  const servidor = servidores.find((s) => s.id === documento?.servidorId) ?? null;
+  const operador = sessionData?.user
+    ? {
+        nome: sessionData.user.nome || 'Operador não identificado',
+        matricula: sessionData.user.matricula || 'N/A',
+        ip: 'N/A',
       }
-    };
+    : {
+        nome: 'Operador não identificado',
+        matricula: 'N/A',
+        ip: 'N/A',
+      };
 
-    void loadDocument();
-  }, [id]);
+  const loading = !id || documentoQuery.isLoading || servidoresQuery.isLoading;
 
   if (loading) {
     return (

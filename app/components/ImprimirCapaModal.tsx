@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, CheckCircle2, ShieldCheck, X } from 'lucide-react';
 import Image from 'next/image';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type { Servidor } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
+import { fetchJson, fetchSession } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
 interface ImprimirCapaModalProps {
   servidor: Servidor;
@@ -28,42 +31,24 @@ const OPERADOR_DESCONHECIDO: OperadorLog = {
 export default function ImprimirCapaModal({ servidor, onClose }: ImprimirCapaModalProps) {
   const [imprimindo, setImprimindo] = useState(false);
   const [impressoComSucesso, setImpressoComSucesso] = useState(false);
-  const [operador, setOperador] = useState<OperadorLog>(OPERADOR_DESCONHECIDO);
-  const [operadorCarregado, setOperadorCarregado] = useState(false);
   const [hashValidacao] = useState(() => Math.random().toString(36).substring(2, 12).toUpperCase());
   const [dataHoraAtual] = useState(() => new Date().toLocaleString('pt-BR'));
+  const { data: sessionData, isLoading: operadorCarregado } = useQuery({
+    queryKey: queryKeys.session,
+    queryFn: fetchSession,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
+  const operador = sessionData?.user
+    ? {
+        nome: sessionData.user.nome || OPERADOR_DESCONHECIDO.nome,
+        matricula: sessionData.user.matricula || OPERADOR_DESCONHECIDO.matricula,
+        ip: OPERADOR_DESCONHECIDO.ip,
+      }
+    : OPERADOR_DESCONHECIDO;
 
-    fetch('/api/auth/session')
-      .then((res) => res.json())
-      .then((session: { authenticated?: boolean; user?: Partial<OperadorLog> }) => {
-        if (!cancelled && session?.authenticated && session.user) {
-          setOperador({
-            nome: session.user.nome || OPERADOR_DESCONHECIDO.nome,
-            matricula: session.user.matricula || OPERADOR_DESCONHECIDO.matricula,
-            ip: session.user.ip || OPERADOR_DESCONHECIDO.ip,
-          });
-        }
-      })
-      .catch((err) => {
-        console.error('[ImprimirCapaModal] erro ao obter sessão:', err);
-      })
-      .finally(() => {
-        if (!cancelled) setOperadorCarregado(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handlePrint = async () => {
-    setImprimindo(true);
-
-    try {
-      await fetch('/api/logs', {
+  const logMutation = useMutation({
+    mutationFn: async () => {
+      await fetchJson('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,6 +59,14 @@ export default function ImprimirCapaModal({ servidor, onClose }: ImprimirCapaMod
           ip: operador.ip,
         }),
       });
+    },
+  });
+
+  const handlePrint = async () => {
+    setImprimindo(true);
+
+    try {
+      await logMutation.mutateAsync();
     } catch (e) {
       console.error('[ImprimirCapaModal] erro ao registrar log:', e);
     }

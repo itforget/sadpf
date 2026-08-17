@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { Servidor } from '@/lib/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,16 +14,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { fetchSession } from '@/lib/client/api';
+import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
+import { useQuery } from '@tanstack/react-query';
 
 interface EditarServidorModalProps {
   servidor: Servidor;
   modo: 'dados' | 'foto';
   onClose: () => void;
   onUpdated: () => void;
-}
-
-interface SessionUser {
-  role: string;
 }
 
 export default function EditarServidorModal({
@@ -35,34 +35,16 @@ export default function EditarServidorModal({
   const [foto, setFoto] = useState<File | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
-  const [session, setSession] = useState<SessionUser | null>(null);
   const editandoFoto = modo === 'foto';
-  const podeEditarPerfil = session?.role === 'ADMIN';
+  const queryClient = useQueryClient();
+  const { data: sessionData } = useQuery({
+    queryKey: queryKeys.session,
+    queryFn: fetchSession,
+  });
+  const podeEditarPerfil = sessionData?.user?.role === 'ADMIN';
 
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch('/api/auth/session')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) setSession(data?.user ?? null);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const atualizar = <K extends keyof Servidor>(campo: K, valor: Servidor[K]) => {
-    setDados((anterior) => ({ ...anterior, [campo]: valor }));
-  };
-
-  const salvar = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSalvando(true);
-    setErro('');
-    try {
+  const salvarMutation = useMutation({
+    mutationFn: async () => {
       if (editandoFoto) {
         if (!foto) throw new Error('Selecione uma imagem para enviar.');
         if (!['image/png', 'image/jpeg'].includes(foto.type)) {
@@ -79,36 +61,58 @@ export default function EditarServidorModal({
           const resposta = await response.json().catch(() => null);
           throw new Error(resposta?.error || 'Não foi possível salvar a foto.');
         }
-      } else {
-        const response = await fetch(`/api/servidores?id=${encodeURIComponent(servidor.id)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nome: dados.nome,
-            matricula: dados.matricula,
-            cpf: dados.cpf,
-            cargoEfetivo: dados.cargoEfetivo,
-            cargoOcupado: dados.cargoOcupado,
-            lotacao: dados.lotacao,
-            status: dados.status,
-            ...(podeEditarPerfil ? { role: dados.role } : {}),
-            dataIngresso: dados.dataIngresso,
-            email: dados.email,
-            telefone: dados.telefone,
-          }),
-        });
-        if (!response.ok) {
-          const resposta = await response.json().catch(() => null);
-          throw new Error(resposta?.error || 'Não foi possível salvar as alterações.');
-        }
+        return;
       }
+
+      const response = await fetch(`/api/servidores?id=${encodeURIComponent(servidor.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: dados.nome,
+          matricula: dados.matricula,
+          cpf: dados.cpf,
+          cargoEfetivo: dados.cargoEfetivo,
+          cargoOcupado: dados.cargoOcupado,
+          lotacao: dados.lotacao,
+          status: dados.status,
+          ...(podeEditarPerfil ? { role: dados.role } : {}),
+          dataIngresso: dados.dataIngresso,
+          email: dados.email,
+          telefone: dados.telefone,
+        }),
+      });
+      if (!response.ok) {
+        const resposta = await response.json().catch(() => null);
+        throw new Error(resposta?.error || 'Não foi possível salvar as alterações.');
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['servidores'] });
+      await Promise.all(
+        summaryQueryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+      );
       onUpdated();
       onClose();
-    } catch (error) {
+    },
+    onError: (error) => {
       setErro(error instanceof Error ? error.message : 'Não foi possível salvar as alterações.');
-    } finally {
+    },
+    onSettled: () => {
       setSalvando(false);
-    }
+    },
+  });
+
+  const atualizar = <K extends keyof Servidor>(campo: K, valor: Servidor[K]) => {
+    setDados((anterior) => ({ ...anterior, [campo]: valor }));
+  };
+
+  const salvar = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSalvando(true);
+    setErro('');
+    try {
+      await salvarMutation.mutateAsync();
+    } catch {}
   };
 
   return (

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Users, User, Search, Plus, Filter, ChevronRight, UserPlus } from 'lucide-react';
 import type { Servidor } from '@/lib/types';
 import Image from 'next/image';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,13 +28,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { servidorSchema, type ServidorFormData } from '@/lib/validations/servidor';
+import { fetchJson, fetchServidores } from '@/lib/client/api';
+import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 
 export default function ServidoresListPage() {
-  const [servidores, setServidores] = useState<Servidor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('Todos');
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Inativo'>('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -58,48 +60,18 @@ export default function ServidoresListPage() {
   });
 
   const status = useWatch({ control, name: 'status' });
+  const { data: servidores = [], isLoading } = useQuery({
+    queryKey: queryKeys.servidores({ status: statusFilter, search: searchQuery }),
+    queryFn: () =>
+      fetchServidores({
+        status: statusFilter as 'Ativo' | 'Inativo' | 'Todos',
+        search: searchQuery,
+      }),
+  });
 
-  const requestServidores = useCallback(async (): Promise<Servidor[]> => {
-    const url = new URL('/api/servidores', window.location.origin);
-    if (statusFilter !== 'Todos') url.searchParams.set('status', statusFilter);
-    if (searchQuery) url.searchParams.set('search', searchQuery);
-    const res = await fetch(url.toString());
-    return (await res.json()) as Servidor[];
-  }, [statusFilter, searchQuery]);
-
-  const fetchServidores = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await requestServidores();
-      setServidores(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [requestServidores]);
-
-  useEffect(() => {
-    let cancelled = false;
-    requestServidores()
-      .then((data) => {
-        if (!cancelled) {
-          setServidores(data);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [requestServidores]);
-
-  const onSubmit = async (data: ServidorFormData) => {
-    try {
-      const res = await fetch('/api/servidores', {
+  const createMutation = useMutation({
+    mutationFn: async (data: ServidorFormData) => {
+      await fetchJson('/api/servidores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,12 +81,20 @@ export default function ServidoresListPage() {
           fotoUrl: '',
         }),
       });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['servidores'] });
+      await Promise.all(
+        summaryQueryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+      );
+      setShowAddModal(false);
+      reset();
+    },
+  });
 
-      if (res.ok) {
-        setShowAddModal(false);
-        reset();
-        void fetchServidores();
-      }
+  const onSubmit = async (data: ServidorFormData) => {
+    try {
+      await createMutation.mutateAsync(data);
     } catch (err) {
       console.error(err);
     }
@@ -273,25 +253,25 @@ export default function ServidoresListPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Filter size={16} className="text-muted-foreground shrink-0" />
-          <span className="text-xs font-semibold text-muted-foreground">Status:</span>
-          {['Todos', 'Ativo', 'Inativo'].map((st) => (
-            <Button
-              key={st}
-              variant={statusFilter === st ? 'default' : 'outline'}
-              size="sm"
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Filter size={16} className="text-muted-foreground shrink-0" />
+              <span className="text-xs font-semibold text-muted-foreground">Status:</span>
+          {(['Todos', 'Ativo', 'Inativo'] as const).map((st) => (
+              <Button
+                key={st}
+                variant={statusFilter === st ? 'default' : 'outline'}
+                size="sm"
               onClick={() => setStatusFilter(st)}
-              className={statusFilter === st ? 'bg-ssp-blue hover:bg-ssp-blueDark' : ''}
-            >
-              {st}
-            </Button>
+                className={statusFilter === st ? 'bg-ssp-blue hover:bg-ssp-blueDark' : ''}
+              >
+                {st}
+              </Button>
           ))}
-        </div>
+            </div>
       </div>
 
       <div className="bg-card rounded-2xl border border-border shadow-corporate overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-sm font-semibold">Carregando acervo de servidores...</p>

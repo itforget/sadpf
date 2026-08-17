@@ -27,6 +27,7 @@ import EncaminharModal from './EncaminharModal';
 import EditarServidorModal from './EditarServidorModal';
 import EditarDocumentoModal from './EditarDocumentoModal';
 import Image from 'next/image';
+import { fetchBlob, fetchJson } from '@/lib/client/api';
 
 interface CapaPastaProps {
   servidor: Servidor;
@@ -88,17 +89,9 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
 
   const handleDownloadPasta = async () => {
     try {
-      const response = await fetch(
-        `/api/pastas/exportar?servidorId=${encodeURIComponent(servidor.id)}`,
-        { method: 'GET', cache: 'no-store' }
-      );
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error || 'Não foi possível gerar a pasta funcional em PDF.');
-      }
-
-      const blob = await response.blob();
+      const blob = await fetchBlob(`/api/pastas/exportar?servidorId=${encodeURIComponent(servidor.id)}`, {
+        method: 'GET',
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -123,7 +116,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
     setDocumentoMovendo(documentoId);
 
     try {
-      const response = await fetch('/api/pastas/ordem', {
+      await fetchJson('/api/pastas/ordem', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -131,10 +124,6 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
           documentoIds: novaOrdem.map((documento) => documento.id),
         }),
       });
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error || 'Não foi possível salvar a nova ordem.');
-      }
     } catch (error) {
       console.error('[CapaPasta] erro ao reordenar documentos:', error);
       setDocumentosOrdenados(ordemAnterior);
@@ -202,11 +191,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
 
     setDocumentoExcluindo(documento.id);
     try {
-      const response = await fetch(`/api/documentos/${documento.id}`, { method: 'DELETE' });
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error || 'Não foi possível excluir o documento.');
-      }
+      await fetchJson(`/api/documentos/${documento.id}`, { method: 'DELETE' });
       atualizarPagina();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Não foi possível excluir o documento.');

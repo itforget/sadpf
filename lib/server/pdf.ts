@@ -379,9 +379,7 @@ export async function desenharDadosServidor(
         align: 'center',
         valign: 'center',
       });
-    } catch {
-      // Mantém o espaço reservado quando o arquivo não for uma imagem suportada pelo PDFKit.
-    }
+    } catch {}
   }
   if (!foto) {
     doc

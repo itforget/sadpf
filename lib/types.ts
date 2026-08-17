@@ -36,6 +36,11 @@ export interface DocumentoPDF {
   operadorRH: string;
 }
 
+export interface ServidorComDocumentos {
+  servidor: Servidor;
+  documentos: DocumentoPDF[];
+}
+
 export interface NovoDocumentoPDF extends Omit<DocumentoPDF, 'id'> {
   storageBackend: 'local' | 'supabase' | 's3';
   storageKey: string;

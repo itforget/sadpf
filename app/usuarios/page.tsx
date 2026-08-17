@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { UserCog, Plus, Search, Pencil, Power, Users, KeyRound } from 'lucide-react';
 import type { Servidor } from '@/lib/types';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,8 @@ import {
 } from '@/components/ui/select';
 import { usuarioSchema, type UsuarioFormData } from '@/lib/validations/usuario';
 import Image from 'next/image';
+import { fetchJson, fetchServidores } from '@/lib/client/api';
+import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 
 const usuarioEditSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório'),
@@ -71,8 +74,6 @@ const ROLE_BADGE: Record<Servidor['role'], string> = {
 const ROLE_FILTERS = ['Todos', 'ADMIN', 'OPERADOR', 'PASTA'] as const;
 
 export default function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState<Servidor[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('Todos');
   const [showCreate, setShowCreate] = useState(false);
@@ -81,6 +82,7 @@ export default function UsuariosPage() {
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(
     null
   );
+  const queryClient = useQueryClient();
 
   const createForm = useForm<UsuarioFormData>({
     resolver: zodResolver(usuarioSchema),
@@ -103,40 +105,58 @@ export default function UsuariosPage() {
   const editStatus = useWatch({ control: editForm.control, name: 'status' });
   const editRole = useWatch({ control: editForm.control, name: 'role' });
 
-  const loadUsers = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/servidores');
-      const data = await res.json();
-      setUsuarios(data);
-    } catch (error) {
-      console.error(error);
-      setFeedback({ kind: 'error', message: 'Erro ao carregar usuários.' });
-    } finally {
-      setLoading(false);
-    }
+  const {
+    data: usuarios = [],
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.servidores(),
+    queryFn: () => fetchServidores(),
+  });
+
+  const invalidateUsuarios = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['servidores'] });
+    await Promise.all(
+      summaryQueryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+    );
+    await refetch();
   };
 
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch('/api/servidores')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) {
-          setUsuarios(data);
-          setLoading(false);
-        }
-      })
-      .catch((error) => {
-        console.error(error);
-        if (!cancelled) setLoading(false);
+  const createMutation = useMutation({
+    mutationFn: async (data: UsuarioFormData) => {
+      await fetchJson('/api/servidores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          cargoEfetivo: 'Sem cargo registrado',
+          cargoOcupado: 'Sem cargo comissionado',
+          lotacao: 'Não informada',
+        }),
       });
+    },
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const editMutation = useMutation({
+    mutationFn: async (data: UsuarioEditData) => {
+      if (!editingUser) throw new Error('Usuário não encontrado.');
+      await fetchJson(`/api/servidores?id=${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ user, nextStatus }: { user: Servidor; nextStatus: Servidor['status'] }) => {
+      await fetchJson(`/api/servidores?id=${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+    },
+  });
 
   const filteredUsuarios = useMemo(() => {
     return usuarios.filter((user) => {
@@ -167,26 +187,11 @@ export default function UsuariosPage() {
 
   const onSubmitCreate = async (data: UsuarioFormData) => {
     try {
-      const res = await fetch('/api/servidores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          cargoEfetivo: 'Sem cargo registrado',
-          cargoOcupado: 'Sem cargo comissionado',
-          lotacao: 'Não informada',
-        }),
-      });
-
-      if (!res.ok) {
-        const responseData = await res.json();
-        throw new Error(responseData?.error || 'Falha ao criar usuário.');
-      }
-
+      await createMutation.mutateAsync(data);
       showFeedback('success', `Usuário ${data.nome} criado com sucesso.`);
       setShowCreate(false);
       createForm.reset();
-      void loadUsers();
+      await invalidateUsuarios();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro inesperado ao criar usuário.';
       showFeedback('error', message);
@@ -224,21 +229,11 @@ export default function UsuariosPage() {
   const onSubmitEdit = async (data: UsuarioEditData) => {
     if (!editingUser) return;
     try {
-      const res = await fetch(`/api/servidores?id=${editingUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      const responseData = await res.json();
-      if (!res.ok) {
-        throw new Error(responseData?.error || 'Falha ao atualizar usuário.');
-      }
-
+      await editMutation.mutateAsync(data);
       showFeedback('success', `Dados de ${data.nome} atualizados com sucesso.`);
       setEditingUser(null);
       editForm.reset();
-      void loadUsers();
+      await invalidateUsuarios();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro inesperado ao atualizar usuário.';
       showFeedback('error', message);
@@ -249,22 +244,12 @@ export default function UsuariosPage() {
     const nextStatus = user.status === 'Ativo' ? 'Inativo' : 'Ativo';
     setBusyId(user.id);
     try {
-      const res = await fetch(`/api/servidores?id=${user.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-
-      const responseData = await res.json();
-      if (!res.ok) {
-        throw new Error(responseData?.error || 'Falha ao alterar o status.');
-      }
-
+      await toggleMutation.mutateAsync({ user, nextStatus });
       showFeedback(
         'success',
         `${user.nome} ${nextStatus === 'Ativo' ? 'reativado' : 'desativado'} com sucesso.`
       );
-      void loadUsers();
+      await invalidateUsuarios();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro inesperado ao alterar o status.';
       showFeedback('error', message);
@@ -389,7 +374,7 @@ export default function UsuariosPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="p-8 text-center text-muted-foreground">
                     Carregando usuários...

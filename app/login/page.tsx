@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { fetchJson } from '@/lib/client/api';
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 import Image from 'next/image';
 
@@ -16,7 +18,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordRequired, setPasswordRequired] = useState(false);
 
@@ -28,26 +29,28 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const loginMutation = useMutation({
+    mutationFn: async (data: LoginFormData) => {
+      return fetchJson<{ firstAccess?: boolean; passwordRequired?: boolean; message?: string }>(
+        '/api/auth/login',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }
+      );
+    },
+  });
+
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
     setNotice(null);
-    setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        setError(result?.error || 'Erro de autenticação.');
-        return;
-      }
+      const result = await loginMutation.mutateAsync(data);
 
       if (result?.firstAccess) {
-        setNotice(result.message);
+        setNotice(result.message || null);
         return;
       }
 
@@ -57,10 +60,8 @@ export default function LoginPage() {
       }
 
       router.replace('/dashboard');
-    } catch {
-      setError('Não foi possível conectar ao servidor. Tente novamente.');
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível conectar ao servidor. Tente novamente.');
     }
   };
 
@@ -145,10 +146,14 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loginMutation.isPending}
               className="w-full bg-ssp-blue hover:bg-ssp-blueDark mt-4"
             >
-              {loading ? 'Verificando...' : passwordRequired ? 'Entrar no Sistema' : 'Continuar'}
+              {loginMutation.isPending
+                ? 'Verificando...'
+                : passwordRequired
+                ? 'Entrar no Sistema'
+                : 'Continuar'}
             </Button>
           </form>
 
