@@ -1,6 +1,9 @@
+import type { CategoriaDocumentoLabel } from './documentos';
+
 export interface Servidor {
   id: string;
   matricula: string;
+  matriculaCargoEfetivo: string;
   nome: string;
   cpf: string;
   fotoUrl: string;
@@ -10,7 +13,7 @@ export interface Servidor {
   cargoEfetivo: string;
   cargoOcupado: string;
   lotacao: string;
-  status: 'Ativo' | 'Inativo';
+  status: 'Ativo' | 'Inativo' | 'Aposentado';
   role: 'ADMIN' | 'OPERADOR' | 'PASTA';
   dataIngresso: string;
   email: string;
@@ -21,12 +24,7 @@ export interface DocumentoPDF {
   id: string;
   servidorId: string;
   titulo: string;
-  categoria:
-    | 'Dados Pessoais'
-    | 'Posse e Exercício'
-    | 'Vida Funcional'
-    | 'Licenças e Afastamentos'
-    | 'Avaliação de Desempenho';
+  categoria: CategoriaDocumentoLabel;
   dataUpload: string;
   tamanho: string;
   paginas: number;
@@ -51,7 +49,15 @@ export interface LogAuditoria {
   dataHora: string;
   operador: string;
   operadorMatricula: string;
-  acao: 'CONSULTA' | 'UPLOAD' | 'IMPRESSAO' | 'EXPORTACAO' | 'ENCAMINHAMENTO' | 'PESQUISA_OCR';
+  acao:
+    | 'CONSULTA'
+    | 'ATUALIZACAO'
+    | 'EXCLUSAO'
+    | 'UPLOAD'
+    | 'IMPRESSAO'
+    | 'EXPORTACAO'
+    | 'ENCAMINHAMENTO'
+    | 'PESQUISA_OCR';
   detalhes: string;
   ip: string;
 }

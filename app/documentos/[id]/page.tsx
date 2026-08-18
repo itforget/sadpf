@@ -12,6 +12,8 @@ import PrintModal from '@/app/components/PrintModal';
 import EncaminharModal from '@/app/components/EncaminharModal';
 import { fetchDocumentoById, fetchServidores, fetchSession } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 export default function DocumentoDetailPage() {
   const params = useParams();
@@ -95,7 +97,7 @@ export default function DocumentoDetailPage() {
         <div className="flex items-center gap-3">
           <Link
             href={`/servidores/${servidor.id}`}
-            className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground rounded-full transition-colors"
+            className={buttonVariants({ variant: 'ghost', size: 'icon' })}
           >
             <ArrowLeft size={20} />
           </Link>
@@ -111,23 +113,17 @@ export default function DocumentoDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => setShowPrintModal(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-sm"
-          >
+          <Button onClick={() => setShowPrintModal(true)} variant="outline">
             <Printer size={16} className="text-ssp-blue" /> Imprimir Documento
-          </button>
-          <button
-            onClick={() => setShowEncaminharModal(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-sm"
-          >
+          </Button>
+          <Button onClick={() => setShowEncaminharModal(true)} variant="outline">
             <Send size={16} className="text-ssp-blue" /> Encaminhar
-          </button>
+          </Button>
           <a
             href={documento.arquivoUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-ssp-blue hover:bg-ssp-blueDark text-white transition-colors shadow-sm"
+            className={buttonVariants({ className: 'bg-ssp-blue hover:bg-ssp-blueDark' })}
           >
             <Download size={16} /> Salvar PDF
           </a>
@@ -135,7 +131,7 @@ export default function DocumentoDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card rounded-2xl border border-border shadow-corporate overflow-hidden flex flex-col">
+        <Card className="lg:col-span-2 gap-0 border-0 py-0 shadow-corporate">
           <div className="p-4 bg-muted/50 border-b border-border flex justify-between items-center text-xs font-semibold text-muted-foreground">
             <span>Visualizador de PDF Integrado (SADPF/SSP-DF)</span>
             <span className="font-mono">
@@ -145,7 +141,7 @@ export default function DocumentoDetailPage() {
           <div className="p-4 flex-1 bg-slate-900/5 min-h-[600px]">
             <PDFViewer src={documento.arquivoUrl} />
           </div>
-        </div>
+        </Card>
 
         <div className="space-y-6">
           <div className="bg-card p-5 rounded-2xl border border-border shadow-corporate space-y-4 text-xs">

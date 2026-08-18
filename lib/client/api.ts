@@ -72,7 +72,7 @@ export interface SessionResponse {
 }
 
 export interface ServidoresFilters {
-  status?: 'Ativo' | 'Inativo' | 'Todos';
+  status?: 'Ativo' | 'Inativo' | 'Aposentado' | 'Todos';
   search?: string;
   role?: Servidor['role'];
 }

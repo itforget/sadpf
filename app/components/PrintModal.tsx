@@ -130,12 +130,18 @@ export default function PrintModal({ servidor, documento, operador, onClose }: P
                 </span>
               </div>
               <div>
-                <span className="font-bold text-slate-500 block">CARGO EFETIVO:</span>
-                <span className="font-medium text-slate-800">{servidor.cargoEfetivo}</span>
+                <span className="font-bold text-slate-500 block">MATRÍCULA CARGO EFETIVO:</span>
+                <span className="font-mono font-bold text-slate-900 text-sm">
+                  {servidor.matriculaCargoEfetivo || '—'}
+                </span>
               </div>
               <div>
-                <span className="font-bold text-slate-500 block">CARGO OCUPADO NO ÓRGÃO:</span>
+                <span className="font-bold text-slate-500 block">CARGO SSP-DF:</span>
                 <span className="font-medium text-slate-800">{servidor.cargoOcupado}</span>
+              </div>
+              <div>
+                <span className="font-bold text-slate-500 block">CARGO EFETIVO:</span>
+                <span className="font-medium text-slate-800">{servidor.cargoEfetivo}</span>
               </div>
               <div>
                 <span className="font-bold text-slate-500 block">LOTAÇÃO ATUAL:</span>

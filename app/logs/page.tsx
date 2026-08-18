@@ -5,6 +5,17 @@ import { ScrollText, Search, RefreshCw, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchLogs } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export default function LogsPage() {
   const [filterAction, setFilterAction] = useState('TODAS');
@@ -40,6 +51,10 @@ export default function LogsPage() {
         return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
       case 'PESQUISA_OCR':
         return 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20';
+      case 'ATUALIZACAO':
+        return 'bg-status-warning/10 text-status-warning border-status-warning/20';
+      case 'EXCLUSAO':
+        return 'bg-status-danger/10 text-status-danger border-status-danger/20';
       default:
         return 'bg-gray-500/10 text-gray-600 border-gray-500/20';
     }
@@ -59,12 +74,9 @@ export default function LogsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => refetch()}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border hover:bg-muted text-foreground text-sm font-semibold rounded-lg shadow-sm transition-colors"
-        >
+        <Button onClick={() => refetch()} variant="outline">
           <RefreshCw size={16} /> Atualizar Log
-        </button>
+        </Button>
       </div>
 
       <div className="p-4 bg-ssp-blueDark text-white rounded-2xl flex items-center gap-4 shadow-corporate">
@@ -87,12 +99,12 @@ export default function LogsPage() {
             className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
             size={18}
           />
-          <input
+          <Input
             type="search"
             placeholder="Filtrar por operador, matrícula ou evento..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ssp-blue"
+            className="h-9 pl-10"
           />
         </div>
 
@@ -101,23 +113,26 @@ export default function LogsPage() {
           {[
             'TODAS',
             'CONSULTA',
+            'ATUALIZACAO',
+            'EXCLUSAO',
             'UPLOAD',
             'IMPRESSAO',
             'EXPORTACAO',
             'ENCAMINHAMENTO',
             'PESQUISA_OCR',
           ].map((ac) => (
-            <button
+            <Button
               key={ac}
+              type="button"
+              variant={filterAction === ac ? 'default' : 'secondary'}
+              size="sm"
               onClick={() => setFilterAction(ac)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                filterAction === ac
-                  ? 'bg-ssp-blue text-white shadow-sm'
-                  : 'bg-muted text-muted-foreground hover:bg-slate-200 dark:hover:bg-slate-800'
+              className={`shrink-0 text-xs ${
+                filterAction === ac ? 'bg-ssp-blue hover:bg-ssp-blueDark' : 'text-muted-foreground'
               }`}
             >
               {ac}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -129,49 +144,48 @@ export default function LogsPage() {
             <p className="text-sm font-semibold">Carregando trilha de auditoria...</p>
           </div>
         ) : filteredLogs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-muted/60 text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
-                <tr>
-                  <th className="px-6 py-4">Data e Hora</th>
-                  <th className="px-6 py-4">Operador RH</th>
-                  <th className="px-6 py-4">Ação Registrada</th>
-                  <th className="px-6 py-4">Detalhes da Operação</th>
-                  <th className="px-6 py-4 text-right">IP de Origem</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border font-mono text-xs">
-                {filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap font-bold text-foreground">
-                      {log.dataHora}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="font-bold text-foreground font-sans">{log.operador}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Mat.: {log.operadorMatricula}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${getBadgeClass(
-                          log.acao
-                        )}`}
-                      >
-                        {log.acao}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-foreground/90 font-sans max-w-md line-clamp-2">
-                      {log.detalhes}
-                    </td>
-                    <td className="px-6 py-4 text-right text-muted-foreground font-mono">
-                      {log.ip}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="text-left text-sm">
+            <TableHeader className="bg-muted/60 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <TableRow>
+                <TableHead className="px-6 py-4">Data e Hora</TableHead>
+                <TableHead className="px-6 py-4">Operador RH</TableHead>
+                <TableHead className="px-6 py-4">Ação Registrada</TableHead>
+                <TableHead className="px-6 py-4">Detalhes da Operação</TableHead>
+                <TableHead className="px-6 py-4 text-right">IP de Origem</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="font-mono text-xs">
+              {filteredLogs.map((log) => (
+                <TableRow key={log.id}>
+                  <TableCell className="px-6 py-4 font-bold text-foreground">
+                    {log.dataHora}
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <p className="font-bold text-foreground font-sans">{log.operador}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Mat.: {log.operadorMatricula}
+                    </p>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <Badge
+                      variant="outline"
+                      className={`h-auto px-2.5 py-0.5 font-bold text-[11px] ${getBadgeClass(
+                        log.acao
+                      )}`}
+                    >
+                      {log.acao}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-md px-6 py-4 font-sans text-foreground/90 whitespace-normal line-clamp-2">
+                    {log.detalhes}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right font-mono text-muted-foreground">
+                    {log.ip}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : (
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <ScrollText size={48} className="mx-auto opacity-40" />

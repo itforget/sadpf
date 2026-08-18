@@ -3,6 +3,8 @@ import { AcaoAuditoria } from '@/prisma/generated';
 
 const acoesAuditoria = [
   AcaoAuditoria.CONSULTA,
+  AcaoAuditoria.ATUALIZACAO,
+  AcaoAuditoria.EXCLUSAO,
   AcaoAuditoria.UPLOAD,
   AcaoAuditoria.IMPRESSAO,
   AcaoAuditoria.EXPORTACAO,
@@ -21,7 +23,16 @@ export const logSchema = z.object({
 });
 
 export const auditLogSchema = z.object({
-  acao: z.enum(['CONSULTA', 'UPLOAD', 'IMPRESSAO', 'EXPORTACAO', 'ENCAMINHAMENTO', 'PESQUISA_OCR']),
+  acao: z.enum([
+    'CONSULTA',
+    'ATUALIZACAO',
+    'EXCLUSAO',
+    'UPLOAD',
+    'IMPRESSAO',
+    'EXPORTACAO',
+    'ENCAMINHAMENTO',
+    'PESQUISA_OCR',
+  ]),
   detalhes: z.string().min(1).max(2000),
 });
 

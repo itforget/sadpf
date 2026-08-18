@@ -10,6 +10,7 @@ datasource db {
 enum StatusServidor {
   Ativo
   Inativo
+  Aposentado
 }
 
 enum Role {
@@ -19,11 +20,11 @@ enum Role {
 }
 
 enum CategoriaDocumento {
-  Dados_Pessoais
-  Posse_e_Exercicio
-  Vida_Funcional
-  Licencas_e_Afastamentos
-  Avaliacao_de_Desempenho
+  Pasta_Fisica_Digitalizada
+  Posse_Eletronica
+  Documentos_Pessoais
+  Publicacoes
+  Certidoes_Declaracoes
 }
 
 enum StorageBackend {
@@ -34,6 +35,8 @@ enum StorageBackend {
 
 enum AcaoAuditoria {
   CONSULTA
+  ATUALIZACAO
+  EXCLUSAO
   UPLOAD
   IMPRESSAO
   EXPORTACAO
@@ -44,6 +47,7 @@ enum AcaoAuditoria {
 model Servidor {
   id              String         @id @default(uuid())
   matricula       String         @unique
+  matriculaCargoEfetivo String   @default("")
   nome            String
   cpf             String         @unique
   fotoUrl         String?

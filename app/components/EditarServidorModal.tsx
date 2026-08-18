@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -70,6 +77,7 @@ export default function EditarServidorModal({
         body: JSON.stringify({
           nome: dados.nome,
           matricula: dados.matricula,
+          matriculaCargoEfetivo: dados.matriculaCargoEfetivo,
           cpf: dados.cpf,
           cargoEfetivo: dados.cargoEfetivo,
           cargoOcupado: dados.cargoOcupado,
@@ -152,9 +160,15 @@ export default function EditarServidorModal({
               <div className="grid grid-cols-2 gap-3">
                 <Campo
                   id="matricula"
-                  label="Matrícula"
+                  label="Matrícula SSP-DF"
                   value={dados.matricula}
                   onChange={(value) => atualizar('matricula', value)}
+                />
+                <Campo
+                  id="matriculaCargoEfetivo"
+                  label="Matrícula do cargo efetivo"
+                  value={dados.matriculaCargoEfetivo}
+                  onChange={(value) => atualizar('matriculaCargoEfetivo', value)}
                 />
                 <Campo
                   id="cpf"
@@ -163,18 +177,20 @@ export default function EditarServidorModal({
                   onChange={(value) => atualizar('cpf', value)}
                 />
               </div>
-              <Campo
-                id="cargoEfetivo"
-                label="Cargo efetivo"
-                value={dados.cargoEfetivo}
-                onChange={(value) => atualizar('cargoEfetivo', value)}
-              />
-              <Campo
-                id="cargoOcupado"
-                label="Cargo ocupado"
-                value={dados.cargoOcupado}
-                onChange={(value) => atualizar('cargoOcupado', value)}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <Campo
+                  id="cargoOcupado"
+                  label="Cargo SSP-DF"
+                  value={dados.cargoOcupado}
+                  onChange={(value) => atualizar('cargoOcupado', value)}
+                />
+                <Campo
+                  id="cargoEfetivo"
+                  label="Cargo efetivo"
+                  value={dados.cargoEfetivo}
+                  onChange={(value) => atualizar('cargoEfetivo', value)}
+                />
+              </div>
               <Campo
                 id="lotacao"
                 label="Lotação"
@@ -198,7 +214,7 @@ export default function EditarServidorModal({
               </div>
               <Campo
                 id="dataIngresso"
-                label="Data de ingresso"
+                label="Data de admissão"
                 value={dados.dataIngresso}
                 onChange={(value) => atualizar('dataIngresso', value)}
               />
@@ -207,7 +223,7 @@ export default function EditarServidorModal({
                   id="status"
                   label="Status"
                   value={dados.status}
-                  opcoes={['Ativo', 'Inativo']}
+                  opcoes={['Ativo', 'Inativo', 'Aposentado']}
                   onChange={(value) => atualizar('status', value as Servidor['status'])}
                 />
                 {podeEditarPerfil ? (
@@ -288,16 +304,18 @@ function Selecao({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-      >
-        {opcoes.map((opcao) => (
-          <option key={opcao}>{opcao}</option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={(nextValue) => onChange(nextValue ?? '')}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {opcoes.map((opcao) => (
+            <SelectItem key={opcao} value={opcao}>
+              {opcao}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

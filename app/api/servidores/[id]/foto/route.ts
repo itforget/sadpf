@@ -90,7 +90,7 @@ export async function POST(
     await addLog({
       operador: String(session.nome),
       operadorMatricula: String(session.matricula),
-      acao: 'UPLOAD',
+      acao: 'ATUALIZACAO',
       detalhes: `Atualizou a foto do servidor ${servidor.nome} (Mat. ${servidor.matricula})`,
       ip: getRequestIp(request),
     });

@@ -9,6 +9,10 @@ import type { DocumentoPDF } from '@/lib/types';
 
 import { fetchPesquisa } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 type PesquisaResult = {
   resultados: DocumentoPDF[];
@@ -81,24 +85,24 @@ function PesquisaContent() {
 
       <form onSubmit={handleSubmit} className="relative flex items-center">
         <SearchIcon className="absolute left-5 text-muted-foreground" size={22} />
-        <input
+        <Input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-14 pr-36 py-4 text-base sm:text-lg bg-card border border-border shadow-corporate rounded-full focus:outline-none focus:ring-2 focus:ring-ssp-blue focus:border-transparent transition-all"
+          className="h-14 rounded-full pl-14 pr-36 text-base shadow-corporate sm:text-lg"
           placeholder="Digite portarias, certidões, termos, averbações ou palavras-chave..."
         />
-        <button
+        <Button
           type="submit"
           disabled={isFetching}
-          className="absolute right-2.5 bg-ssp-blue text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-ssp-blueDark transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-ssp-blue flex items-center gap-2"
+          className="absolute right-2.5 rounded-full bg-ssp-blue px-6 hover:bg-ssp-blueDark"
         >
           {isFetching ? (
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           ) : (
             'Pesquisar OCR'
           )}
-        </button>
+        </Button>
       </form>
 
       <div className="space-y-4">
@@ -115,46 +119,51 @@ function PesquisaContent() {
         {resultados.length > 0 ? (
           <div className="space-y-4">
             {resultados.map((doc) => (
-              <article
+              <Card
                 key={doc.id}
-                className="bg-card p-5 sm:p-6 rounded-2xl border border-border hover:border-ssp-blue/40 transition-all shadow-corporate group"
+                className="gap-0 border-ssp-blue/10 py-0 shadow-corporate transition-all hover:ring-ssp-blue/40"
               >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                  <div>
-                    <Link
-                      href={`/documentos/${doc.id}`}
-                      className="text-lg font-bold text-ssp-blue hover:underline hover:text-ssp-blueDark flex items-center gap-2"
-                    >
-                      <FileText size={20} className="shrink-0 text-ssp-blue" />
-                      {doc.titulo}
-                    </Link>
-                    <div className="flex items-center gap-2 text-xs font-semibold text-status-success mt-1.5 flex-wrap">
-                      <span>Categoria: {doc.categoria}</span>
-                      <ArrowRight size={12} />
-                      <Link href={`/servidores/${doc.servidorId}`} className="hover:underline">
-                        Ver Pasta do Servidor
+                <CardContent className="p-5 sm:p-6">
+                  <div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                    <div>
+                      <Link
+                        href={`/documentos/${doc.id}`}
+                        className="text-lg font-bold text-ssp-blue hover:underline hover:text-ssp-blueDark flex items-center gap-2"
+                      >
+                        <FileText size={20} className="shrink-0 text-ssp-blue" />
+                        {doc.titulo}
+                      </Link>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-status-success mt-1.5 flex-wrap">
+                        <span>Categoria: {doc.categoria}</span>
+                        <ArrowRight size={12} />
+                        <Link href={`/servidores/${doc.servidorId}`} className="hover:underline">
+                          Ver Pasta do Servidor
+                        </Link>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge
+                        variant="outline"
+                        className="h-auto rounded-md bg-muted px-2.5 py-1 font-mono"
+                      >
+                        Pág. 1-{doc.paginas}
+                      </Badge>
+                      <Link
+                        href={`/documentos/${doc.id}`}
+                        className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors"
+                        title="Abrir documento"
+                      >
+                        <ExternalLink size={18} />
                       </Link>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-md border border-border font-mono">
-                      Pág. 1-{doc.paginas}
-                    </span>
-                    <Link
-                      href={`/documentos/${doc.id}`}
-                      className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors"
-                      title="Abrir documento"
-                    >
-                      <ExternalLink size={18} />
-                    </Link>
-                  </div>
-                </div>
-
-                <p className="text-xs sm:text-sm text-foreground/85 leading-relaxed font-serif bg-muted/30 p-3.5 rounded-xl border border-border">
-                  &quot;{highlightMatch(doc.textoOCR, query)}&quot;
-                </p>
-              </article>
+                  <p className="text-xs sm:text-sm text-foreground/85 leading-relaxed font-serif bg-muted/30 p-3.5 rounded-xl border border-border">
+                    &quot;{highlightMatch(doc.textoOCR, query)}&quot;
+                  </p>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (

@@ -23,6 +23,7 @@ import {
 import { documentoSchema, type DocumentoFormData } from '@/lib/validations/documento';
 import { fetchJson, fetchServidorProfile, fetchServidoresAtivos } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
 function NovoDocumentoForm() {
   const router = useRouter();
@@ -45,7 +46,7 @@ function NovoDocumentoForm() {
     defaultValues: {
       servidorId: defaultServidorId,
       titulo: '',
-      categoria: 'Vida Funcional',
+      categoria: 'Pasta Física Digitalizada',
       processoSEI: '',
     },
   });
@@ -86,13 +87,11 @@ function NovoDocumentoForm() {
   const uploadMutation = useMutation({
     mutationFn: async (data: DocumentoFormData) => {
       const formData = new FormData();
-      formData.append('file', data.file);
       formData.append('servidorId', data.servidorId);
       formData.append('titulo', data.titulo);
       formData.append('categoria', data.categoria);
-      if (data.processoSEI) {
-        formData.append('processoSEI', data.processoSEI);
-      }
+      formData.append('processoSEI', data.processoSEI || '');
+      formData.append('file', data.file);
 
       await fetchJson('/api/upload', {
         method: 'POST',
@@ -232,11 +231,11 @@ function NovoDocumentoForm() {
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Dados Pessoais">Dados Pessoais</SelectItem>
-                    <SelectItem value="Posse e Exercício">Posse e Exercício</SelectItem>
-                    <SelectItem value="Vida Funcional">Vida Funcional</SelectItem>
-                    <SelectItem value="Licenças e Afastamentos">Licenças e Afastamentos</SelectItem>
-                    <SelectItem value="Avaliação de Desempenho">Avaliação de Desempenho</SelectItem>
+                    {CATEGORIAS_DOCUMENTO.map((categoria) => (
+                      <SelectItem key={categoria} value={categoria}>
+                        {categoria}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -256,12 +255,12 @@ function NovoDocumentoForm() {
                 Arquivo Digital (Apenas PDF) <span className="text-destructive">*</span>
               </Label>
               <div className="border-2 border-dashed border-border hover:border-ssp-blue/50 transition-colors rounded-xl p-6 text-center bg-muted/20 flex flex-col items-center justify-center cursor-pointer relative">
-                <input
+                <Input
                   id="file"
                   type="file"
                   accept="application/pdf,.pdf"
                   onChange={handleFileChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 />
                 <UploadCloud size={40} className="text-ssp-blue mb-2" />
                 {selectedFile ? (

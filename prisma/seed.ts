@@ -37,6 +37,7 @@ async function main() {
   const admin = await prisma.servidor.create({
     data: {
       matricula,
+      matriculaCargoEfetivo: '',
       nome: process.env.INITIAL_ADMIN_NOME!,
       cpf,
       fotoUrl: null,

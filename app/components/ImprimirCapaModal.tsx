@@ -81,11 +81,16 @@ export default function ImprimirCapaModal({ servidor, onClose }: ImprimirCapaMod
   const dados = [
     { rotulo: 'Nome Completo', valor: servidor.nome, mono: false },
     { rotulo: 'Matrícula SSP-DF', valor: servidor.matricula, mono: true },
+    {
+      rotulo: 'Matrícula do Cargo Efetivo',
+      valor: servidor.matriculaCargoEfetivo || '—',
+      mono: true,
+    },
     { rotulo: 'CPF', valor: servidor.cpf, mono: true },
+    { rotulo: 'Cargo SSP-DF', valor: servidor.cargoOcupado || '—', mono: false },
     { rotulo: 'Cargo Efetivo', valor: servidor.cargoEfetivo, mono: false },
-    { rotulo: 'Cargo Ocupado no Órgão', valor: servidor.cargoOcupado || '—', mono: false },
     { rotulo: 'Lotação Atual', valor: servidor.lotacao, mono: false },
-    { rotulo: 'Data de Ingresso', valor: servidor.dataIngresso, mono: false },
+    { rotulo: 'Data de Admissão', valor: servidor.dataIngresso, mono: false },
     { rotulo: 'E-mail Institucional', valor: servidor.email || '—', mono: false },
     { rotulo: 'Telefone', valor: servidor.telefone || '—', mono: false },
   ];
@@ -109,12 +114,16 @@ export default function ImprimirCapaModal({ servidor, onClose }: ImprimirCapaMod
               Emissão auditada pela Gestão de Pessoas — validação com hash de segurança.
             </p>
           </div>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors shrink-0"
+            className="shrink-0 text-muted-foreground"
+            aria-label="Fechar impressão"
           >
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <div className="overflow-y-auto max-h-[55vh] bg-slate-100 p-5 print:bg-transparent print:overflow-visible print:max-h-none print:p-0">

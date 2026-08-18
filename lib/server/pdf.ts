@@ -326,12 +326,13 @@ export async function desenharDadosServidor(
 ): Promise<void> {
   const campos: { rotulo: string; valor: string }[] = [
     { rotulo: 'Nome', valor: servidor.nome },
-    { rotulo: 'Matrícula', valor: servidor.matricula },
+    { rotulo: 'Matrícula SSP-DF', valor: servidor.matricula },
+    { rotulo: 'Matrícula Cargo Efetivo', valor: servidor.matriculaCargoEfetivo || '—' },
     { rotulo: 'CPF', valor: servidor.cpf },
+    { rotulo: 'Cargo SSP-DF', valor: servidor.cargoOcupado },
     { rotulo: 'Cargo Efetivo', valor: servidor.cargoEfetivo },
-    { rotulo: 'Cargo Ocupado', valor: servidor.cargoOcupado },
     { rotulo: 'Lotação Atual', valor: servidor.lotacao },
-    { rotulo: 'Data de Ingresso', valor: servidor.dataIngresso },
+    { rotulo: 'Data de Admissão', valor: servidor.dataIngresso },
     { rotulo: 'E-mail', valor: servidor.email || '—' },
     { rotulo: 'Telefone', valor: servidor.telefone || '—' },
     { rotulo: 'Status', valor: servidor.status },

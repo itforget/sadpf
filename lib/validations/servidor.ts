@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const servidorSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório'),
   matricula: z.string().min(1, 'Matrícula é obrigatória'),
+  matriculaCargoEfetivo: z.string().min(1, 'Matrícula do cargo efetivo é obrigatória'),
   cpf: z
     .string()
     .min(1, 'CPF é obrigatório')
@@ -10,8 +11,8 @@ export const servidorSchema = z.object({
   cargoEfetivo: z.string().min(1, 'Cargo efetivo é obrigatório'),
   cargoOcupado: z.string().optional(),
   lotacao: z.string().min(1, 'Lotação é obrigatória'),
-  dataIngresso: z.string().min(1, 'Data de ingresso é obrigatória').optional(),
-  status: z.enum(['Ativo', 'Inativo'], {
+  dataIngresso: z.string().min(1, 'Data de admissão é obrigatória').optional(),
+  status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
     message: 'Status é obrigatório',
   }),
   role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {

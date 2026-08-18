@@ -11,6 +11,7 @@ import type { Servidor, DocumentoPDF, LogAuditoria, NovoDocumentoPDF } from '../
 const SERVIDOR_SELECT = {
   id: true,
   matricula: true,
+  matriculaCargoEfetivo: true,
   nome: true,
   cpf: true,
   fotoUrl: true,
@@ -63,6 +64,7 @@ export async function getServidores(filter?: {
     where.OR = [
       { nome: { contains: q, mode: 'insensitive' } },
       { matricula: { contains: q, mode: 'insensitive' } },
+      { matriculaCargoEfetivo: { contains: q, mode: 'insensitive' } },
       { cpf: { contains: q, mode: 'insensitive' } },
       { cargoEfetivo: { contains: q, mode: 'insensitive' } },
       { lotacao: { contains: q, mode: 'insensitive' } },
@@ -111,13 +113,14 @@ export async function addServidor(
   const created = await prisma.servidor.create({
     data: {
       matricula: data.matricula,
+      matriculaCargoEfetivo: data.matriculaCargoEfetivo,
       nome: data.nome,
       cpf: data.cpf,
       fotoUrl: data.fotoUrl || null,
       cargoEfetivo: data.cargoEfetivo,
       cargoOcupado: data.cargoOcupado,
       lotacao: data.lotacao,
-      status: data.status === 'Inativo' ? 'Inativo' : 'Ativo',
+      status: data.status,
       role: data.role ?? 'PASTA',
       dataIngresso: data.dataIngresso,
       email: data.email,
@@ -138,26 +141,46 @@ export async function addServidor(
 
 export async function updateServidor(
   id: string,
-  data: Partial<Omit<Servidor, 'id'>> & { senhaHash?: string }
+  data: Partial<Omit<Servidor, 'id'>> & { senhaHash?: string },
+  auditLog?: Omit<LogAuditoria, 'id' | 'dataHora'>
 ): Promise<Servidor | null> {
-  const updated = await prisma.servidor.update({
-    where: { id },
-    data: {
-      ...(data.matricula !== undefined && { matricula: data.matricula }),
-      ...(data.cpf !== undefined && { cpf: data.cpf }),
-      ...(data.nome !== undefined && { nome: data.nome }),
-      ...(data.email !== undefined && { email: data.email }),
-      ...(data.telefone !== undefined && { telefone: data.telefone }),
-      ...(data.fotoUrl !== undefined && { fotoUrl: data.fotoUrl || null }),
-      ...(data.cargoEfetivo !== undefined && { cargoEfetivo: data.cargoEfetivo }),
-      ...(data.cargoOcupado !== undefined && { cargoOcupado: data.cargoOcupado }),
-      ...(data.lotacao !== undefined && { lotacao: data.lotacao }),
-      ...(data.status !== undefined && { status: data.status }),
-      ...(data.role !== undefined && { role: data.role }),
-      ...(data.dataIngresso !== undefined && { dataIngresso: data.dataIngresso }),
-      ...(data.senhaHash !== undefined && { senhaHash: data.senhaHash }),
-    },
-    select: SERVIDOR_SELECT,
+  const updateData = {
+    ...(data.matricula !== undefined && { matricula: data.matricula }),
+    ...(data.matriculaCargoEfetivo !== undefined && {
+      matriculaCargoEfetivo: data.matriculaCargoEfetivo,
+    }),
+    ...(data.cpf !== undefined && { cpf: data.cpf }),
+    ...(data.nome !== undefined && { nome: data.nome }),
+    ...(data.email !== undefined && { email: data.email }),
+    ...(data.telefone !== undefined && { telefone: data.telefone }),
+    ...(data.fotoUrl !== undefined && { fotoUrl: data.fotoUrl || null }),
+    ...(data.cargoEfetivo !== undefined && { cargoEfetivo: data.cargoEfetivo }),
+    ...(data.cargoOcupado !== undefined && { cargoOcupado: data.cargoOcupado }),
+    ...(data.lotacao !== undefined && { lotacao: data.lotacao }),
+    ...(data.status !== undefined && { status: data.status }),
+    ...(data.role !== undefined && { role: data.role }),
+    ...(data.dataIngresso !== undefined && { dataIngresso: data.dataIngresso }),
+    ...(data.senhaHash !== undefined && { senhaHash: data.senhaHash }),
+  };
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const servidor = await tx.servidor.update({
+      where: { id },
+      data: updateData,
+      select: SERVIDOR_SELECT,
+    });
+    if (auditLog) {
+      await tx.logAuditoria.create({
+        data: {
+          operador: auditLog.operador,
+          operadorMatricula: auditLog.operadorMatricula,
+          acao: auditLog.acao as AcaoAuditoria,
+          detalhes: auditLog.detalhes,
+          ip: auditLog.ip,
+        },
+      });
+    }
+    return servidor;
   });
 
   return {
@@ -168,10 +191,27 @@ export async function updateServidor(
   };
 }
 
-export async function deleteServidor(id: string): Promise<Servidor | null> {
-  const deleted = await prisma.servidor.delete({
-    where: { id },
-    select: SERVIDOR_SELECT,
+export async function deleteServidor(
+  id: string,
+  auditLog?: Omit<LogAuditoria, 'id' | 'dataHora'>
+): Promise<Servidor | null> {
+  const deleted = await prisma.$transaction(async (tx) => {
+    const servidor = await tx.servidor.delete({
+      where: { id },
+      select: SERVIDOR_SELECT,
+    });
+    if (auditLog) {
+      await tx.logAuditoria.create({
+        data: {
+          operador: auditLog.operador,
+          operadorMatricula: auditLog.operadorMatricula,
+          acao: auditLog.acao as AcaoAuditoria,
+          detalhes: auditLog.detalhes,
+          ip: auditLog.ip,
+        },
+      });
+    }
+    return servidor;
   });
 
   return {
@@ -212,11 +252,11 @@ export async function updateFotoServidor(
 }
 
 const CATEGORIA_ENUM: Record<DocumentoPDF['categoria'], CategoriaDocumento> = {
-  'Dados Pessoais': 'Dados_Pessoais',
-  'Posse e Exercício': 'Posse_e_Exercicio',
-  'Vida Funcional': 'Vida_Funcional',
-  'Licenças e Afastamentos': 'Licencas_e_Afastamentos',
-  'Avaliação de Desempenho': 'Avaliacao_de_Desempenho',
+  'Pasta Física Digitalizada': 'Pasta_Fisica_Digitalizada',
+  'Posse Eletrônica': 'Posse_Eletronica',
+  'Documentos Pessoais': 'Documentos_Pessoais',
+  Publicações: 'Publicacoes',
+  'Certidões/Declarações': 'Certidoes_Declaracoes',
 };
 
 const CATEGORIA_DISPLAY = Object.fromEntries(

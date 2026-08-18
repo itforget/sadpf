@@ -36,7 +36,7 @@ export async function PATCH(request: NextRequest) {
     await addLog({
       operador: String(session.nome),
       operadorMatricula: String(session.matricula),
-      acao: 'CONSULTA',
+      acao: 'ATUALIZACAO',
       detalhes: `Reorganizou a ordem dos documentos da pasta funcional de ${servidor.nome} (Mat. ${servidor.matricula})`,
       ip: getRequestIp(request),
     });

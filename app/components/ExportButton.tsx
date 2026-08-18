@@ -5,6 +5,7 @@ import { Download, Loader2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 
 import { fetchBlob } from '@/lib/client/api';
+import { Button } from '@/components/ui/button';
 
 export default function ExportButton() {
   const [erro, setErro] = useState('');
@@ -40,10 +41,11 @@ export default function ExportButton() {
 
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <button
+      <Button
         onClick={handleExportar}
         disabled={exportMutation.isPending}
-        className="inline-flex items-center gap-2 px-4 py-2.5 bg-ssp-blue hover:bg-ssp-blueDark text-white font-semibold text-sm rounded-lg shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        size="lg"
+        className="bg-ssp-blue hover:bg-ssp-blueDark"
       >
         {exportMutation.isPending ? (
           <Loader2 size={18} className="animate-spin" />
@@ -51,7 +53,7 @@ export default function ExportButton() {
           <Download size={18} />
         )}
         {exportMutation.isPending ? 'Gerando Relatório...' : 'Exportar Relatório Sintético (PDF)'}
-      </button>
+      </Button>
       {erro && <p className="text-xs text-status-danger font-medium">{erro}</p>}
     </div>
   );

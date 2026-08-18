@@ -4,16 +4,11 @@ import { addLog, deleteDocumento, getDocumentoById, updateDocumento } from '@/li
 import { getStorage } from '@/lib/storage';
 import { z } from 'zod';
 import { getRequestIp } from '@/lib/server/request-ip';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
 const documentoUpdateSchema = z.object({
   titulo: z.string().trim().min(1, 'Título é obrigatório'),
-  categoria: z.enum([
-    'Dados Pessoais',
-    'Posse e Exercício',
-    'Vida Funcional',
-    'Licenças e Afastamentos',
-    'Avaliação de Desempenho',
-  ]),
+  categoria: z.enum(CATEGORIAS_DOCUMENTO),
   processoSEI: z.string().trim().optional(),
 });
 
@@ -43,7 +38,7 @@ export async function PATCH(request: NextRequest, context: RouteContext<'/api/do
     await addLog({
       operador: String(session.nome),
       operadorMatricula: String(session.matricula),
-      acao: 'CONSULTA',
+      acao: 'ATUALIZACAO',
       detalhes: `Editou os dados do documento '${documento.titulo}'.`,
       ip: getRequestIp(request),
     });
@@ -73,7 +68,7 @@ export async function DELETE(request: NextRequest, context: RouteContext<'/api/d
     await addLog({
       operador: String(session.nome),
       operadorMatricula: String(session.matricula),
-      acao: 'CONSULTA',
+      acao: 'EXCLUSAO',
       detalhes: `Excluiu o documento '${existente.titulo}'.`,
       ip: getRequestIp(request),
     });

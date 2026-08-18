@@ -10,15 +10,10 @@ import {
   type TabelaColuna,
 } from '@/lib/server/pdf';
 import { getRequestIp } from '@/lib/server/request-ip';
-import type { DocumentoPDF, Servidor } from '@/lib/types';
+import type { Servidor } from '@/lib/types';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
-const CATEGORIAS: DocumentoPDF['categoria'][] = [
-  'Dados Pessoais',
-  'Posse e Exercício',
-  'Vida Funcional',
-  'Licenças e Afastamentos',
-  'Avaliação de Desempenho',
-];
+const CATEGORIAS = CATEGORIAS_DOCUMENTO;
 
 export async function GET(request: NextRequest) {
   try {
@@ -122,7 +117,9 @@ export async function GET(request: NextRequest) {
       doc,
       'Páginas Indexadas',
       totalPaginas.toLocaleString('pt-BR'),
-      `Média de ${mediaPaginasPorDocumento.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} páginas por documento`
+      `Média de ${mediaPaginasPorDocumento.toLocaleString('pt-BR', {
+        maximumFractionDigits: 1,
+      })} páginas por documento`
     );
 
     desenharBlocoEstatistica(
@@ -165,13 +162,13 @@ export async function GET(request: NextRequest) {
 
       desenharTabela(doc, colunasCategoria, linhasCategoria);
     } else {
-        doc
-          .fillColor('#6b7280')
-          .font('Helvetica')
-          .fontSize(9)
-          .text(
-            'Nenhum documento cadastrado ainda. Anexe documentos às pastas funcionais para gerar a distribuição por categoria.'
-          );
+      doc
+        .fillColor('#6b7280')
+        .font('Helvetica')
+        .fontSize(9)
+        .text(
+          'Nenhum documento cadastrado ainda. Anexe documentos às pastas funcionais para gerar a distribuição por categoria.'
+        );
     }
 
     if (acervoPorServidor.length > 0) {
@@ -202,11 +199,7 @@ export async function GET(request: NextRequest) {
 
     if (acervoPorLotacao.length > 0) {
       doc.moveDown(1.6);
-      doc
-        .fillColor('#0a4d8c')
-        .font('Helvetica-Bold')
-        .fontSize(12)
-        .text('Documentos por Lotação');
+      doc.fillColor('#0a4d8c').font('Helvetica-Bold').fontSize(12).text('Documentos por Lotação');
       doc.moveDown(0.6);
 
       const colunasLotacao: TabelaColuna[] = [

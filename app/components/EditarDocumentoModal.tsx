@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -15,6 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { fetchJson } from '@/lib/client/api';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
 interface EditarDocumentoModalProps {
   documento: DocumentoPDF;
@@ -22,13 +30,7 @@ interface EditarDocumentoModalProps {
   onUpdated: () => void;
 }
 
-const categorias: DocumentoPDF['categoria'][] = [
-  'Dados Pessoais',
-  'Posse e Exercício',
-  'Vida Funcional',
-  'Licenças e Afastamentos',
-  'Avaliação de Desempenho',
-];
+const categorias = CATEGORIAS_DOCUMENTO;
 
 export default function EditarDocumentoModal({
   documento,
@@ -90,16 +92,21 @@ export default function EditarDocumentoModal({
           </div>
           <div className="space-y-2">
             <Label htmlFor="categoriaDocumento">Categoria</Label>
-            <select
-              id="categoriaDocumento"
+            <Select
               value={categoria}
-              onChange={(event) => setCategoria(event.target.value as DocumentoPDF['categoria'])}
-              className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              onValueChange={(value) => setCategoria(value as DocumentoPDF['categoria'])}
             >
-              {categorias.map((opcao) => (
-                <option key={opcao}>{opcao}</option>
-              ))}
-            </select>
+              <SelectTrigger id="categoriaDocumento" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {categorias.map((opcao) => (
+                  <SelectItem key={opcao} value={opcao}>
+                    {opcao}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="processoSEI">Processo SEI</Label>

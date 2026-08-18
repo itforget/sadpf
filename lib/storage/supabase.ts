@@ -17,6 +17,16 @@ function getBucket() {
   return process.env.STORAGE_BUCKET || 'sadpf-documentos';
 }
 
+export async function createSupabaseSignedUploadUrl(key: string) {
+  const { data, error } = await getClient().storage.from(getBucket()).createSignedUploadUrl(key);
+
+  if (error || !data) {
+    throw new Error(`Falha ao preparar upload para Supabase Storage: ${error?.message}`);
+  }
+
+  return data.signedUrl;
+}
+
 export const supabaseStorage: StorageDriver = {
   backend: 'supabase',
 

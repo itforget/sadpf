@@ -7,6 +7,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { fetchJson, fetchSession } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -20,7 +23,8 @@ export default function Topbar() {
   const { data } = useQuery({
     queryKey: queryKeys.session,
     queryFn: fetchSession,
-    enabled: pathname !== '/login' && pathname !== '/redefinir-senha' && pathname !== '/privacidade',
+    enabled:
+      pathname !== '/login' && pathname !== '/redefinir-senha' && pathname !== '/privacidade',
   });
 
   const [quickQuery, setQuickQuery] = useState('');
@@ -72,36 +76,39 @@ export default function Topbar() {
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             size={18}
           />
-          <input
+          <Input
             type="search"
             value={quickQuery}
             onChange={(e) => setQuickQuery(e.target.value)}
             placeholder="Pesquisa rápida (Nome, CPF ou Matrícula)..."
-            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-ssp-blue focus:border-transparent transition-all shadow-sm placeholder:text-muted-foreground"
+            className="h-9 rounded-full pl-10 pr-4 shadow-sm"
             aria-label="Pesquisa global rápida"
           />
         </form>
       </div>
 
       <div className="md:hidden flex items-center">
-        <button className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground rounded-full transition-colors">
+        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Abrir pesquisa">
           <Search size={20} />
-        </button>
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-        <button
-          className="relative p-2 text-muted-foreground hover:bg-muted hover:text-foreground rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ssp-blue"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative rounded-full text-muted-foreground"
           aria-label="Abrir notificações"
         >
           <Bell size={20} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-status-danger rounded-full ring-2 ring-card animate-pulse"></span>
-        </button>
+        </Button>
 
-        <div className="hidden sm:block h-8 w-px bg-border mx-1"></div>
+        <Separator orientation="vertical" className="mx-1 hidden h-8 sm:block" />
 
-        <button
-          className="flex items-center gap-3 p-1 pr-2 rounded-full hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ssp-blue text-left"
+        <Button
+          variant="ghost"
+          className="h-auto gap-3 rounded-full p-1 pr-2 text-left"
           aria-label="Menu do usuário"
         >
           <div className="w-9 h-9 rounded-full bg-ssp-blue flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-background">
@@ -113,16 +120,18 @@ export default function Topbar() {
             </span>
             <span className="text-xs text-muted-foreground leading-none">{displayRole}</span>
           </div>
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={handleLogout}
-          className="ml-1 p-2 text-muted-foreground hover:bg-status-danger/10 hover:text-status-danger rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-status-danger"
+          variant="ghost"
+          size="icon"
+          className="ml-1 rounded-full text-muted-foreground hover:bg-status-danger/10 hover:text-status-danger"
           aria-label="Sair do sistema"
           title="Sair do sistema"
         >
           <LogOut size={20} />
-        </button>
+        </Button>
       </div>
     </header>
   );

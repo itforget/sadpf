@@ -6,14 +6,9 @@ import { enqueueOCR, extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
 import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
 import { getRequestIp } from '@/lib/server/request-ip';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
-const categoriasOCR: DocumentoPDF['categoria'][] = [
-  'Dados Pessoais',
-  'Posse e Exercício',
-  'Vida Funcional',
-  'Licenças e Afastamentos',
-  'Avaliação de Desempenho',
-];
+const categoriasOCR = CATEGORIAS_DOCUMENTO;
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,10 +22,10 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const servidorId = formData.get('servidorId') as string | null;
     const titulo = (formData.get('titulo') as string) || file?.name || 'Documento.pdf';
-    const rawCategoria = (formData.get('categoria') as string) || 'Vida Funcional';
+    const rawCategoria = (formData.get('categoria') as string) || 'Pasta Física Digitalizada';
     const categoria = categoriasOCR.includes(rawCategoria as DocumentoPDF['categoria'])
       ? (rawCategoria as DocumentoPDF['categoria'])
-      : 'Vida Funcional';
+      : 'Pasta Física Digitalizada';
     const processoSEI = (formData.get('processoSEI') as string) || undefined;
 
     if (!file) {

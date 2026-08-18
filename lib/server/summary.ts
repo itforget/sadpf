@@ -3,7 +3,7 @@ import { join } from 'path';
 
 import { prisma } from './prisma';
 import { getServidores, getTodosDocumentos } from './db';
-import type { DocumentoPDF } from '@/lib/types';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 import type {
   DashboardSummary,
   ConfiguracoesSummary,
@@ -41,11 +41,39 @@ async function getStorageStats() {
 export async function getDashboardSummary(): Promise<DashboardSummary> {
   const [servidores, documentos] = await Promise.all([getServidores(), getTodosDocumentos()]);
   const servidoresAtivos = servidores.filter((s) => s.status === 'Ativo').length;
+  const servidoresInativos = servidores.filter((s) => s.status === 'Inativo').length;
+  const servidoresAposentados = servidores.filter((s) => s.status === 'Aposentado').length;
+  const servidoresPorId = new Map(servidores.map((servidor) => [servidor.id, servidor]));
+  const volumePorServidor = new Map<string, number>();
+
+  for (const documento of documentos) {
+    volumePorServidor.set(
+      documento.servidorId,
+      (volumePorServidor.get(documento.servidorId) ?? 0) + 1
+    );
+  }
 
   return {
-    totalServidores: servidoresAtivos,
     servidoresAtivos,
-    totalDocumentos: documentos.length,
+    servidoresInativos,
+    servidoresAposentados,
+    totalPastasFuncionais: servidores.length,
+    ultimasInsercoes: documentos.slice(0, 5).map((documento) => ({
+      id: documento.id,
+      titulo: documento.titulo,
+      categoria: documento.categoria,
+      dataUpload: documento.dataUpload,
+      servidorId: documento.servidorId,
+      servidorNome: servidoresPorId.get(documento.servidorId)?.nome ?? 'Servidor não encontrado',
+    })),
+    volumePorServidor: Array.from(volumePorServidor.entries())
+      .map(([servidorId, quantidade]) => ({
+        servidorId,
+        servidorNome: servidoresPorId.get(servidorId)?.nome ?? 'Servidor não encontrado',
+        documentos: quantidade,
+      }))
+      .sort((a, b) => b.documentos - a.documentos || a.servidorNome.localeCompare(b.servidorNome))
+      .slice(0, 5),
   };
 }
 
@@ -64,13 +92,7 @@ export async function getRelatoriosSummary(): Promise<RelatoriosSummary> {
   const mediaPaginasPorDocumento = totalDocumentos > 0 ? totalPaginas / totalDocumentos : 0;
   const totalServidoresSemPasta = totalServidores - servidoresComPasta;
 
-  const categorias: DocumentoPDF['categoria'][] = [
-    'Dados Pessoais',
-    'Posse e Exercício',
-    'Vida Funcional',
-    'Licenças e Afastamentos',
-    'Avaliação de Desempenho',
-  ];
+  const categorias = CATEGORIAS_DOCUMENTO;
 
   const categoriaResumo = categorias.map((categoria) => ({
     categoria,

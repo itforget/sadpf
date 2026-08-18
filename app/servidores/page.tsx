@@ -8,7 +8,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -29,9 +29,20 @@ import {
 import { servidorSchema, type ServidorFormData } from '@/lib/validations/servidor';
 import { fetchJson, fetchServidores } from '@/lib/client/api';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export default function ServidoresListPage() {
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Inativo'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Inativo' | 'Aposentado'>(
+    'Todos'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const queryClient = useQueryClient();
@@ -48,6 +59,7 @@ export default function ServidoresListPage() {
     defaultValues: {
       nome: '',
       matricula: '',
+      matriculaCargoEfetivo: '',
       cpf: '',
       cargoEfetivo: '',
       cargoOcupado: '',
@@ -64,7 +76,7 @@ export default function ServidoresListPage() {
     queryKey: queryKeys.servidores({ status: statusFilter, search: searchQuery }),
     queryFn: () =>
       fetchServidores({
-        status: statusFilter as 'Ativo' | 'Inativo' | 'Todos',
+        status: statusFilter,
         search: searchQuery,
       }),
   });
@@ -148,6 +160,21 @@ export default function ServidoresListPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="matriculaCargoEfetivo">Matrícula do Cargo Efetivo *</Label>
+                <Input
+                  id="matriculaCargoEfetivo"
+                  {...register('matriculaCargoEfetivo')}
+                  placeholder="Ex.: 987.654-3"
+                  className={`font-mono ${
+                    errors.matriculaCargoEfetivo ? 'border-destructive' : ''
+                  }`}
+                />
+                {errors.matriculaCargoEfetivo && (
+                  <p className="text-sm text-destructive">{errors.matriculaCargoEfetivo.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="cpf">CPF *</Label>
                 <Input
                   id="cpf"
@@ -184,8 +211,18 @@ export default function ServidoresListPage() {
                   <SelectContent>
                     <SelectItem value="Ativo">Ativo</SelectItem>
                     <SelectItem value="Inativo">Inativo</SelectItem>
+                    <SelectItem value="Aposentado">Aposentado</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cargoOcupado">Cargo SSP-DF</Label>
+                <Input
+                  id="cargoOcupado"
+                  {...register('cargoOcupado')}
+                  placeholder="Ex.: Agente de Polícia"
+                />
               </div>
 
               <div className="space-y-2">
@@ -198,15 +235,6 @@ export default function ServidoresListPage() {
                 {errors.cargoEfetivo && (
                   <p className="text-sm text-destructive">{errors.cargoEfetivo.message}</p>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cargoOcupado">Cargo Ocupado no Órgão</Label>
-                <Input
-                  id="cargoOcupado"
-                  {...register('cargoOcupado')}
-                  placeholder="Ex.: Chefe de Núcleo (FG-02)"
-                />
               </div>
             </div>
 
@@ -268,7 +296,7 @@ export default function ServidoresListPage() {
         <div className="flex items-center gap-2 w-full md:w-auto">
           <Filter size={16} className="text-muted-foreground shrink-0" />
           <span className="text-xs font-semibold text-muted-foreground">Status:</span>
-          {(['Todos', 'Ativo', 'Inativo'] as const).map((st) => (
+          {(['Todos', 'Ativo', 'Inativo', 'Aposentado'] as const).map((st) => (
             <Button
               key={st}
               variant={statusFilter === st ? 'default' : 'outline'}
@@ -289,92 +317,99 @@ export default function ServidoresListPage() {
             <p className="text-sm font-semibold">Carregando acervo de servidores...</p>
           </div>
         ) : servidores.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-muted/60 text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border">
-                <tr>
-                  <th className="px-6 py-4">Servidor</th>
-                  <th className="px-6 py-4">Matrícula</th>
-                  <th className="px-6 py-4">Cargo Efetivo / Ocupado</th>
-                  <th className="px-6 py-4">Lotação Atual</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {servidores.map((s) => (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {s.fotoUrl ? (
-                          <Image
-                            src={s.fotoUrl}
-                            alt={s.nome}
-                            width={200}
-                            height={200}
-                            unoptimized={
-                              s.fotoUrl.startsWith('/api/') || s.fotoUrl.startsWith('data:')
-                            }
-                            className="w-10 h-10 rounded-full object-cover border border-border shadow-sm shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0">
-                            <User size={18} />
-                          </div>
-                        )}
-                        <div>
-                          <Link
-                            href={`/servidores/${s.id}`}
-                            className="font-bold text-foreground hover:text-ssp-blue transition-colors"
-                          >
-                            {s.nome}
-                          </Link>
-                          <p className="text-xs text-muted-foreground font-mono">CPF: {s.cpf}</p>
+          <Table className="text-left text-sm">
+            <TableHeader className="bg-muted/60 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <TableRow>
+                <TableHead className="px-6 py-4">Servidor</TableHead>
+                <TableHead className="px-6 py-4">Matrículas</TableHead>
+                <TableHead className="px-6 py-4">Cargo SSP-DF / Efetivo</TableHead>
+                <TableHead className="px-6 py-4">Lotação Atual</TableHead>
+                <TableHead className="px-6 py-4">Role</TableHead>
+                <TableHead className="px-6 py-4">Status</TableHead>
+                <TableHead className="px-6 py-4 text-right">Ação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {servidores.map((s) => (
+                <TableRow key={s.id} className="group">
+                  <TableCell className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      {s.fotoUrl ? (
+                        <Image
+                          src={s.fotoUrl}
+                          alt={s.nome}
+                          width={200}
+                          height={200}
+                          unoptimized={
+                            s.fotoUrl.startsWith('/api/') || s.fotoUrl.startsWith('data:')
+                          }
+                          className="w-10 h-10 rounded-full object-cover border border-border shadow-sm shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                          <User size={18} />
                         </div>
+                      )}
+                      <div>
+                        <Link
+                          href={`/servidores/${s.id}`}
+                          className="font-bold text-foreground hover:text-ssp-blue transition-colors"
+                        >
+                          {s.nome}
+                        </Link>
+                        <p className="text-xs text-muted-foreground font-mono">CPF: {s.cpf}</p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono font-bold text-ssp-blue">{s.matricula}</td>
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-foreground">{s.cargoEfetivo}</p>
-                      <p className="text-xs text-muted-foreground">{s.cargoOcupado}</p>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-muted-foreground">{s.lotacao}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                          s.role === 'ADMIN'
-                            ? 'bg-ssp-blue/10 text-ssp-blue border-ssp-blue/20'
-                            : 'bg-muted text-muted-foreground border-border'
-                        }`}
-                      >
-                        {s.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                          s.status === 'Ativo'
-                            ? 'bg-status-success/15 text-status-success border-status-success/20'
-                            : 'bg-status-danger/15 text-status-danger border-status-danger/20'
-                        }`}
-                      >
-                        {s.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/servidores/${s.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-ssp-blue hover:text-ssp-blueDark bg-ssp-blue/10 hover:bg-ssp-blue/20 px-3 py-1.5 rounded-lg transition-colors"
-                      >
-                        Abrir Capa <ChevronRight size={14} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 font-mono font-bold text-ssp-blue">
+                    <p>{s.matricula}</p>
+                    <p className="text-xs text-muted-foreground">{s.matriculaCargoEfetivo}</p>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <p className="font-semibold text-foreground">{s.cargoOcupado}</p>
+                    <p className="text-xs text-muted-foreground">{s.cargoEfetivo}</p>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 font-medium text-muted-foreground">
+                    {s.lotacao}
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <Badge
+                      variant="outline"
+                      className={`h-auto px-2.5 py-0.5 text-xs font-bold ${
+                        s.role === 'ADMIN'
+                          ? 'bg-ssp-blue/10 text-ssp-blue border-ssp-blue/20'
+                          : 'bg-muted text-muted-foreground border-border'
+                      }`}
+                    >
+                      {s.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <Badge
+                      variant="outline"
+                      className={`h-auto px-2.5 py-0.5 text-xs font-bold ${
+                        s.status === 'Ativo'
+                          ? 'bg-status-success/15 text-status-success border-status-success/20'
+                          : s.status === 'Inativo'
+                          ? 'bg-status-danger/15 text-status-danger border-status-danger/20'
+                          : 'bg-muted text-muted-foreground border-border'
+                      }`}
+                    >
+                      {s.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <Link
+                      href={`/servidores/${s.id}`}
+                      className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                    >
+                      Abrir Capa <ChevronRight size={14} />
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : (
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <Users size={48} className="mx-auto opacity-40" />

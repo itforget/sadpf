@@ -28,6 +28,12 @@ import EditarServidorModal from './EditarServidorModal';
 import EditarDocumentoModal from './EditarDocumentoModal';
 import Image from 'next/image';
 import { fetchBlob, fetchJson } from '@/lib/client/api';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 
 interface CapaPastaProps {
   servidor: Servidor;
@@ -35,23 +41,23 @@ interface CapaPastaProps {
 }
 
 const CORES_CATEGORIA: Record<DocumentoPDF['categoria'], { cartao: string; etiqueta: string }> = {
-  'Dados Pessoais': {
+  'Pasta Física Digitalizada': {
     cartao: 'bg-sky-50/70 border-sky-200 hover:border-sky-400',
     etiqueta: 'text-sky-800 bg-sky-100 border-sky-200',
   },
-  'Posse e Exercício': {
+  'Posse Eletrônica': {
     cartao: 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-400',
     etiqueta: 'text-emerald-800 bg-emerald-100 border-emerald-200',
   },
-  'Vida Funcional': {
+  'Documentos Pessoais': {
     cartao: 'bg-violet-50/70 border-violet-200 hover:border-violet-400',
     etiqueta: 'text-violet-800 bg-violet-100 border-violet-200',
   },
-  'Licenças e Afastamentos': {
+  Publicações: {
     cartao: 'bg-amber-50/70 border-amber-200 hover:border-amber-400',
     etiqueta: 'text-amber-800 bg-amber-100 border-amber-200',
   },
-  'Avaliação de Desempenho': {
+  'Certidões/Declarações': {
     cartao: 'bg-rose-50/70 border-rose-200 hover:border-rose-400',
     etiqueta: 'text-rose-800 bg-rose-100 border-rose-200',
   },
@@ -69,14 +75,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
   const [activeTab, setActiveTab] = useState<string>('Todos');
   const [searchDocQuery, setSearchDocQuery] = useState('');
 
-  const categorias = [
-    'Todos',
-    'Dados Pessoais',
-    'Posse e Exercício',
-    'Vida Funcional',
-    'Licenças e Afastamentos',
-    'Avaliação de Desempenho',
-  ];
+  const categorias = ['Todos', ...CATEGORIAS_DOCUMENTO];
 
   const filteredDocs = documentosOrdenados.filter((doc) => {
     const matchCategory = activeTab === 'Todos' || doc.categoria === activeTab;
@@ -89,9 +88,12 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
 
   const handleDownloadPasta = async () => {
     try {
-      const blob = await fetchBlob(`/api/pastas/exportar?servidorId=${encodeURIComponent(servidor.id)}`, {
-        method: 'GET',
-      });
+      const blob = await fetchBlob(
+        `/api/pastas/exportar?servidorId=${encodeURIComponent(servidor.id)}`,
+        {
+          method: 'GET',
+        }
+      );
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -201,7 +203,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-300">
+    <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-300">
       {showEncaminharModal && (
         <EncaminharModal servidor={servidor} onClose={() => setShowEncaminharModal(false)} />
       )}
@@ -221,7 +223,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
         />
       )}
 
-      <div className="flex flex-wrap justify-between items-center gap-4 border-b border-border pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <nav
           aria-label="Breadcrumb"
           className="text-muted-foreground text-sm flex items-center space-x-2"
@@ -234,70 +236,72 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
         </nav>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={handleImprimirPasta}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-sm"
-          >
+          <Button type="button" variant="outline" size="sm" onClick={handleImprimirPasta}>
             <Printer size={16} className="text-ssp-blue" /> Imprimir Pasta
-          </button>
+          </Button>
 
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setEditorServidor('dados')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-sm"
           >
             <Pencil size={16} className="text-ssp-blue" /> Editar dados pessoais
-          </button>
+          </Button>
 
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setEditorServidor('foto')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-sm"
           >
             <Camera size={16} className="text-ssp-blue" /> Adicionar / editar foto
-          </button>
+          </Button>
 
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setShowEncaminharModal(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-sm"
           >
             <Send size={16} className="text-ssp-blue" /> Encaminhar Pasta
-          </button>
+          </Button>
 
-          <button
-            onClick={handleDownloadPasta}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors shadow-sm"
-          >
+          <Button type="button" variant="outline" size="sm" onClick={handleDownloadPasta}>
             <Download size={16} className="text-ssp-blue" /> Salvar / Baixar
-          </button>
+          </Button>
 
           <Link
             href={`/documentos/novo?servidorId=${servidor.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-ssp-blue hover:bg-ssp-blueDark text-white transition-colors shadow-sm"
+            className={buttonVariants({ size: 'sm' })}
           >
             <Plus size={16} /> Anexar Documento PDF
           </Link>
         </div>
       </div>
 
-      <section className="bg-card rounded-2xl border-2 border-ssp-blue/20 shadow-corporate overflow-hidden relative">
-        <div className="bg-ssp-blueDark px-6 py-3 text-white flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
-          <div className="flex items-center gap-2">
+      <Card className="gap-0 overflow-hidden border-0 py-0 shadow-corporate">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-ssp-blueDark px-5 py-2.5 text-white sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <Image
               src="/logo-sspdf.png"
               alt="Logo SSP-DF"
-              width={120}
-              height={120}
-              className="h-auto w-auto"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
             />
-            <span>PASTA FUNCIONAL DIGITAL • SECRETARIA DE ESTADO DE SEGURANÇA PÚBLICA DO DF</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Pasta Funcional Digital
+            </span>
           </div>
-          <span className="bg-blue-900/60 px-2.5 py-1 rounded text-[11px] font-mono border border-blue-700/50">
+          <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider">
             USO EXCLUSIVO RH
           </span>
         </div>
 
-        <div className="p-6 sm:p-8 flex flex-col md:flex-row gap-6 md:gap-8 items-start">
-          <div className="shrink-0 flex flex-col items-center gap-3">
-            <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-xl border-4 border-white shadow-md overflow-hidden bg-muted relative">
+        <CardContent className="grid gap-0 p-0 lg:grid-cols-[18rem_minmax(0,1fr)]">
+          <div className="flex flex-col items-center bg-muted/50 px-6 py-8 text-center lg:items-start lg:text-left">
+            <div className="relative h-28 w-28 overflow-hidden rounded-2xl border-4 border-card bg-muted shadow-md">
               {servidor.fotoUrl ? (
                 <Image
                   src={servidor.fotoUrl}
@@ -307,17 +311,18 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                   unoptimized={
                     servidor.fotoUrl.startsWith('data:') || servidor.fotoUrl.startsWith('/api/')
                   }
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover object-center"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500">
+                <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
                   <User size={64} />
                 </div>
               )}
             </div>
 
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+            <Badge
+              variant="outline"
+              className={`mt-4 h-auto gap-1.5 px-3 py-1 text-xs font-bold ${
                 servidor.status === 'Ativo'
                   ? 'bg-status-success/15 text-status-success border-status-success/30'
                   : 'bg-status-danger/15 text-status-danger border-status-danger/30'
@@ -330,60 +335,109 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                     : 'bg-status-danger'
                 }`}
               />
-              Status Atual: {servidor.status}
-            </span>
+              Status: {servidor.status}
+            </Badge>
+            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Pasta Funcional
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Acervo administrativo e histórico funcional do servidor.
+            </p>
           </div>
 
-          <div className="flex-1 w-full space-y-5">
+          <div className="space-y-6 p-6 sm:p-8">
             <div>
-              <div className="flex flex-wrap items-center gap-3 mb-1">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                   {servidor.nome}
                 </h1>
                 <BadgeCheck className="text-ssp-blue" size={24} />
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 mt-2">
-                <span className="font-mono bg-ssp-blue/10 text-ssp-blueDark px-3 py-1 rounded-md text-xs font-bold border border-ssp-blue/20">
-                  Matrícula: {servidor.matricula}
-                </span>
-                <span className="font-mono bg-muted px-3 py-1 rounded-md text-xs font-semibold text-muted-foreground border border-border">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <Badge
+                  variant="outline"
+                  className="h-auto rounded-md bg-muted px-3 py-1 font-mono text-xs"
+                >
                   CPF: {servidor.cpf}
-                </span>
+                </Badge>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6 pt-2 border-t border-border">
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Briefcase size={14} className="text-ssp-blue" /> Cargo Efetivo
-                </span>
-                <p className="font-bold text-sm text-foreground">{servidor.cargoEfetivo}</p>
-              </div>
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Vínculos e identificação
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Card
+                  size="sm"
+                  className="gap-0 border-0 bg-background py-0 shadow-none ring-1 ring-border"
+                >
+                  <CardContent className="space-y-4 p-4">
+                    <div className="space-y-1">
+                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Matrícula SSP-DF
+                      </span>
+                      <p className="font-mono text-sm font-bold text-ssp-blue">
+                        {servidor.matricula}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Separator className="mb-3" />
+                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Briefcase size={14} className="text-ssp-blue" /> Cargo SSP-DF
+                      </span>
+                      <p className="font-bold text-sm text-foreground">
+                        {servidor.cargoOcupado || '—'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Briefcase size={14} className="text-ssp-blue" /> Cargo Ocupado no Órgão
-                </span>
-                <p className="font-bold text-sm text-foreground">{servidor.cargoOcupado}</p>
+                <Card
+                  size="sm"
+                  className="gap-0 border-0 bg-background py-0 shadow-none ring-1 ring-border"
+                >
+                  <CardContent className="space-y-4 p-4">
+                    <div className="space-y-1">
+                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Matrícula do cargo efetivo
+                      </span>
+                      <p className="font-mono text-sm font-bold text-ssp-blue">
+                        {servidor.matriculaCargoEfetivo || '—'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Separator className="mb-3" />
+                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Briefcase size={14} className="text-ssp-blue" /> Cargo efetivo
+                      </span>
+                      <p className="font-bold text-sm text-foreground">{servidor.cargoEfetivo}</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <Separator />
+
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
+              <div className="p-1">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <MapPin size={14} className="text-ssp-blue" /> Lotação Atual
                 </span>
                 <p className="font-bold text-sm text-foreground">{servidor.lotacao}</p>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <CalendarDays size={14} className="text-ssp-blue" /> Data de Ingresso
+              <div className="p-1">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <CalendarDays size={14} className="text-ssp-blue" /> Data de Admissão
                 </span>
                 <p className="font-semibold text-sm text-foreground">{servidor.dataIngresso}</p>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <div className="p-1">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <Mail size={14} className="text-ssp-blue" /> E-mail Institucional
                 </span>
                 <p
@@ -394,185 +448,202 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                 </p>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <div className="p-1">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <Phone size={14} className="text-ssp-blue" /> Telefone
                 </span>
                 <p className="font-semibold text-sm text-foreground">{servidor.telefone || '—'}</p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">
-              Documentos Anexados (Acervo PDF)
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Arraste os documentos para definir a ordem usada ao baixar ou imprimir a pasta.
-            </p>
+        </CardContent>
+      </Card>
+      <Card className="gap-0 border-0 py-0 shadow-corporate">
+        <CardContent className="space-y-5 p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                Documentos Anexados (Acervo PDF)
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Arraste os documentos para definir a ordem usada ao baixar ou imprimir a pasta.
+              </p>
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={16}
+              />
+              <Input
+                type="text"
+                placeholder="Filtrar nesta pasta..."
+                value={searchDocQuery}
+                onChange={(e) => setSearchDocQuery(e.target.value)}
+                className="h-8 pl-9 text-xs"
+              />
+            </div>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              size={16}
-            />
-            <input
-              type="text"
-              placeholder="Filtrar nesta pasta..."
-              value={searchDocQuery}
-              onChange={(e) => setSearchDocQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-card border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ssp-blue"
-            />
+          <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+            {categorias.map((cat) => (
+              <Button
+                key={cat}
+                type="button"
+                variant={activeTab === cat ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveTab(cat)}
+                className={`shrink-0 text-xs ${
+                  activeTab === cat ? 'bg-ssp-blue hover:bg-ssp-blueDark' : 'text-muted-foreground'
+                }`}
+              >
+                {cat}
+              </Button>
+            ))}
           </div>
-        </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-          {categorias.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors border ${
-                activeTab === cat
-                  ? 'bg-ssp-blue text-white border-ssp-blue shadow-sm'
-                  : 'bg-card text-muted-foreground border-border hover:bg-muted'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+          {filteredDocs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredDocs.map((doc) => {
+                const cores = CORES_CATEGORIA[doc.categoria];
 
-        {filteredDocs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredDocs.map((doc) => {
-              const cores = CORES_CATEGORIA[doc.categoria];
+                return (
+                  <div
+                    key={doc.id}
+                    draggable={documentoMovendo === null}
+                    onDragStart={(event) => iniciarArraste(event, doc.id)}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (documentoArrastado !== doc.id) setDocumentoSobreposto(doc.id);
+                    }}
+                    onDrop={(event) => soltarDocumento(event, doc.id)}
+                    onDragEnd={() => {
+                      setDocumentoArrastado(null);
+                      setDocumentoSobreposto(null);
+                    }}
+                    className={`p-5 rounded-xl border shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 cursor-grab active:cursor-grabbing ${
+                      cores.cartao
+                    } ${documentoArrastado === doc.id ? 'opacity-50' : ''} ${
+                      documentoSobreposto === doc.id
+                        ? 'border-ssp-blue ring-2 ring-ssp-blue/30'
+                        : ''
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span
+                          className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${cores.etiqueta}`}
+                        >
+                          {doc.categoria}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground font-mono">
+                          {doc.tamanho}
+                        </span>
+                      </div>
 
-              return (
-                <div
-                  key={doc.id}
-                  draggable={documentoMovendo === null}
-                  onDragStart={(event) => iniciarArraste(event, doc.id)}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    if (documentoArrastado !== doc.id) setDocumentoSobreposto(doc.id);
-                  }}
-                  onDrop={(event) => soltarDocumento(event, doc.id)}
-                  onDragEnd={() => {
-                    setDocumentoArrastado(null);
-                    setDocumentoSobreposto(null);
-                  }}
-                  className={`p-5 rounded-xl border shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 cursor-grab active:cursor-grabbing ${
-                    cores.cartao
-                  } ${documentoArrastado === doc.id ? 'opacity-50' : ''} ${
-                    documentoSobreposto === doc.id ? 'border-ssp-blue ring-2 ring-ssp-blue/30' : ''
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span
-                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${cores.etiqueta}`}
-                      >
-                        {doc.categoria}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground font-mono">
-                        {doc.tamanho}
-                      </span>
-                    </div>
-
-                    <Link
-                      href={`/documentos/${doc.id}`}
-                      className="font-semibold text-sm text-foreground hover:text-ssp-blue transition-colors flex items-start gap-2 group"
-                    >
-                      <FileText size={18} className="text-ssp-blue shrink-0 mt-0.5" />
-                      <span className="line-clamp-2 leading-tight">{doc.titulo}</span>
-                    </Link>
-
-                    {doc.processoSEI && (
-                      <p className="text-xs text-muted-foreground mt-2 font-mono">
-                        SEI: {doc.processoSEI}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-3 border-t border-border flex items-center justify-between gap-2 text-xs font-semibold">
-                    <span className="text-muted-foreground">Enviado: {doc.dataUpload}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => moverDocumento(doc.id, 'cima')}
-                        disabled={
-                          documentoMovendo !== null ||
-                          documentosOrdenados.findIndex((documento) => documento.id === doc.id) ===
-                            0
-                        }
-                        aria-label={`Mover ${doc.titulo} para cima`}
-                        title="Mover para cima"
-                        className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <ChevronUp size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moverDocumento(doc.id, 'baixo')}
-                        disabled={
-                          documentoMovendo !== null ||
-                          documentosOrdenados.findIndex((documento) => documento.id === doc.id) ===
-                            documentosOrdenados.length - 1
-                        }
-                        aria-label={`Mover ${doc.titulo} para baixo`}
-                        title="Mover para baixo"
-                        className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <ChevronDown size={16} />
-                      </button>
                       <Link
                         href={`/documentos/${doc.id}`}
-                        className="text-ssp-blue hover:underline"
+                        className="font-semibold text-sm text-foreground hover:text-ssp-blue transition-colors flex items-start gap-2 group"
                       >
-                        Visualizar PDF
+                        <FileText size={18} className="text-ssp-blue shrink-0 mt-0.5" />
+                        <span className="line-clamp-2 leading-tight">{doc.titulo}</span>
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => setDocumentoEditando(doc)}
-                        aria-label={`Editar ${doc.titulo}`}
-                        title="Editar documento"
-                        className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => excluirDocumento(doc)}
-                        disabled={documentoExcluindo !== null}
-                        aria-label={`Excluir ${doc.titulo}`}
-                        title="Excluir documento"
-                        className="p-1 rounded text-status-danger hover:bg-status-danger/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+
+                      {doc.processoSEI && (
+                        <p className="text-xs text-muted-foreground mt-2 font-mono">
+                          SEI: {doc.processoSEI}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-border flex items-center justify-between gap-2 text-xs font-semibold">
+                      <span className="text-muted-foreground">Enviado: {doc.dataUpload}</span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => moverDocumento(doc.id, 'cima')}
+                          disabled={
+                            documentoMovendo !== null ||
+                            documentosOrdenados.findIndex(
+                              (documento) => documento.id === doc.id
+                            ) === 0
+                          }
+                          aria-label={`Mover ${doc.titulo} para cima`}
+                          title="Mover para cima"
+                          variant="ghost"
+                          size="icon-xs"
+                        >
+                          <ChevronUp size={16} />
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => moverDocumento(doc.id, 'baixo')}
+                          disabled={
+                            documentoMovendo !== null ||
+                            documentosOrdenados.findIndex(
+                              (documento) => documento.id === doc.id
+                            ) ===
+                              documentosOrdenados.length - 1
+                          }
+                          aria-label={`Mover ${doc.titulo} para baixo`}
+                          title="Mover para baixo"
+                          variant="ghost"
+                          size="icon-xs"
+                        >
+                          <ChevronDown size={16} />
+                        </Button>
+                        <Link
+                          href={`/documentos/${doc.id}`}
+                          className={buttonVariants({
+                            variant: 'link',
+                            size: 'sm',
+                            className: 'h-auto px-0 text-xs text-ssp-blue',
+                          })}
+                        >
+                          Visualizar PDF
+                        </Link>
+                        <Button
+                          type="button"
+                          onClick={() => setDocumentoEditando(doc)}
+                          aria-label={`Editar ${doc.titulo}`}
+                          title="Editar documento"
+                          variant="ghost"
+                          size="icon-xs"
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => excluirDocumento(doc)}
+                          disabled={documentoExcluindo !== null}
+                          aria-label={`Excluir ${doc.titulo}`}
+                          title="Excluir documento"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="text-status-danger hover:bg-status-danger/10 hover:text-status-danger"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-8 text-center bg-card rounded-xl border border-border text-muted-foreground space-y-2">
-            <FileText size={40} className="mx-auto text-muted-foreground/40" />
-            <p className="font-semibold">
-              Nenhum documento PDF encontrado para o filtro selecionado.
-            </p>
-            <p className="text-xs">
-              Utilize o botão &quot;Anexar Documento PDF&quot; para incluir novos arquivos nesta
-              pasta.
-            </p>
-          </div>
-        )}
-      </section>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-8 text-center bg-card rounded-xl border border-border text-muted-foreground space-y-2">
+              <FileText size={40} className="mx-auto text-muted-foreground/40" />
+              <p className="font-semibold">
+                Nenhum documento PDF encontrado para o filtro selecionado.
+              </p>
+              <p className="text-xs">
+                Utilize o botão &quot;Anexar Documento PDF&quot; para incluir novos arquivos nesta
+                pasta.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

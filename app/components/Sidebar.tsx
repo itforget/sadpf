@@ -3,21 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  Users,
-  Search,
-  BarChart,
-  Send,
-  ScrollText,
-  UserCog,
-  Settings,
-} from 'lucide-react';
+import { Home, Users, Search, BarChart, Send, ScrollText, UserCog, Settings } from 'lucide-react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 
 import { fetchSession } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 type MenuItem = {
   name: string;
@@ -49,7 +42,8 @@ export default function Sidebar() {
   const { data } = useQuery({
     queryKey: queryKeys.session,
     queryFn: fetchSession,
-    enabled: pathname !== '/login' && pathname !== '/redefinir-senha' && pathname !== '/privacidade',
+    enabled:
+      pathname !== '/login' && pathname !== '/redefinir-senha' && pathname !== '/privacidade',
   });
 
   if (pathname === '/login' || pathname === '/redefinir-senha' || pathname === '/privacidade') {
@@ -66,9 +60,10 @@ export default function Sidebar() {
         isOpen ? 'w-64' : 'w-20'
       } transition-all duration-300 bg-card border-r border-border flex flex-col z-20 print:hidden`}
     >
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="h-16 flex items-center justify-center border-b border-border gap-3 hover:bg-slate-50 transition-colors w-full focus:outline-none"
+        variant="ghost"
+        className="h-16 w-full justify-center gap-3 rounded-none border-b border-border"
         aria-label="Alternar menu lateral"
       >
         <Image
@@ -82,13 +77,16 @@ export default function Sidebar() {
           <span className="flex items-center gap-2 whitespace-nowrap">
             <span className="font-bold text-lg text-ssp-blueDark">SADPF</span>
             {session && (
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-ssp-blue bg-ssp-blue/10 border border-ssp-blue/30 rounded-full px-2 py-0.5">
+              <Badge
+                variant="outline"
+                className="border-ssp-blue/30 bg-ssp-blue/10 text-[10px] text-ssp-blue"
+              >
                 {ROLE_LABELS[session.role] ?? session.role}
-              </span>
+              </Badge>
             )}
           </span>
         )}
-      </button>
+      </Button>
 
       <nav className="flex-1 overflow-y-auto py-4 px-2 custom-scrollbar">
         <ul className="space-y-1">

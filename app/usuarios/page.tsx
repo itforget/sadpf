@@ -47,7 +47,7 @@ const usuarioEditSchema = z.object({
   cargoEfetivo: z.string().optional(),
   cargoOcupado: z.string().optional(),
   lotacao: z.string().optional(),
-  status: z.enum(['Ativo', 'Inativo'], {
+  status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
     message: 'Status é obrigatório',
   }),
   role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {
@@ -537,7 +537,7 @@ export default function UsuariosPage() {
                 <Select
                   value={editStatus}
                   onValueChange={(value) => {
-                    if (value) editForm.setValue('status', value as 'Ativo' | 'Inativo');
+                    if (value) editForm.setValue('status', value as Servidor['status']);
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -546,6 +546,7 @@ export default function UsuariosPage() {
                   <SelectContent>
                     <SelectItem value="Ativo">Ativo</SelectItem>
                     <SelectItem value="Inativo">Inativo</SelectItem>
+                    <SelectItem value="Aposentado">Aposentado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

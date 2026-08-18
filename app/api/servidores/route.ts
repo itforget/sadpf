@@ -10,6 +10,7 @@ import {
   getServidorById,
 } from '@/lib/server/db';
 import { servidorSchema, servidorUpdateSchema } from '@/lib/validations/servidor';
+import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET(request: Request) {
   try {
@@ -24,6 +25,8 @@ export async function GET(request: Request) {
         ? StatusServidor.Ativo
         : statusParam === StatusServidor.Inativo
         ? StatusServidor.Inativo
+        : statusParam === StatusServidor.Aposentado
+        ? StatusServidor.Aposentado
         : statusParam === 'Todos'
         ? 'Todos'
         : undefined;
@@ -78,6 +81,7 @@ export async function POST(request: Request) {
 
     const newServidor = await addServidor({
       matricula: data.matricula,
+      matriculaCargoEfetivo: data.matriculaCargoEfetivo,
       nome: data.nome,
       cpf: data.cpf,
       fotoUrl: typeof body.fotoUrl === 'string' ? body.fotoUrl : '',
@@ -151,21 +155,35 @@ export async function PUT(request: Request) {
       );
     }
 
-    const updated = await updateServidor(id, {
-      matricula: data.matricula,
-      cpf: data.cpf,
-      nome: data.nome,
-      email: data.email ?? undefined,
-      telefone: data.telefone ?? undefined,
-      fotoUrl: data.fotoUrl ?? undefined,
-      cargoEfetivo: data.cargoEfetivo,
-      cargoOcupado: data.cargoOcupado,
-      lotacao: data.lotacao,
-      status: data.status,
-      ...(session.role === 'ADMIN' && data.role !== undefined ? { role: data.role } : {}),
-      dataIngresso: data.dataIngresso,
-      senhaHash,
-    });
+    const updated = await updateServidor(
+      id,
+      {
+        matricula: data.matricula,
+        matriculaCargoEfetivo: data.matriculaCargoEfetivo,
+        cpf: data.cpf,
+        nome: data.nome,
+        email: data.email ?? undefined,
+        telefone: data.telefone ?? undefined,
+        fotoUrl: data.fotoUrl ?? undefined,
+        cargoEfetivo: data.cargoEfetivo,
+        cargoOcupado: data.cargoOcupado,
+        lotacao: data.lotacao,
+        status: data.status,
+        ...(session.role === 'ADMIN' && data.role !== undefined ? { role: data.role } : {}),
+        dataIngresso: data.dataIngresso,
+        senhaHash,
+      },
+      {
+        operador: String(session.nome),
+        operadorMatricula: String(session.matricula),
+        acao: 'ATUALIZACAO',
+        detalhes: `Atualizou os dados cadastrais da pasta funcional de ${servidorAtual.nome} (Mat. ${servidorAtual.matricula}).`,
+        ip: getRequestIp(request),
+      }
+    );
+    if (!updated) {
+      return NextResponse.json({ error: 'Servidor não encontrado.' }, { status: 404 });
+    }
 
     return NextResponse.json(updated);
   } catch (error: unknown) {
@@ -193,7 +211,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID do usuário é obrigatório.' }, { status: 400 });
     }
 
-    const deleted = await deleteServidor(id);
+    const servidor = await getServidorById(id);
+    if (!servidor) {
+      return NextResponse.json({ error: 'Servidor não encontrado.' }, { status: 404 });
+    }
+
+    const deleted = await deleteServidor(id, {
+      operador: String(session.nome),
+      operadorMatricula: String(session.matricula),
+      acao: 'EXCLUSAO',
+      detalhes: `Excluiu a pasta funcional de ${servidor.nome} (Mat. ${servidor.matricula}).`,
+      ip: getRequestIp(request),
+    });
     return NextResponse.json(deleted);
   } catch (error: unknown) {
     console.error('[DELETE /api/servidores]', error);

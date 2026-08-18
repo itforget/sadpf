@@ -8,7 +8,7 @@ export const usuarioSchema = z.object({
     .min(1, 'CPF é obrigatório')
     .regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido'),
   email: z.email('Email inválido'),
-  status: z.enum(['Ativo', 'Inativo'], {
+  status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
     message: 'Status é obrigatório',
   }),
   role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {

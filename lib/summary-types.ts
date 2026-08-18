@@ -1,9 +1,19 @@
 import type { DocumentoPDF, Servidor } from './types';
 
 export type DashboardSummary = {
-  totalServidores: number;
   servidoresAtivos: number;
-  totalDocumentos: number;
+  servidoresInativos: number;
+  servidoresAposentados: number;
+  totalPastasFuncionais: number;
+  ultimasInsercoes: {
+    id: string;
+    titulo: string;
+    categoria: DocumentoPDF['categoria'];
+    dataUpload: string;
+    servidorId: string;
+    servidorNome: string;
+  }[];
+  volumePorServidor: { servidorId: string; servidorNome: string; documentos: number }[];
 };
 
 export type RelatoriosCategoriaResumo = {

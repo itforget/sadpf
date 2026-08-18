@@ -1,20 +1,12 @@
 import { z } from 'zod';
+import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
 export const documentoSchema = z.object({
   servidorId: z.string().min(1, 'Servidor é obrigatório'),
   titulo: z.string().min(1, 'Título é obrigatório'),
-  categoria: z.enum(
-    [
-      'Dados Pessoais',
-      'Posse e Exercício',
-      'Vida Funcional',
-      'Licenças e Afastamentos',
-      'Avaliação de Desempenho',
-    ],
-    {
-      message: 'Categoria é obrigatória',
-    }
-  ),
+  categoria: z.enum(CATEGORIAS_DOCUMENTO, {
+    message: 'Categoria é obrigatória',
+  }),
   processoSEI: z.string().optional(),
   file: z
     .instanceof(File)
