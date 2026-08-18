@@ -86,16 +86,42 @@ function NovoDocumentoForm() {
 
   const uploadMutation = useMutation({
     mutationFn: async (data: DocumentoFormData) => {
-      const formData = new FormData();
-      formData.append('servidorId', data.servidorId);
-      formData.append('titulo', data.titulo);
-      formData.append('categoria', data.categoria);
-      formData.append('processoSEI', data.processoSEI || '');
-      formData.append('file', data.file);
+      const upload = await fetchJson<{ signedUrl: string; storageKey: string }>(
+        '/api/upload/assinar',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            servidorId: data.servidorId,
+            titulo: data.titulo,
+            categoria: data.categoria,
+            processoSEI: data.processoSEI || undefined,
+            fileName: data.file.name,
+            fileSize: data.file.size,
+          }),
+        }
+      );
 
-      await fetchJson('/api/upload', {
+      const body = new FormData();
+      body.append('cacheControl', '0');
+      body.append('', data.file);
+      const storageResponse = await fetch(upload.signedUrl, { method: 'PUT', body });
+      if (!storageResponse.ok) {
+        throw new Error('Não foi possível enviar o arquivo para o armazenamento seguro.');
+      }
+
+      await fetchJson('/api/upload/confirmar', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          servidorId: data.servidorId,
+          titulo: data.titulo,
+          categoria: data.categoria,
+          processoSEI: data.processoSEI || undefined,
+          fileName: data.file.name,
+          fileSize: data.file.size,
+          storageKey: upload.storageKey,
+        }),
       });
     },
   });
@@ -310,7 +336,7 @@ function NovoDocumentoForm() {
                 {loading ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                    Processando OCR & Inserindo...
+                    Enviando e processando OCR...
                   </>
                 ) : (
                   'Confirmar Inserção em PDF'
