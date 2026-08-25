@@ -57,8 +57,6 @@ export default function LoginPage() {
         return;
       }
 
-      // A navegação completa garante que a primeira requisição ao dashboard
-      // já carregue o cookie HTTP-only que acabou de ser emitido pelo login.
       window.location.replace('/dashboard');
     } catch (err) {
       setError(

@@ -24,7 +24,7 @@ import { documentoSchema, type DocumentoFormData } from '@/lib/validations/docum
 import { fetchJson, fetchServidorProfile, fetchServidoresAtivos } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
-import { uploadSupabaseResumableFile } from '@/lib/storage/supabase-browser';
+import { uploadSupabaseSignedFile } from '@/lib/storage/supabase-browser';
 
 function NovoDocumentoForm() {
   const router = useRouter();
@@ -89,10 +89,8 @@ function NovoDocumentoForm() {
   const uploadMutation = useMutation({
     mutationFn: async (data: DocumentoFormData) => {
       const upload = await fetchJson<{
-        bucket: string;
         storageKey: string;
-        token: string;
-        resumableUrl: string;
+        signedUrl: string;
       }>('/api/upload/assinar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,12 +104,9 @@ function NovoDocumentoForm() {
         }),
       });
 
-      await uploadSupabaseResumableFile({
-        bucket: upload.bucket,
+      await uploadSupabaseSignedFile({
         file: data.file,
-        resumableUrl: upload.resumableUrl,
-        storageKey: upload.storageKey,
-        token: upload.token,
+        signedUrl: upload.signedUrl,
         onProgress: setUploadProgress,
       });
 

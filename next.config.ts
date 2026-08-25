@@ -50,6 +50,18 @@ const nextConfig: NextConfig = {
             : []),
         ],
       },
+      {
+        // PDFs autenticados são exibidos no iframe da própria aplicação.
+        // Esta regra posterior sobrescreve o bloqueio global apenas para o arquivo.
+        source: '/api/documentos/:id/arquivo',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'none'; frame-ancestors 'self';",
+          },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
     ];
   },
 };

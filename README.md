@@ -171,11 +171,11 @@ npm run prisma:generate  # Gera Prisma Client
 
 O projeto suporta storage via variável de ambiente `STORAGE_PROVIDER`:
 
-| Provider     | Descrição                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------- |
-| `local`      | Arquivos privados em `storage/uploads/` (padrão)                                                              |
-| `supabase`   | Supabase Storage com upload direto/retomável (requer `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STORAGE_BUCKET`) |
-| `s3`/`minio` | Storage compatível com S3 no servidor da Secretaria (requer as variáveis `S3_*`)                              |
+| Provider     | Descrição                                                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `local`      | Arquivos privados em `storage/uploads/` (padrão)                                                                     |
+| `supabase`   | Supabase Storage com upload direto por URL assinada (requer `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STORAGE_BUCKET`) |
+| `s3`/`minio` | Storage compatível com S3 no servidor da Secretaria (requer as variáveis `S3_*`)                                     |
 
 ## Variáveis de Ambiente — produção
 
@@ -208,10 +208,8 @@ Obrigatórias quando `STORAGE_PROVIDER=supabase`:
 | `SUPABASE_SECRET_KEY` | Chave secreta/server-side (ou `service_role` legada) do **mesmo projeto** da URL. Nunca a exponha ao cliente. |
 | `STORAGE_BUCKET`      | Bucket privado que receberá os documentos.                                                                    |
 
-O upload retomável usa um token temporário assinado pelo servidor; não requer
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Se ocorrer `Invalid Compact JWS`, confirme que
-`SUPABASE_URL` e `SUPABASE_SECRET_KEY` são do mesmo projeto, atualize a chave após uma
-rotação no Supabase e faça um novo deploy.
+O upload direto usa uma URL temporária assinada pelo servidor; não requer
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e evita expor a chave secreta ao navegador.
 
 ### S3 ou MinIO
 

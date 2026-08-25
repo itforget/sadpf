@@ -3,11 +3,7 @@ import { getServidorById } from '@/lib/server/db';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { createDocumentStorageKey, signedUploadSchema } from '@/lib/server/document-upload';
-import {
-  createSupabaseSignedUploadUrl,
-  getSupabaseBucketName,
-  getSupabaseResumableUploadUrl,
-} from '@/lib/storage/supabase';
+import { createSupabaseSignedUploadUrl } from '@/lib/storage/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,13 +56,11 @@ export async function POST(request: NextRequest) {
     }
 
     const storageKey = createDocumentStorageKey(servidor.id);
-    const { token } = await createSupabaseSignedUploadUrl(storageKey);
+    const { signedUrl } = await createSupabaseSignedUploadUrl(storageKey);
 
     return NextResponse.json({
-      bucket: getSupabaseBucketName(),
       storageKey,
-      token,
-      resumableUrl: getSupabaseResumableUploadUrl(),
+      signedUrl,
     });
   } catch (error: unknown) {
     console.error('[POST /api/upload/assinar]', error);
