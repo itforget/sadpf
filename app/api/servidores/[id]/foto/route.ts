@@ -1,14 +1,14 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { addLog, getFotoServidorById, getServidorById, updateFotoServidor } from '@/lib/server/db';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { getStorage } from '@/lib/storage';
 import { getRequestIp } from '@/lib/server/request-ip';
 
 const TIPOS_PERMITIDOS = new Set(['image/png', 'image/jpeg']);
 
 async function sessaoAutorizada(request: NextRequest) {
-  const session = getSessionFromToken(await getSessionToken(request));
+  const session = await getVerifiedSession(request);
   return session && ['ADMIN', 'OPERADOR'].includes(String(session.role)) ? session : null;
 }
 
@@ -45,6 +45,9 @@ export async function POST(
   request: NextRequest,
   context: RouteContext<'/api/servidores/[id]/foto'>
 ) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+  }
   const session = await sessaoAutorizada(request);
   if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
 
@@ -105,6 +108,9 @@ export async function DELETE(
   request: NextRequest,
   context: RouteContext<'/api/servidores/[id]/foto'>
 ) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+  }
   const session = await sessaoAutorizada(request);
   if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
 

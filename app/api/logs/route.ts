@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLogs, addLog } from '@/lib/server/db';
 import { auditLogSchema } from '@/lib/validations/log';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = getSessionFromToken(await getSessionToken(request));
+    const session = await getVerifiedSession(request);
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }
@@ -24,9 +24,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getSessionFromToken(await getSessionToken(request));
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession(request);
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Acesso restrito a administradores.' }, { status: 403 });
     }
 
     const body = await request.json();

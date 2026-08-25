@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession } from '@/lib/server/access';
 import { getDocumentosByServidor, getServidorById } from '@/lib/server/db';
 
 export async function GET(request: NextRequest, context: RouteContext<'/api/servidores/[id]'>) {
-  const session = getSessionFromToken(await getSessionToken(request));
+  const session = await getVerifiedSession(request);
   if (!session) {
     return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
   }

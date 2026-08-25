@@ -1,11 +1,14 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { addEncaminhamento, getEncaminhamentos } from '@/lib/server/db';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { encaminhamentoSchema } from '@/lib/validations/encaminhamento';
 
 export async function GET() {
   try {
+    if (!(await getVerifiedSession())) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
     return NextResponse.json(await getEncaminhamentos());
   } catch (error) {
     console.error('[GET /api/encaminhamentos]', error);
@@ -15,7 +18,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getSessionFromToken(await getSessionToken(request));
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession(request);
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }

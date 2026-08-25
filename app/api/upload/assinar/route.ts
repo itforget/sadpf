@@ -1,14 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServidorById } from '@/lib/server/db';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 import { createDocumentStorageKey, signedUploadSchema } from '@/lib/server/document-upload';
-import { createSupabaseSignedUploadUrl } from '@/lib/storage/supabase';
+import {
+  createSupabaseSignedUploadUrl,
+  getSupabaseBucketName,
+  getSupabaseResumableUploadUrl,
+} from '@/lib/storage/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getSessionFromToken(await getSessionToken(request));
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession(request);
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    const rateLimit = checkRateLimit(`signed-upload:${session.id}`, 30, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Limite de preparações de upload atingido. Tente novamente mais tarde.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
     }
 
     if ((process.env.STORAGE_PROVIDER || 'local').toLowerCase() !== 'supabase') {
@@ -45,9 +60,14 @@ export async function POST(request: NextRequest) {
     }
 
     const storageKey = createDocumentStorageKey(servidor.id);
-    const signedUrl = await createSupabaseSignedUploadUrl(storageKey);
+    const { token } = await createSupabaseSignedUploadUrl(storageKey);
 
-    return NextResponse.json({ signedUrl, storageKey });
+    return NextResponse.json({
+      bucket: getSupabaseBucketName(),
+      storageKey,
+      token,
+      resumableUrl: getSupabaseResumableUploadUrl(),
+    });
   } catch (error: unknown) {
     console.error('[POST /api/upload/assinar]', error);
     const message = error instanceof Error ? error.message : 'Erro ao preparar upload do arquivo.';

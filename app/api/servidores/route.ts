@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { StatusServidor } from '@/prisma/generated';
-import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import {
   getServidores,
   addServidor,
@@ -14,6 +14,9 @@ import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET(request: Request) {
   try {
+    if (!(await getVerifiedSession())) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
 
     const statusParam = searchParams.get('status');
@@ -46,8 +49,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const token = await getSessionToken();
-    const session = getSessionFromToken(token);
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }
@@ -108,8 +113,10 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const token = await getSessionToken();
-    const session = getSessionFromToken(token);
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }
@@ -194,8 +201,10 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const token = await getSessionToken();
-    const session = getSessionFromToken(token);
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }

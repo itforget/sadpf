@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PDFDocument } from 'pdf-lib';
-import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
+import { getVerifiedSession } from '@/lib/server/access';
 import {
   getServidorById,
   getDocumentosByServidor,
@@ -18,8 +18,7 @@ import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET(request: Request) {
   try {
-    const token = await getSessionToken();
-    const session = getSessionFromToken(token);
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }
@@ -98,7 +97,7 @@ export async function GET(request: Request) {
       acao: paraImpressao ? 'IMPRESSAO' : 'EXPORTACAO',
       detalhes: `${
         paraImpressao ? 'Abriu para impressão' : 'Exportou'
-        } a pasta funcional completa, com ${documentos.length} documento(s), do servidor ${
+      } a pasta funcional completa, com ${documentos.length} documento(s), do servidor ${
         servidor.nome
       } (Mat. ${servidor.matricula})`,
       ip: getRequestIp(request),

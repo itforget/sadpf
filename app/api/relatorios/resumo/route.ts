@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession } from '@/lib/server/access';
 import { getRelatoriosSummary } from '@/lib/server/summary';
 
 export async function GET(request: NextRequest) {
-  const session = getSessionFromToken(await getSessionToken(request));
+  const session = await getVerifiedSession(request);
   if (!session) {
     return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
   }

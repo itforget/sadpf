@@ -32,9 +32,9 @@ export function generateJWT(
   payload: Record<string, unknown>,
   expiresInSeconds = 60 * 60 * 8
 ): string {
-  if (!SECRET) {
+  if (SECRET.length < 32) {
     throw new Error(
-      'SADPF_SECRET (or NEXTAUTH_SECRET for backwards compatibility) must be configured for JWT issuance.'
+      'SADPF_SECRET (ou NEXTAUTH_SECRET) deve ter ao menos 32 caracteres para emitir JWTs.'
     );
   }
 
@@ -90,7 +90,7 @@ function verifyJWT(token: string, secret: string): boolean {
 
 export function isAuthenticated(token: string | null): boolean {
   if (!token) return false;
-  return SECRET ? verifyJWT(token, SECRET) : false;
+  return SECRET.length >= 32 ? verifyJWT(token, SECRET) : false;
 }
 
 export function getSessionFromToken(token: string | null) {

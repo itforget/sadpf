@@ -25,7 +25,7 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path))) {
+  if (PUBLIC_PATHS.includes(pathname)) {
     if (pathname === '/login') {
       const token = await getSessionToken(request);
       if (getSessionFromToken(token)) {

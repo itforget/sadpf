@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { addLog, getServidorById, reordenarDocumentosDoServidor } from '@/lib/server/db';
 import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = getSessionFromToken(await getSessionToken(request));
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession(request);
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }

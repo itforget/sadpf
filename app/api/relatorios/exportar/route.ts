@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionToken, getSessionFromToken } from '@/lib/server/auth';
+import { getVerifiedSession } from '@/lib/server/access';
 import { getServidores, getTodosDocumentos, addLog } from '@/lib/server/db';
 import {
   criarDocumento,
@@ -17,8 +17,7 @@ const CATEGORIAS = CATEGORIAS_DOCUMENTO;
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getSessionToken();
-    const session = getSessionFromToken(token);
+    const session = await getVerifiedSession();
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
     }

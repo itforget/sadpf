@@ -4,10 +4,16 @@ const scriptSrc = `script-src 'self' 'unsafe-inline'${
   process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''
 };`;
 
+const supabaseStorageUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseStorageOrigin = supabaseStorageUrl ? new URL(supabaseStorageUrl).origin : '';
+const supabaseResumableOrigin = supabaseStorageOrigin
+  ? supabaseStorageOrigin.replace('.supabase.co', '.storage.supabase.co')
+  : '';
+
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse', 'pdfkit'],
   experimental: {
-    proxyClientMaxBodySize: '100mb',
+    proxyClientMaxBodySize: '50mb',
   },
   images: {
     remotePatterns: [
@@ -31,7 +37,9 @@ const nextConfig: NextConfig = {
             value:
               "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' https://images.unsplash.com https://avatars.githubusercontent.com data:; style-src 'self' 'unsafe-inline'; " +
               scriptSrc +
-              " font-src 'self' data:; connect-src 'self'",
+              ` font-src 'self' data:; connect-src 'self'${
+                supabaseStorageOrigin ? ` ${supabaseStorageOrigin}` : ''
+              }${supabaseResumableOrigin ? ` ${supabaseResumableOrigin}` : ''}`,
           },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },

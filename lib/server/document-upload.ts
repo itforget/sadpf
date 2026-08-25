@@ -11,7 +11,7 @@ const uploadMetadataSchema = z.object({
   categoria: z.enum(CATEGORIAS_DOCUMENTO, { message: 'Categoria inválida.' }),
   processoSEI: z.string().max(255).optional(),
   fileName: z.string().min(1, 'Nome do arquivo é obrigatório.').max(255),
-  fileSize: z.number().int().positive().max(MAX_DOCUMENT_SIZE, 'Arquivo deve ter no máximo 100MB.'),
+  fileSize: z.number().int().positive().max(MAX_DOCUMENT_SIZE, 'Arquivo deve ter no máximo 50mb.'),
 });
 
 export const signedUploadSchema = uploadMetadataSchema;

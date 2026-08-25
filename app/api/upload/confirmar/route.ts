@@ -3,7 +3,8 @@ import type { DocumentoPDF } from '@/lib/types';
 import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
 import { enqueueOCR, extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getRequestIp } from '@/lib/server/request-ip';
 import {
   completeUploadSchema,
@@ -15,9 +16,19 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getSessionFromToken(await getSessionToken(request));
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession(request);
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    const rateLimit = checkRateLimit(`upload-confirm:${session.id}`, 20, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Limite de confirmações de upload atingido. Tente novamente mais tarde.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
     }
 
     const validation = completeUploadSchema.safeParse(await request.json());
@@ -55,7 +66,7 @@ export async function POST(request: NextRequest) {
     const buffer = await storage.download(data.storageKey);
     if (buffer.byteLength > MAX_DOCUMENT_SIZE) {
       await storage.delete(data.storageKey);
-      return NextResponse.json({ error: 'Arquivo deve ter no máximo 100MB.' }, { status: 400 });
+      return NextResponse.json({ error: 'Arquivo deve ter no máximo 50mb.' }, { status: 400 });
     }
     if (!isPDF(data.fileName, 'application/pdf', buffer)) {
       await storage.delete(data.storageKey);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { addLog, deleteDocumento, getDocumentoById, updateDocumento } from '@/lib/server/db';
 import { getStorage } from '@/lib/storage';
 import { z } from 'zod';
@@ -13,11 +13,14 @@ const documentoUpdateSchema = z.object({
 });
 
 async function getSession(request: NextRequest) {
-  const session = getSessionFromToken(await getSessionToken(request));
+  const session = await getVerifiedSession(request);
   return session && ['ADMIN', 'OPERADOR'].includes(String(session.role)) ? session : null;
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext<'/api/documentos/[id]'>) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+  }
   const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Acesso não autorizado.' }, { status: 403 });
 
@@ -50,6 +53,9 @@ export async function PATCH(request: NextRequest, context: RouteContext<'/api/do
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext<'/api/documentos/[id]'>) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+  }
   const session = await getSession(request);
   if (!session) return NextResponse.json({ error: 'Acesso não autorizado.' }, { status: 403 });
 

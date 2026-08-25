@@ -24,6 +24,7 @@ import { documentoSchema, type DocumentoFormData } from '@/lib/validations/docum
 import { fetchJson, fetchServidorProfile, fetchServidoresAtivos } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
+import { uploadSupabaseResumableFile } from '@/lib/storage/supabase-browser';
 
 function NovoDocumentoForm() {
   const router = useRouter();
@@ -34,6 +35,7 @@ function NovoDocumentoForm() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const {
     register,
@@ -86,29 +88,32 @@ function NovoDocumentoForm() {
 
   const uploadMutation = useMutation({
     mutationFn: async (data: DocumentoFormData) => {
-      const upload = await fetchJson<{ signedUrl: string; storageKey: string }>(
-        '/api/upload/assinar',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            servidorId: data.servidorId,
-            titulo: data.titulo,
-            categoria: data.categoria,
-            processoSEI: data.processoSEI || undefined,
-            fileName: data.file.name,
-            fileSize: data.file.size,
-          }),
-        }
-      );
+      const upload = await fetchJson<{
+        bucket: string;
+        storageKey: string;
+        token: string;
+        resumableUrl: string;
+      }>('/api/upload/assinar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          servidorId: data.servidorId,
+          titulo: data.titulo,
+          categoria: data.categoria,
+          processoSEI: data.processoSEI || undefined,
+          fileName: data.file.name,
+          fileSize: data.file.size,
+        }),
+      });
 
-      const body = new FormData();
-      body.append('cacheControl', '0');
-      body.append('', data.file);
-      const storageResponse = await fetch(upload.signedUrl, { method: 'PUT', body });
-      if (!storageResponse.ok) {
-        throw new Error('Não foi possível enviar o arquivo para o armazenamento seguro.');
-      }
+      await uploadSupabaseResumableFile({
+        bucket: upload.bucket,
+        file: data.file,
+        resumableUrl: upload.resumableUrl,
+        storageKey: upload.storageKey,
+        token: upload.token,
+        onProgress: setUploadProgress,
+      });
 
       await fetchJson('/api/upload/confirmar', {
         method: 'POST',
@@ -128,6 +133,7 @@ function NovoDocumentoForm() {
 
   const onSubmit = async (data: DocumentoFormData) => {
     setLoading(true);
+    setUploadProgress(0);
     setSuccessMsg('');
     setErrorMsg('');
 
@@ -144,6 +150,7 @@ function NovoDocumentoForm() {
       setValue('file', undefined as unknown as File);
     } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -303,7 +310,7 @@ function NovoDocumentoForm() {
                       Clique ou arraste um arquivo PDF para anexar
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Tamanho máximo: 100MB. O OCR será processado automaticamente.
+                      Tamanho máximo: 50mb. O OCR será processado automaticamente.
                     </p>
                   </div>
                 )}
@@ -336,7 +343,9 @@ function NovoDocumentoForm() {
                 {loading ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                    Enviando e processando OCR...
+                    {uploadProgress === null || uploadProgress === 100
+                      ? 'Processando documento...'
+                      : `Enviando arquivo: ${uploadProgress}%`}
                   </>
                 ) : (
                   'Confirmar Inserção em PDF'

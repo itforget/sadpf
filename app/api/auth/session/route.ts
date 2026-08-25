@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { clearSessionCookie, getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { clearSessionCookie } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 
 export async function GET() {
-  const token = await getSessionToken();
-  const session = getSessionFromToken(token);
+  const session = await getVerifiedSession();
 
   return NextResponse.json({
     authenticated: Boolean(session),
@@ -19,7 +19,10 @@ export async function GET() {
   });
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  if (!isSameOriginMutation(request)) {
+    return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+  }
   const response = NextResponse.json({ ok: true });
   return clearSessionCookie(response);
 }

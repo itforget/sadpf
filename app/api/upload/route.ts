@@ -4,7 +4,8 @@ import type { DocumentoPDF } from '@/lib/types';
 import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
 import { enqueueOCR, extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
-import { getSessionFromToken, getSessionToken } from '@/lib/server/auth';
+import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getRequestIp } from '@/lib/server/request-ip';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
@@ -12,9 +13,19 @@ const categoriasOCR = CATEGORIAS_DOCUMENTO;
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getSessionFromToken(await getSessionToken(request));
+    if (!isSameOriginMutation(request)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
+    const session = await getVerifiedSession(request);
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+    const rateLimit = checkRateLimit(`upload:${session.id}`, 20, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Limite de uploads atingido. Tente novamente mais tarde.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
     }
 
     const formData = await request.formData();
@@ -56,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     const maxSize = 100 * 1024 * 1024;
     if (file.size > maxSize) {
-      return NextResponse.json({ error: 'Arquivo deve ter no máximo 100MB.' }, { status: 400 });
+      return NextResponse.json({ error: 'Arquivo deve ter no máximo 50mb.' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

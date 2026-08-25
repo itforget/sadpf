@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/server/prisma';
 import { generateJWT, setSessionCookie } from '@/lib/server/auth';
+import { isSameOriginMutation } from '@/lib/server/access';
 import { loginSchema } from '@/lib/validations/auth';
-import { checkRateLimit, resetRateLimit } from '@/lib/server/rate-limit';
+import { checkRateLimit, getRateLimitKey, resetRateLimit } from '@/lib/server/rate-limit';
 import { sendFirstAccessEmail } from '@/lib/server/password-reset';
 
 export async function POST(req: Request) {
   try {
+    if (!isSameOriginMutation(req)) {
+      return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });
+    }
     const body = await req.json();
 
     const validationResult = loginSchema.safeParse(body);
@@ -19,9 +23,8 @@ export async function POST(req: Request) {
     }
 
     const { email, password } = validationResult.data;
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const normalizedEmail = email.trim().toLowerCase();
-    const rateLimitKey = `${clientIp}:${normalizedEmail}`;
+    const rateLimitKey = `${getRateLimitKey(req, 'login')}:${normalizedEmail}`;
     const rateLimit = checkRateLimit(rateLimitKey);
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -78,6 +81,7 @@ export async function POST(req: Request) {
       matricula: user.matricula,
       email: user.email,
       role: user.role,
+      authVersion: user.updatedAt.getTime(),
     });
 
     const response = NextResponse.json({

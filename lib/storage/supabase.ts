@@ -13,25 +13,39 @@ function getClient() {
   });
 }
 
-function getBucket() {
+export function getSupabaseBucketName() {
   return process.env.STORAGE_BUCKET || 'sadpf-documentos';
 }
 
+export function getSupabaseResumableUploadUrl() {
+  const url = process.env.SUPABASE_URL;
+  if (!url) throw new Error('SUPABASE_URL é obrigatória para upload retomável.');
+
+  const projectUrl = new URL(url);
+  const hostname = projectUrl.hostname.endsWith('.supabase.co')
+    ? projectUrl.hostname.replace('.supabase.co', '.storage.supabase.co')
+    : projectUrl.hostname;
+
+  return `${projectUrl.protocol}//${hostname}/storage/v1/upload/resumable`;
+}
+
 export async function createSupabaseSignedUploadUrl(key: string) {
-  const { data, error } = await getClient().storage.from(getBucket()).createSignedUploadUrl(key);
+  const { data, error } = await getClient()
+    .storage.from(getSupabaseBucketName())
+    .createSignedUploadUrl(key);
 
   if (error || !data) {
     throw new Error(`Falha ao preparar upload para Supabase Storage: ${error?.message}`);
   }
 
-  return data.signedUrl;
+  return { signedUrl: data.signedUrl, token: data.token };
 }
 
 export const supabaseStorage: StorageDriver = {
   backend: 'supabase',
 
   async upload(buffer, key, mimeType) {
-    const { error } = await getClient().storage.from(getBucket()).upload(key, buffer, {
+    const { error } = await getClient().storage.from(getSupabaseBucketName()).upload(key, buffer, {
       contentType: mimeType,
       upsert: false,
       cacheControl: '0',
@@ -41,13 +55,13 @@ export const supabaseStorage: StorageDriver = {
   },
 
   async download(key) {
-    const { data, error } = await getClient().storage.from(getBucket()).download(key);
+    const { data, error } = await getClient().storage.from(getSupabaseBucketName()).download(key);
     if (error || !data) throw new Error(`Falha ao ler Supabase Storage: ${error?.message}`);
     return Buffer.from(await data.arrayBuffer());
   },
 
   async delete(key) {
-    const { error } = await getClient().storage.from(getBucket()).remove([key]);
+    const { error } = await getClient().storage.from(getSupabaseBucketName()).remove([key]);
     if (error) throw new Error(`Falha ao remover do Supabase Storage: ${error.message}`);
   },
 };
