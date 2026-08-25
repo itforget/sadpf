@@ -95,7 +95,8 @@ npm run db:up          # Docker Compose — PostgreSQL
 
 ### 2. Variáveis de ambiente
 
-Copie o `.env` (já existente no projeto) e ajuste se necessário:
+Copie o `.env.example` para `.env` e ajuste os valores locais. Para produção, use o
+gerenciador de segredos do provedor de deploy e **não** versione um arquivo `.env`.
 
 ```env
 DATABASE_URL="postgresql://postgres:postgrespassword@localhost:5432/sadpf_db"
@@ -111,7 +112,7 @@ STORAGE_PROVIDER=local
 
 ```bash
 npm run db:push        # Aplica schema ao banco
-npm run db:seed        # Cria usuário ADMIN e OPERADOR de teste
+npm run db:seed        # Cria o ADMIN inicial com as variáveis INITIAL_ADMIN_*
 ```
 
 ### 4. Rodar em dev
@@ -122,12 +123,12 @@ npm run dev
 
 Acesse [http://localhost:3000](http://localhost:3000).
 
-### Usuários de teste (seed)
+### Bootstrap do administrador
 
-| Usuário  | Matrícula  | CPF           | Role     | Senha          |
-| -------- | ---------- | ------------- | -------- | -------------- |
-| Admin    | `000001-1` | `12345678900` | ADMIN    | `123456Senha!` |
-| Operador | `000002-2` | `12345678900` | OPERADOR | `123456Senha!` |
+Antes de executar `npm run db:seed`, defina `INITIAL_ADMIN_NOME`,
+`INITIAL_ADMIN_MATRICULA`, `INITIAL_ADMIN_CPF`, `INITIAL_ADMIN_EMAIL` e
+`INITIAL_ADMIN_PASSWORD`. O seed cria apenas esse administrador e exige senha com no mínimo
+12 caracteres; não existem credenciais de teste embutidas no projeto.
 
 ---
 
@@ -170,29 +171,67 @@ npm run prisma:generate  # Gera Prisma Client
 
 O projeto suporta storage via variável de ambiente `STORAGE_PROVIDER`:
 
-| Provider     | Descrição                                                                                     |
-| ------------ | --------------------------------------------------------------------------------------------- |
-| `local`      | Arquivos privados em `storage/uploads/` (padrão)                                              |
-| `supabase`   | Supabase Storage (requer `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STORAGE_BUCKET`) |
-| `s3`/`minio` | Storage compatível com S3 no servidor da Secretaria (requer as variáveis `S3_*`)              |
+| Provider     | Descrição                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| `local`      | Arquivos privados em `storage/uploads/` (padrão)                                                              |
+| `supabase`   | Supabase Storage com upload direto/retomável (requer `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `STORAGE_BUCKET`) |
+| `s3`/`minio` | Storage compatível com S3 no servidor da Secretaria (requer as variáveis `S3_*`)                              |
 
-## Variáveis de Ambiente
+## Variáveis de Ambiente — produção
 
-| Variável                               |   Obrigatória   | Descrição                                                       |
-| -------------------------------------- | :-------------: | --------------------------------------------------------------- |
-| `DATABASE_URL`                         |       Sim       | URL de conexão PostgreSQL (Prisma)                              |
-| `SADPF_SECRET`                         |       Sim       | Chave HMAC-SHA256 para assinatura de JWT (mínimo 32 caracteres) |
-| `APP_URL`                              | Primeiro acesso | URL pública do SADPF usada no link enviado por e-mail           |
-| `RESEND_API_KEY`                       | Primeiro acesso | Chave da API do Resend                                          |
-| `EMAIL_FROM`                           | Primeiro acesso | Remetente verificado no Resend                                  |
-| `NODE_ENV`                             |       Não       | `development` / `production`                                    |
-| `STORAGE_PROVIDER`                     |       Não       | `local` (padrão), `supabase`, `s3` ou `minio`                   |
-| `NEXT_PUBLIC_SUPABASE_URL`             |   Condicional   | URL do projeto Supabase (quando `STORAGE_PROVIDER=supabase`)    |
-| `SUPABASE_SECRET_KEY`                  |   Condicional   | Secret/service role key do Supabase                             |
-| `NEXT_PUBLIC_SUPABASE_URL`             |   Condicional   | URL pública do Supabase para upload direto no navegador         |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |   Condicional   | Chave publicável do Supabase para upload direto no navegador    |
-| `STORAGE_BUCKET`                       |       Não       | Bucket (padrão: `sadpf-documentos`)                             |
-| `S3_ENDPOINT`                          |   Condicional   | Endpoint S3/MinIO                                               |
-| `S3_ACCESS_KEY_ID`                     |   Condicional   | Chave de acesso S3/MinIO                                        |
-| `S3_SECRET_ACCESS_KEY`                 |   Condicional   | Chave secreta S3/MinIO                                          |
-| `S3_REGION`                            |       Não       | Região S3 (padrão: `us-east-1`)                                 |
+Cadastre estas variáveis no ambiente de produção. Nunca use variáveis com o prefixo
+`NEXT_PUBLIC_` para segredos: esse prefixo torna o valor disponível no navegador.
+
+| Variável           | Obrigatória | Descrição                                                                                                                                                                               |
+| ------------------ | :---------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`         |     Sim     | Defina como `production`. Provedores como Vercel normalmente fazem isso automaticamente.                                                                                                |
+| `DATABASE_URL`     |     Sim     | Conexão PostgreSQL usada pelo Prisma. Use usuário próprio da aplicação, senha forte e TLS (`sslmode=require`) fora da rede local.                                                       |
+| `SADPF_SECRET`     |     Sim     | Segredo HMAC do JWT, aleatório e com pelo menos 32 caracteres. Gere com `openssl rand -base64 48`. Não use `NEXTAUTH_SECRET` em instalações novas; ele é apenas compatibilidade legada. |
+| `APP_URL`          |     Sim     | URL pública canônica, sem barra final; compõe links de primeiro acesso.                                                                                                                 |
+| `RESEND_API_KEY`   |    Sim\*    | Chave do Resend. Obrigatória quando houver contas sem senha/primeiro acesso.                                                                                                            |
+| `EMAIL_FROM`       |    Sim\*    | Remetente já verificado no Resend. Obrigatório junto da chave acima.                                                                                                                    |
+| `TRUST_PROXY`      |   Sim\*\*   | Use `true` somente atrás de proxy/CDN confiável que limpa e regrava `X-Forwarded-For`; habilita rate limit por IP.                                                                      |
+| `STORAGE_PROVIDER` |     Sim     | Escolha `supabase`, `s3`, `minio` ou `local`. Para produção, prefira storage gerenciado em vez de disco local efêmero.                                                                  |
+| `STORAGE_BUCKET`   |     Não     | Nome do bucket; se omitido, usa `sadpf-documentos`. O bucket deve existir e ser privado.                                                                                                |
+
+\* Pode ser omitida apenas se não houver fluxo de primeiro acesso por e-mail.
+
+\*\* Em Vercel, Nginx ou Ingress configurado corretamente. Sem proxy confiável, omita ou use `false`.
+
+### Supabase Storage
+
+Obrigatórias quando `STORAGE_PROVIDER=supabase`:
+
+| Variável              | Descrição                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`        | URL do projeto, por exemplo `https://seu-project-ref.supabase.co`.                                            |
+| `SUPABASE_SECRET_KEY` | Chave secreta/server-side (ou `service_role` legada) do **mesmo projeto** da URL. Nunca a exponha ao cliente. |
+| `STORAGE_BUCKET`      | Bucket privado que receberá os documentos.                                                                    |
+
+O upload retomável usa um token temporário assinado pelo servidor; não requer
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Se ocorrer `Invalid Compact JWS`, confirme que
+`SUPABASE_URL` e `SUPABASE_SECRET_KEY` são do mesmo projeto, atualize a chave após uma
+rotação no Supabase e faça um novo deploy.
+
+### S3 ou MinIO
+
+Obrigatórias quando `STORAGE_PROVIDER=s3` ou `minio`:
+
+| Variável               | Descrição                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| `S3_ACCESS_KEY_ID`     | Chave de acesso do usuário com escopo restrito ao bucket.                             |
+| `S3_SECRET_ACCESS_KEY` | Segredo correspondente.                                                               |
+| `S3_REGION`            | Região; padrão `us-east-1`.                                                           |
+| `S3_ENDPOINT`          | Endpoint do MinIO/S3 compatível. A implementação atual o exige inclusive para AWS S3. |
+| `S3_FORCE_PATH_STYLE`  | Use `true` normalmente para MinIO; padrão `true`.                                     |
+
+### Banco local por Docker e bootstrap inicial
+
+| Variável                  | Quando usar       | Descrição                                                                            |
+| ------------------------- | ----------------- | ------------------------------------------------------------------------------------ |
+| `POSTGRES_PASSWORD`       | `npm run db:up`   | Senha do PostgreSQL do `docker-compose.yml`; mantenha-a coerente com `DATABASE_URL`. |
+| `INITIAL_ADMIN_NOME`      | `npm run db:seed` | Nome do administrador inicial.                                                       |
+| `INITIAL_ADMIN_MATRICULA` | `npm run db:seed` | Matrícula do administrador inicial.                                                  |
+| `INITIAL_ADMIN_CPF`       | `npm run db:seed` | CPF do administrador inicial.                                                        |
+| `INITIAL_ADMIN_EMAIL`     | `npm run db:seed` | E-mail institucional do administrador inicial.                                       |
+| `INITIAL_ADMIN_PASSWORD`  | `npm run db:seed` | Senha inicial, com no mínimo 12 caracteres. Remova-a do ambiente após o bootstrap.   |

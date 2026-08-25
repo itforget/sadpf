@@ -161,6 +161,7 @@ export async function updateServidor(
     ...(data.role !== undefined && { role: data.role }),
     ...(data.dataIngresso !== undefined && { dataIngresso: data.dataIngresso }),
     ...(data.senhaHash !== undefined && { senhaHash: data.senhaHash }),
+    ...(data.senhaHash !== undefined && { senhaDefinidaEm: new Date() }),
   };
 
   const updated = await prisma.$transaction(async (tx) => {

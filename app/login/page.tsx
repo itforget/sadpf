@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +14,6 @@ import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 import Image from 'next/image';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -59,9 +57,15 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace('/dashboard');
+      // A navegação completa garante que a primeira requisição ao dashboard
+      // já carregue o cookie HTTP-only que acabou de ser emitido pelo login.
+      window.location.replace('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível conectar ao servidor. Tente novamente.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível conectar ao servidor. Tente novamente.'
+      );
     }
   };
 

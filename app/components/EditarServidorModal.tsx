@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import Image from 'next/image';
 import type { Servidor } from '@/lib/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,9 @@ export default function EditarServidorModal({
 }: EditarServidorModalProps) {
   const [dados, setDados] = useState(servidor);
   const [foto, setFoto] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [excluindoFoto, setExcluindoFoto] = useState(false);
   const [erro, setErro] = useState('');
   const editandoFoto = modo === 'foto';
   const queryClient = useQueryClient();
@@ -110,6 +113,31 @@ export default function EditarServidorModal({
     },
   });
 
+  const excluirFoto = async () => {
+    if (!window.confirm('Excluir permanentemente a foto deste servidor?')) return;
+
+    setExcluindoFoto(true);
+    setErro('');
+    try {
+      const response = await fetch(`/api/servidores/${servidor.id}/foto`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const resposta = await response.json().catch(() => null);
+        throw new Error(resposta?.error || 'Não foi possível excluir a foto.');
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['servidores'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.servidor(servidor.id) });
+      onUpdated();
+      onClose();
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível excluir a foto.');
+    } finally {
+      setExcluindoFoto(false);
+    }
+  };
+
   const atualizar = <K extends keyof Servidor>(campo: K, valor: Servidor[K]) => {
     setDados((anterior) => ({ ...anterior, [campo]: valor }));
   };
@@ -123,31 +151,67 @@ export default function EditarServidorModal({
     } catch {}
   };
 
+  const selecionarFoto = (arquivo: File | null) => {
+    setFoto(arquivo);
+    setFotoPreview(arquivo ? URL.createObjectURL(arquivo) : null);
+  };
+
+  const fotoExibida = fotoPreview || servidor.fotoUrl;
+  const processando = salvando || excluindoFoto;
+
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" showCloseButton={!salvando}>
+      <DialogContent
+        className="max-w-xl max-h-[90vh] overflow-y-auto"
+        showCloseButton={!processando}
+      >
         <DialogHeader>
           <DialogTitle>
             {editandoFoto ? 'Adicionar ou editar foto' : 'Editar dados do servidor'}
           </DialogTitle>
           <DialogDescription>
             {editandoFoto
-              ? 'Envie uma imagem para a pasta funcional e os PDFs.'
+              ? 'Visualize, substitua ou exclua a foto da pasta funcional.'
               : 'Atualize os dados cadastrais do servidor.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={salvar} className="space-y-4">
           {editandoFoto ? (
-            <div className="space-y-2">
-              <Label htmlFor="foto">Foto do servidor</Label>
-              <Input
-                id="foto"
-                type="file"
-                accept="image/png,image/jpeg"
-                onChange={(event) => setFoto(event.target.files?.[0] || null)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">PNG ou JPEG, até 5 MB.</p>
+            <div className="space-y-4">
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                <div className="relative h-36 w-36 overflow-hidden rounded-full border-4 border-card bg-muted shadow-sm">
+                  {fotoExibida ? (
+                    <Image
+                      src={fotoExibida}
+                      alt={`Foto de ${servidor.nome}`}
+                      width={144}
+                      height={144}
+                      unoptimized
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
+                      Nenhuma foto cadastrada
+                    </span>
+                  )}
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  {fotoPreview ? 'Pré-visualização da nova foto' : 'Foto atual do servidor'}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="foto">Escolher nova foto</Label>
+                <Input
+                  id="foto"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={(event) => selecionarFoto(event.target.files?.[0] || null)}
+                  required={!servidor.fotoUrl}
+                  disabled={processando}
+                />
+                <p className="text-xs text-muted-foreground">PNG ou JPEG, até 5 MB.</p>
+              </div>
             </div>
           ) : (
             <>
@@ -248,10 +312,24 @@ export default function EditarServidorModal({
           )}
           {erro && <p className="text-sm text-status-danger">{erro}</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={salvando}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={processando}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={salvando} className="bg-ssp-blue hover:bg-ssp-blueDark">
+            {editandoFoto && servidor.fotoUrl && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={excluirFoto}
+                disabled={processando}
+              >
+                {excluindoFoto ? 'Excluindo...' : 'Excluir foto'}
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={processando || (editandoFoto && !foto)}
+              className="bg-ssp-blue hover:bg-ssp-blueDark"
+            >
               {salvando ? 'Salvando...' : 'Salvar alterações'}
             </Button>
           </DialogFooter>

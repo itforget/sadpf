@@ -30,7 +30,7 @@ export async function getVerifiedSession(request?: NextRequest): Promise<Verifie
       email: true,
       role: true,
       status: true,
-      updatedAt: true,
+      senhaDefinidaEm: true,
     },
   });
 
@@ -38,7 +38,8 @@ export async function getVerifiedSession(request?: NextRequest): Promise<Verifie
     !user ||
     user.status !== 'Ativo' ||
     !['ADMIN', 'OPERADOR'].includes(user.role) ||
-    user.updatedAt.getTime() !== token.authVersion
+    !user.senhaDefinidaEm ||
+    user.senhaDefinidaEm.getTime() !== token.authVersion
   ) {
     return null;
   }

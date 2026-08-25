@@ -81,7 +81,9 @@ export async function POST(req: Request) {
       matricula: user.matricula,
       email: user.email,
       role: user.role,
-      authVersion: user.updatedAt.getTime(),
+      // Somente uma troca de senha deve invalidar sessões ativas. updatedAt
+      // também muda ao atualizar foto ou outros dados cadastrais.
+      authVersion: user.senhaDefinidaEm.getTime(),
     });
 
     const response = NextResponse.json({
