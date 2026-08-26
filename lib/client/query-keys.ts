@@ -10,8 +10,11 @@ export const queryKeys = {
   servidoresAtivos: ['servidores', 'ativos'] as const,
   encaminhamentos: ['encaminhamentos'] as const,
   logs: ['logs'] as const,
-  pesquisa: (query: string) => ['pesquisa', query] as const,
   documento: (id: string) => ['documento', id] as const,
 } as const;
 
-export const summaryQueryKeys = [queryKeys.dashboard, queryKeys.relatorios, queryKeys.configuracoes];
+export const summaryQueryKeys = [
+  queryKeys.dashboard,
+  queryKeys.relatorios,
+  queryKeys.configuracoes,
+];

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { DocumentoPDF } from '@/lib/types';
 import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
-import { extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { checkRateLimit } from '@/lib/server/rate-limit';
@@ -78,14 +77,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let textoOCR = '';
     let paginas = 1;
     try {
-      const ocrResult = await extractTextFromPDF(buffer);
-      textoOCR = ocrResult.text;
-      paginas = ocrResult.numpages;
-    } catch (ocrError: unknown) {
-      console.error('[upload] falha ao extrair texto OCR:', ocrError);
+      const { PDF } = await import('@libpdf/core');
+      paginas = (await PDF.load(new Uint8Array(buffer))).getPageCount();
+    } catch (pdfError: unknown) {
+      console.error('[upload] falha ao ler páginas do PDF:', pdfError);
     }
 
     let doc: DocumentoPDF;
@@ -101,7 +98,6 @@ export async function POST(request: NextRequest) {
         arquivoUrl: data.storageKey,
         storageBackend: storage.backend,
         storageKey: data.storageKey,
-        textoOCR,
         operadorRH: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
       });
     } catch (error) {

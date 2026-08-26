@@ -161,11 +161,6 @@ export default function PrintModal({
                 {documento.processoSEI && (
                   <p className="text-slate-600">PROCESSO SEI: {documento.processoSEI}</p>
                 )}
-                {documento.textoOCR && (
-                  <p className="text-slate-500 font-mono text-[11px] leading-relaxed mt-2 bg-slate-100 p-3 rounded">
-                    {documento.textoOCR}
-                  </p>
-                )}
               </div>
             )}
 

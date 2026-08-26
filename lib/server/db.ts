@@ -460,32 +460,11 @@ export async function addDocumento(docData: NovoDocumentoPDF): Promise<Documento
       arquivoUrl: docData.arquivoUrl,
       storageBackend: docData.storageBackend.toUpperCase() as StorageBackend,
       storageKey: docData.storageKey,
-      textoOCR: docData.textoOCR,
       operadorRH: docData.operadorRH,
     },
   });
 
   return mapDocumento(created);
-}
-
-export async function pesquisarOCR(query: string): Promise<DocumentoPDF[]> {
-  const q = query.trim();
-
-  if (!q) {
-    return getTodosDocumentos();
-  }
-
-  const docs = await prisma.documentoPDF.findMany({
-    where: {
-      OR: [
-        { titulo: { contains: q, mode: 'insensitive' } },
-        { textoOCR: { contains: q, mode: 'insensitive' } },
-      ],
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  return docs.map(mapDocumento);
 }
 
 export async function getTodosDocumentos(): Promise<DocumentoPDF[]> {

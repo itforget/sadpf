@@ -2,14 +2,13 @@ import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import type { DocumentoPDF } from '@/lib/types';
 import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
-import { extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getRequestIp } from '@/lib/server/request-ip';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
-const categoriasOCR = CATEGORIAS_DOCUMENTO;
+const categoriasDocumento = CATEGORIAS_DOCUMENTO;
 
 export const runtime = 'nodejs';
 
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     const servidorId = formData.get('servidorId') as string | null;
     const titulo = (formData.get('titulo') as string) || file?.name || 'Documento.pdf';
     const rawCategoria = (formData.get('categoria') as string) || 'Pasta Física Digitalizada';
-    const categoria = categoriasOCR.includes(rawCategoria as DocumentoPDF['categoria'])
+    const categoria = categoriasDocumento.includes(rawCategoria as DocumentoPDF['categoria'])
       ? (rawCategoria as DocumentoPDF['categoria'])
       : 'Pasta Física Digitalizada';
     const processoSEI = (formData.get('processoSEI') as string) || undefined;
@@ -85,14 +84,12 @@ export async function POST(request: NextRequest) {
     const storage = getStorage();
     const storedFile = await storage.upload(buffer, storageKey, file.type);
 
-    let textoOCR = '';
     let paginas = 1;
     try {
-      const ocrResult = await extractTextFromPDF(buffer);
-      textoOCR = ocrResult.text;
-      paginas = ocrResult.numpages;
-    } catch (ocrError: unknown) {
-      console.error('[upload] falha ao extrair texto OCR:', ocrError);
+      const { PDF } = await import('@libpdf/core');
+      paginas = (await PDF.load(new Uint8Array(buffer))).getPageCount();
+    } catch (pdfError: unknown) {
+      console.error('[upload] falha ao ler páginas do PDF:', pdfError);
     }
 
     let doc: DocumentoPDF;
@@ -108,7 +105,6 @@ export async function POST(request: NextRequest) {
         arquivoUrl: storedFile.key,
         storageBackend: storedFile.backend,
         storageKey: storedFile.key,
-        textoOCR,
         operadorRH: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
       });
     } catch (error) {

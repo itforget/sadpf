@@ -1,6 +1,15 @@
 'use client';
 
-import { BarChart3, Users, FileText, ShieldCheck, Layers3, Building2, Gauge, FolderOpen } from 'lucide-react';
+import {
+  BarChart3,
+  Users,
+  FileText,
+  ShieldCheck,
+  Layers3,
+  Building2,
+  Gauge,
+  FolderOpen,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import ExportButton from '@/app/components/ExportButton';
@@ -91,7 +100,9 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
           <p className="text-3xl font-extrabold text-foreground">
             {data.totalDocumentos.toLocaleString('pt-BR')}
           </p>
-          <p className="text-xs text-muted-foreground">Indexados com OCR para pesquisa de termos</p>
+          <p className="text-xs text-muted-foreground">
+            Disponíveis para consulta nas pastas funcionais
+          </p>
         </div>
 
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
@@ -152,7 +163,9 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
                   label={item.categoria}
                   value={item.quantidade}
                   total={data.totalDocumentos}
-                  subtitle={`${Math.round((item.quantidade / data.totalDocumentos) * 100)}% do acervo`}
+                  subtitle={`${Math.round(
+                    (item.quantidade / data.totalDocumentos) * 100
+                  )}% do acervo`}
                 />
               ))}
             </div>
@@ -188,7 +201,9 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
                   label={item.lotacao}
                   value={item.quantidade}
                   total={data.totalDocumentos}
-                  subtitle={`${Math.round((item.quantidade / data.totalDocumentos) * 100)}% do acervo`}
+                  subtitle={`${Math.round(
+                    (item.quantidade / data.totalDocumentos) * 100
+                  )}% do acervo`}
                   tone="bg-emerald-500"
                 />
               ))}
@@ -246,7 +261,10 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
                     <div
                       className="h-full rounded-full bg-indigo-500"
                       style={{
-                        width: `${Math.max((item.quantidade / Math.max(data.topServidores[0].quantidade, 1)) * 100, 4)}%`,
+                        width: `${Math.max(
+                          (item.quantidade / Math.max(data.topServidores[0].quantidade, 1)) * 100,
+                          4
+                        )}%`,
                       }}
                     />
                   </div>
@@ -267,7 +285,8 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
             {data.totalPaginas.toLocaleString('pt-BR')}
           </p>
           <p className="text-xs text-muted-foreground">
-            Média de {data.mediaPaginasPorDocumento.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}{' '}
+            Média de{' '}
+            {data.mediaPaginasPorDocumento.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}{' '}
             páginas por documento
           </p>
         </div>

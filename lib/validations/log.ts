@@ -9,7 +9,6 @@ const acoesAuditoria = [
   AcaoAuditoria.IMPRESSAO,
   AcaoAuditoria.EXPORTACAO,
   AcaoAuditoria.ENCAMINHAMENTO,
-  AcaoAuditoria.PESQUISA_OCR,
 ] as const;
 
 export const logSchema = z.object({
@@ -31,7 +30,6 @@ export const auditLogSchema = z.object({
     'IMPRESSAO',
     'EXPORTACAO',
     'ENCAMINHAMENTO',
-    'PESQUISA_OCR',
   ]),
   detalhes: z.string().min(1).max(2000),
 });

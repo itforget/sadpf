@@ -17,6 +17,15 @@ async function getSession(request: NextRequest) {
   return session && ['ADMIN', 'OPERADOR'].includes(String(session.role)) ? session : null;
 }
 
+export async function GET(request: NextRequest, context: RouteContext<'/api/documentos/[id]'>) {
+  const session = await getSession(request);
+  if (!session) return NextResponse.json({ error: 'Acesso não autorizado.' }, { status: 403 });
+
+  const { id } = await context.params;
+  const documento = await getDocumentoById(id);
+  return NextResponse.json(documento);
+}
+
 export async function PATCH(request: NextRequest, context: RouteContext<'/api/documentos/[id]'>) {
   if (!isSameOriginMutation(request)) {
     return NextResponse.json({ error: 'Origem da requisição inválida.' }, { status: 403 });

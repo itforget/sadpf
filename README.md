@@ -47,12 +47,11 @@ sadpf/
 │   │   ├── page.tsx           #   Listagem + criação
 │   │   └── [id]/page.tsx      #   Capa da pasta (CapaPasta)
 │   ├── documentos/            # Documentos PDF
-│   │   ├── novo/page.tsx      #   Upload com OCR
+│   │   ├── novo/page.tsx      #   Upload de PDFs
 │   │   └── [id]/page.tsx      #   Detalhe
 │   ├── usuarios/page.tsx      # Gerenciamento de usuários (ADMIN only)
 │   ├── configuracoes/page.tsx # Configurações do sistema (ADMIN only)
 │   ├── logs/page.tsx          # Trilha de auditoria (ADMIN only)
-│   ├── pesquisa/page.tsx      # Busca OCR
 │   ├── relatorios/page.tsx    # Relatórios
 │   ├── encaminhamentos/       # Encaminhamento de pastas
 │   ├── impressoes/page.tsx    # Impressão de documentos
@@ -64,7 +63,6 @@ sadpf/
 │   ├── upload/route.ts        # Upload de PDFs
 │   ├── logs/route.ts          # Logs de auditoria
 │   ├── encaminhamentos/route.ts
-│   ├── pesquisa/route.ts      # Busca OCR
 │   ├── search/route.ts        # Busca global rápida
 │   └── health/route.ts        # Healthcheck
 ├── app/components/
@@ -72,7 +70,7 @@ sadpf/
 │   ├── Topbar.tsx             # Barra superior (nome, role, logout)
 │   ├── CapaPasta.tsx          # Componente da capa da pasta funcional
 │   ├── DocumentCard.tsx       # Card de documento PDF
-│   ├── UploadForm.tsx         # Formulário de upload com OCR
+│   ├── UploadForm.tsx         # Formulário de upload de PDFs
 │   ├── EncaminharModal.tsx    # Modal de encaminhamento de pasta
 │   ├── PrintModal.tsx         # Modal de impressão
 │   ├── PDFViewer.tsx          # Visualizador de PDF embutido

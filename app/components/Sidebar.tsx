@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Search, BarChart, Send, ScrollText, UserCog, Settings } from 'lucide-react';
+import { Home, Users, BarChart, Send, ScrollText, UserCog, Settings } from 'lucide-react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 
@@ -22,7 +22,6 @@ type MenuItem = {
 const MENU_ITEMS: MenuItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Servidores', href: '/servidores', icon: Users },
-  { name: 'Pesquisa OCR', href: '/pesquisa', icon: Search },
   { name: 'Relatórios', href: '/relatorios', icon: BarChart },
   { name: 'Encaminhamentos', href: '/encaminhamentos', icon: Send },
   { name: 'Logs', href: '/logs', icon: ScrollText, adminOnly: true },

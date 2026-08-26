@@ -41,7 +41,6 @@ enum AcaoAuditoria {
   IMPRESSAO
   EXPORTACAO
   ENCAMINHAMENTO
-  PESQUISA_OCR
 }
 
 model Servidor {
@@ -100,7 +99,6 @@ model DocumentoPDF {
   arquivoUrl     String
   storageBackend StorageBackend?
   storageKey     String?
-  textoOCR       String             @db.Text
   operadorRH     String
   ordem          Int                @default(0)
   createdAt      DateTime           @default(now())

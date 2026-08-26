@@ -49,8 +49,6 @@ export default function LogsPage() {
         return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
       case 'UPLOAD':
         return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-      case 'PESQUISA_OCR':
-        return 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20';
       case 'ATUALIZACAO':
         return 'bg-status-warning/10 text-status-warning border-status-warning/20';
       case 'EXCLUSAO':
@@ -69,7 +67,7 @@ export default function LogsPage() {
             Segurança (LGPD)
           </h1>
           <p className="text-sm text-muted-foreground">
-            Registro imutável de todas as operações de visualização, OCR, download, impressão e
+            Registro imutável de todas as operações de visualização, download, impressão e
             encaminhamento do RH, reunido em uma única página.
           </p>
         </div>
@@ -119,7 +117,6 @@ export default function LogsPage() {
             'IMPRESSAO',
             'EXPORTACAO',
             'ENCAMINHAMENTO',
-            'PESQUISA_OCR',
           ].map((ac) => (
             <Button
               key={ac}

@@ -71,17 +71,70 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
   const [documentoExcluindo, setDocumentoExcluindo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('Todos');
   const [searchDocQuery, setSearchDocQuery] = useState('');
+  const [consultaExecutada, setConsultaExecutada] = useState('');
+  const [paginasEncontradas, setPaginasEncontradas] = useState<Record<string, number[]>>({});
+  const [pesquisaEmAndamento, setPesquisaEmAndamento] = useState(false);
+  const [erroPesquisa, setErroPesquisa] = useState<string | null>(null);
 
   const categorias = ['Todos', ...CATEGORIAS_DOCUMENTO];
 
   const filteredDocs = documentosOrdenados.filter((doc) => {
     const matchCategory = activeTab === 'Todos' || doc.categoria === activeTab;
+    const query = searchDocQuery.trim().toLocaleLowerCase('pt-BR');
     const matchQuery =
-      !searchDocQuery ||
-      doc.titulo.toLowerCase().includes(searchDocQuery.toLowerCase()) ||
-      doc.textoOCR.toLowerCase().includes(searchDocQuery.toLowerCase());
+      !query ||
+      doc.titulo.toLocaleLowerCase('pt-BR').includes(query) ||
+      (consultaExecutada === searchDocQuery.trim() &&
+        (paginasEncontradas[doc.id]?.length ?? 0) > 0);
     return matchCategory && matchQuery;
   });
+
+  const pesquisarConteudoDosPdfs = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchDocQuery.trim();
+
+    if (!query) {
+      setConsultaExecutada('');
+      setPaginasEncontradas({});
+      setErroPesquisa(null);
+      return;
+    }
+
+    setPesquisaEmAndamento(true);
+    setErroPesquisa(null);
+    setPaginasEncontradas({});
+
+    try {
+      const { PDF } = await import('@libpdf/core');
+      const resultados = await Promise.all(
+        documentosOrdenados.map(async (documento) => {
+          const response = await fetch(documento.arquivoUrl);
+          if (!response.ok) {
+            throw new Error(`Não foi possível abrir ${documento.titulo}.`);
+          }
+
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          const pdf = await PDF.load(bytes);
+          const paginas = pdf
+            .extractText()
+            .filter((pagina) =>
+              pagina.text.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))
+            )
+            .map((pagina) => pagina.pageIndex + 1);
+
+          return [documento.id, paginas] as const;
+        })
+      );
+
+      setPaginasEncontradas(Object.fromEntries(resultados));
+      setConsultaExecutada(query);
+    } catch (error) {
+      console.error('[CapaPasta] erro ao pesquisar conteúdo dos PDFs:', error);
+      setErroPesquisa('Não foi possível pesquisar o conteúdo de todos os PDFs desta pasta.');
+    } finally {
+      setPesquisaEmAndamento(false);
+    }
+  };
 
   const handleDownloadPasta = async () => {
     try {
@@ -455,20 +508,33 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
               </p>
             </div>
 
-            <div className="relative w-full sm:w-64">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                size={16}
-              />
-              <Input
-                type="text"
-                placeholder="Filtrar nesta pasta..."
-                value={searchDocQuery}
-                onChange={(e) => setSearchDocQuery(e.target.value)}
-                className="h-8 pl-9 text-xs"
-              />
-            </div>
+            <form className="flex w-full gap-2 sm:w-auto" onSubmit={pesquisarConteudoDosPdfs}>
+              <div className="relative min-w-0 flex-1 sm:w-72">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  size={16}
+                />
+                <Input
+                  type="search"
+                  placeholder="Pesquisar nos PDFs desta pasta..."
+                  value={searchDocQuery}
+                  onChange={(e) => setSearchDocQuery(e.target.value)}
+                  className="h-8 pl-9 text-xs"
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={pesquisaEmAndamento}>
+                {pesquisaEmAndamento ? 'Pesquisando...' : 'Pesquisar'}
+              </Button>
+            </form>
           </div>
+
+          {consultaExecutada && !pesquisaEmAndamento && (
+            <p className="text-xs text-muted-foreground">
+              Pesquisa textual em {documentosOrdenados.length} PDF(s) para &quot;{consultaExecutada}
+              &quot;.
+            </p>
+          )}
+          {erroPesquisa && <p className="text-xs text-status-danger">{erroPesquisa}</p>}
 
           <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {categorias.map((cat) => (
@@ -539,6 +605,13 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                           SEI: {doc.processoSEI}
                         </p>
                       )}
+                      {paginasEncontradas[doc.id]?.length ? (
+                        <p className="mt-2 text-xs font-semibold text-ssp-blue">
+                          Termo encontrado na
+                          {paginasEncontradas[doc.id].length === 1 ? ' página' : 's páginas'}{' '}
+                          {paginasEncontradas[doc.id].join(', ')}.
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="pt-3 border-t border-border flex items-center justify-between gap-2 text-xs font-semibold">

@@ -30,7 +30,6 @@ export interface DocumentoPDF {
   paginas: number;
   processoSEI?: string;
   arquivoUrl: string;
-  textoOCR: string;
   operadorRH: string;
 }
 
@@ -56,8 +55,7 @@ export interface LogAuditoria {
     | 'UPLOAD'
     | 'IMPRESSAO'
     | 'EXPORTACAO'
-    | 'ENCAMINHAMENTO'
-    | 'PESQUISA_OCR';
+    | 'ENCAMINHAMENTO';
   detalhes: string;
   ip: string;
 }

@@ -11,7 +11,7 @@ const supabaseResumableOrigin = supabaseStorageOrigin
   : '';
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pdf-parse', 'pdfkit', 'tesseract.js'],
+  serverExternalPackages: ['pdfkit'],
   experimental: {
     proxyClientMaxBodySize: '50mb',
   },

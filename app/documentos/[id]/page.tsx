@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Printer, Send, Search, CheckCircle2, Download } from 'lucide-react';
+import { ArrowLeft, FileText, Printer, Send, Download } from 'lucide-react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 
@@ -159,25 +159,6 @@ export default function DocumentoDetailPage() {
                 <span className="text-muted-foreground font-semibold">Operador do RH:</span>
                 <span className="font-semibold text-foreground">{documento.operadorRH}</span>
               </div>
-              <div className="pt-2 flex justify-between">
-                <span className="text-muted-foreground font-semibold">Status OCR:</span>
-                <span className="text-status-success font-bold flex items-center gap-1">
-                  <CheckCircle2 size={14} /> Indexado
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card p-5 rounded-2xl border border-border shadow-corporate space-y-3">
-            <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-              <Search size={16} className="text-ssp-blue" /> Conteúdo Extraído via OCR
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Texto reconhecido automaticamente pelo motor de OCR para permitir a pesquisa por
-              termos no texto.
-            </p>
-            <div className="p-3 bg-muted/60 rounded-xl border border-border font-serif text-xs leading-relaxed text-foreground max-h-80 overflow-y-auto">
-              {documento.textoOCR}
             </div>
           </div>
         </div>

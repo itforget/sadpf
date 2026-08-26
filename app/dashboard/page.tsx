@@ -111,7 +111,7 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-lg font-semibold">Últimas inserções</CardTitle>
             <Link
-              href="/pesquisa"
+              href="/servidores"
               className={buttonVariants({
                 variant: 'ghost',
                 size: 'sm',

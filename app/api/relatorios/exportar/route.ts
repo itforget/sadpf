@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       doc,
       'Volume de Documentos em PDF',
       totalDocumentos.toLocaleString('pt-BR'),
-      `${totalPaginas.toLocaleString('pt-BR')} páginas indexadas com OCR para pesquisa de termos`
+      `${totalPaginas.toLocaleString('pt-BR')} páginas disponíveis nos documentos anexados`
     );
 
     desenharBlocoEstatistica(

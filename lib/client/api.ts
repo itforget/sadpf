@@ -87,7 +87,6 @@ export interface Encaminhamento {
   justificativa: string;
 }
 
-export type PesquisaResult = DocumentoPDF;
 export type DocumentoSearchResult = DocumentoPDF;
 export type LogResult = LogAuditoria;
 
@@ -131,16 +130,6 @@ export async function fetchLogs(): Promise<LogResult[]> {
   return fetchJson<LogResult[]>('/api/logs');
 }
 
-export async function fetchPesquisa(query: string): Promise<PesquisaResult[]> {
-  if (!query.trim()) return [];
-  const url = new URL('/api/pesquisa', window.location.origin);
-  url.searchParams.set('q', query);
-  return fetchJson<PesquisaResult[]>(url);
-}
-
 export async function fetchDocumentoById(id: string): Promise<DocumentoSearchResult | null> {
-  const url = new URL('/api/pesquisa', window.location.origin);
-  url.searchParams.set('id', id);
-  const result = await fetchJson<DocumentoSearchResult[]>(url);
-  return result[0] ?? null;
+  return fetchJson<DocumentoSearchResult | null>(`/api/documentos/${id}`);
 }

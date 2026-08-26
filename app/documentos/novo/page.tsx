@@ -138,7 +138,7 @@ function NovoDocumentoForm() {
 
     try {
       await uploadMutation.mutateAsync(data);
-      setSuccessMsg('Documento PDF anexado e indexado com OCR com sucesso!');
+      setSuccessMsg('Documento PDF anexado com sucesso!');
       setTimeout(() => {
         router.push(`/servidores/${data.servidorId}`);
       }, 1200);
@@ -176,8 +176,7 @@ function NovoDocumentoForm() {
             Anexar Documento PDF na Pasta Digital
           </h1>
           <p className="text-sm text-muted-foreground">
-            Apenas arquivos PDF são aceitos. O sistema executará a leitura e indexação via OCR
-            automaticamente.
+            Apenas arquivos PDF são aceitos. A pesquisa textual fica disponível na pasta funcional.
           </p>
         </div>
       </div>
@@ -308,9 +307,7 @@ function NovoDocumentoForm() {
                     <p className="text-sm font-medium text-foreground">
                       Clique ou arraste um arquivo PDF para anexar
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Tamanho máximo: 50mb. O OCR será processado automaticamente.
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Tamanho máximo: 50 MB.</p>
                   </div>
                 )}
               </div>
