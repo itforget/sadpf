@@ -30,7 +30,7 @@ export async function GET(
             arquivo,
             documento.assinadoEm,
             documento.tokenAssinatura,
-            new URL(`/assinar/${documento.tokenAssinatura}`, request.url).toString()
+            new URL(`/autenticidade/${documento.tokenAssinatura}`, request.url).toString()
           )
         : arquivo;
     return new NextResponse(new Uint8Array(arquivoComMarca), {

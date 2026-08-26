@@ -23,7 +23,7 @@ export async function GET(
           arquivo,
           assinatura.assinadoEm,
           assinatura.token,
-          new URL(`/assinar/${assinatura.token}`, request.url).toString()
+          new URL(`/autenticidade/${assinatura.token}`, request.url).toString()
         )
       : arquivo;
     return new NextResponse(new Uint8Array(arquivoComMarca), {
