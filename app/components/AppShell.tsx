@@ -8,7 +8,7 @@ export default function AppShell({
   topbar,
 }: Readonly<{ children: React.ReactNode; sidebar: React.ReactNode; topbar: React.ReactNode }>) {
   const pathname = usePathname();
-  if (pathname.startsWith('/assinar/')) {
+  if (pathname.startsWith('/assinar/') || pathname.startsWith('/autenticidade/')) {
     return <main className="min-h-screen w-full overflow-y-auto bg-muted/40">{children}</main>;
   }
   return (
