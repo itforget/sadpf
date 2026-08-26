@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const maxSize = 100 * 1024 * 1024;
+    const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
-      return NextResponse.json({ error: 'Arquivo deve ter no máximo 50mb.' }, { status: 400 });
+      return NextResponse.json({ error: 'Arquivo deve ter no máximo 50 MB.' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

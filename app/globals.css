@@ -7,10 +7,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* 2. Importação de plugins diretamente no CSS */
-@plugin "tailwindcss-animate";
-
-/* 3. Configuração do Tema V4 (Substitui o tailwind.config.ts) */
+/* 2. Configuração do Tema V4 (Substitui o tailwind.config.ts) */
 @theme {
   /* Shadcn UI Base */
   --color-background: hsl(210 40% 98%);
@@ -45,7 +42,7 @@
   --shadow-corporate: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
-/* 4. Comportamento Global usando a nova sintaxe de variáveis geradas */
+/* 3. Comportamento Global usando a nova sintaxe de variáveis geradas */
 @layer base {
   *,
   ::after,
@@ -181,7 +178,7 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* 5. Impressão — isola apenas a capa oficial (PrintModal) */
+/* 4. Impressão — isola apenas a capa oficial (PrintModal) */
 
 @page {
   size: A4;

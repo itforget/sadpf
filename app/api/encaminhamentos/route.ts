@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { addEncaminhamento, getEncaminhamentos } from '@/lib/server/db';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { encaminhamentoSchema } from '@/lib/validations/encaminhamento';
+import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET() {
   try {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
       token: randomBytes(32).toString('base64url'),
       operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
       operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
-      ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'N/A',
+      ip: getRequestIp(request),
     });
 
     return NextResponse.json(encaminhamento, { status: 201 });

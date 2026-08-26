@@ -40,18 +40,6 @@ export default function DocumentoDetailPage() {
   const documento = documentoQuery.data ?? null;
   const servidores = servidoresQuery.data ?? [];
   const servidor = servidores.find((s) => s.id === documento?.servidorId) ?? null;
-  const operador = sessionData?.user
-    ? {
-        nome: sessionData.user.nome || 'Operador não identificado',
-        matricula: sessionData.user.matricula || 'N/A',
-        ip: 'N/A',
-      }
-    : {
-        nome: 'Operador não identificado',
-        matricula: 'N/A',
-        ip: 'N/A',
-      };
-
   const loading = !id || documentoQuery.isLoading || servidoresQuery.isLoading;
 
   if (loading) {
@@ -81,7 +69,7 @@ export default function DocumentoDetailPage() {
         <PrintModal
           servidor={servidor}
           documento={documento}
-          operador={operador}
+          operadorNome={sessionData?.user?.nome || 'Operador autenticado'}
           onClose={() => setShowPrintModal(false)}
         />
       )}

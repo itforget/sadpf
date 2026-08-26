@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { DocumentoPDF } from '@/lib/types';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 
-export const MAX_DOCUMENT_SIZE = 100 * 1024 * 1024;
+export const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024;
 
 const uploadMetadataSchema = z.object({
   servidorId: z.string().min(1, 'servidorId é obrigatório.'),
@@ -11,7 +11,7 @@ const uploadMetadataSchema = z.object({
   categoria: z.enum(CATEGORIAS_DOCUMENTO, { message: 'Categoria inválida.' }),
   processoSEI: z.string().max(255).optional(),
   fileName: z.string().min(1, 'Nome do arquivo é obrigatório.').max(255),
-  fileSize: z.number().int().positive().max(MAX_DOCUMENT_SIZE, 'Arquivo deve ter no máximo 50mb.'),
+  fileSize: z.number().int().positive().max(MAX_DOCUMENT_SIZE, 'Arquivo deve ter no máximo 50 MB.'),
 });
 
 export const signedUploadSchema = uploadMetadataSchema;

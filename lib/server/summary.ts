@@ -20,22 +20,33 @@ function formatUptime(seconds: number) {
 }
 
 async function getStorageStats() {
+  if ((process.env.STORAGE_PROVIDER || 'local').toLowerCase() !== 'local') {
+    return { count: 0, bytes: 0, measured: false };
+  }
+
   const uploadDir = join(process.cwd(), 'storage', 'uploads');
   let count = 0;
   let bytes = 0;
 
-  try {
-    const entries = await fs.readdir(uploadDir, { withFileTypes: true });
+  async function visit(directory: string) {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isFile()) {
-        const stat = await fs.stat(join(uploadDir, entry.name));
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await visit(path);
+      } else if (entry.isFile()) {
+        const stat = await fs.stat(path);
         count += 1;
         bytes += stat.size;
       }
     }
+  }
+
+  try {
+    await visit(uploadDir);
   } catch {}
 
-  return { count, bytes };
+  return { count, bytes, measured: true };
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {

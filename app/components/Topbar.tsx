@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Bell, LogOut } from 'lucide-react';
+import { Search, LogOut } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
@@ -9,7 +9,6 @@ import { fetchJson, fetchSession } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -88,29 +87,19 @@ export default function Topbar() {
       </div>
 
       <div className="md:hidden flex items-center">
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Abrir pesquisa">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          aria-label="Abrir pesquisa"
+          onClick={() => router.push('/pesquisa')}
+        >
           <Search size={20} />
         </Button>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative rounded-full text-muted-foreground"
-          aria-label="Abrir notificações"
-        >
-          <Bell size={20} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-status-danger rounded-full ring-2 ring-card animate-pulse"></span>
-        </Button>
-
-        <Separator orientation="vertical" className="mx-1 hidden h-8 sm:block" />
-
-        <Button
-          variant="ghost"
-          className="h-auto gap-3 rounded-full p-1 pr-2 text-left"
-          aria-label="Menu do usuário"
-        >
+        <div className="flex h-auto items-center gap-3 rounded-full p-1 pr-2 text-left">
           <div className="w-9 h-9 rounded-full bg-ssp-blue flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-background">
             {initials}
           </div>
@@ -120,7 +109,7 @@ export default function Topbar() {
             </span>
             <span className="text-xs text-muted-foreground leading-none">{displayRole}</span>
           </div>
-        </Button>
+        </div>
 
         <Button
           onClick={handleLogout}

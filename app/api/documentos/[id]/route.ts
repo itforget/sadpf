@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { addLog, deleteDocumento, getDocumentoById, updateDocumento } from '@/lib/server/db';
-import { getStorage } from '@/lib/storage';
+import { processPendingStorageDeletionTasks } from '@/lib/server/storage-cleanup';
 import { z } from 'zod';
 import { getRequestIp } from '@/lib/server/request-ip';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
@@ -67,9 +67,7 @@ export async function DELETE(request: NextRequest, context: RouteContext<'/api/d
 
     const documento = await deleteDocumento(id);
     if (documento) {
-      await getStorage(documento.storageBackend ?? 'local').delete(
-        documento.storageKey ?? documento.arquivoUrl
-      );
+      await processPendingStorageDeletionTasks();
     }
     await addLog({
       operador: String(session.nome),

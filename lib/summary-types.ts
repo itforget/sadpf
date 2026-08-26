@@ -55,7 +55,7 @@ export type ConfiguracoesSummary = {
   servidoresCount: number;
   documentosCount: number;
   logsCount: number;
-  storage: { count: number; bytes: number };
+  storage: { count: number; bytes: number; measured: boolean };
   secretConfigurado: boolean;
   ambiente: string;
   uptime: string;

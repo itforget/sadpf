@@ -5,7 +5,7 @@ import { Send, ShieldAlert, CheckCircle2, Copy, Link as LinkIcon } from 'lucide-
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Servidor, DocumentoPDF } from '@/lib/types';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   type EncaminhamentoFormData,
 } from '@/lib/validations/encaminhamento';
 import { fetchJson } from '@/lib/client/api';
+import { queryKeys } from '@/lib/client/query-keys';
 
 interface EncaminharModalProps {
   servidor: Servidor;
@@ -43,6 +44,7 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
   const [enviando, setEnviando] = useState(false);
   const [linkGerado, setLinkGerado] = useState('');
   const [copiado, setCopiado] = useState(false);
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -75,6 +77,9 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
           documentoId: documento?.id,
         }),
       });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.encaminhamentos });
     },
   });
 

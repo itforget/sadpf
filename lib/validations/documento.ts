@@ -13,8 +13,8 @@ export const documentoSchema = z.object({
     .refine((file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'), {
       message: 'Apenas arquivos PDF são permitidos',
     })
-    .refine((file) => file.size <= 100 * 1024 * 1024, {
-      message: 'Arquivo deve ter no máximo 50mb',
+    .refine((file) => file.size <= 50 * 1024 * 1024, {
+      message: 'Arquivo deve ter no máximo 50 MB',
     }),
 });
 

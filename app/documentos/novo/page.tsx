@@ -6,7 +6,7 @@ import { UploadCloud, FileText, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ function NovoDocumentoForm() {
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -123,6 +124,9 @@ function NovoDocumentoForm() {
           storageKey: upload.storageKey,
         }),
       });
+    },
+    onSuccess: async (_result, data) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.servidor(data.servidorId) });
     },
   });
 

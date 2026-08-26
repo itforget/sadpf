@@ -21,29 +21,25 @@ import { fetchJson } from '@/lib/client/api';
 interface PrintModalProps {
   servidor: Servidor;
   documento?: DocumentoPDF;
-  operador: { nome: string; matricula: string; ip: string };
+  operadorNome: string;
   onClose: () => void;
 }
 
-export default function PrintModal({ servidor, documento, operador, onClose }: PrintModalProps) {
+export default function PrintModal({
+  servidor,
+  documento,
+  operadorNome,
+  onClose,
+}: PrintModalProps) {
   const [imprimindo, setImprimindo] = useState(false);
   const [impressoComSucesso, setImpressoComSucesso] = useState(false);
   const [hashValidacao] = useState(() => Math.random().toString(36).substring(2, 12).toUpperCase());
   const [dataHoraAtual] = useState(() => new Date().toLocaleString('pt-BR'));
   const logMutation = useMutation({
     mutationFn: async () => {
-      await fetchJson('/api/logs', {
+      if (!documento) return;
+      await fetchJson(`/api/documentos/${documento.id}/impressao`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operador: operador.nome,
-          operadorMatricula: operador.matricula,
-          acao: 'IMPRESSAO',
-          detalhes: `Imprimiu ${
-            documento ? `documento '${documento.titulo}'` : 'Capa da Pasta Funcional'
-          } do servidor ${servidor.nome} (Mat. ${servidor.matricula}) - Hash: ${hashValidacao}`,
-          ip: operador.ip,
-        }),
       });
     },
   });
@@ -178,7 +174,7 @@ export default function PrintModal({ servidor, documento, operador, onClose }: P
                 <p className="font-bold text-slate-700">
                   EMISSÃO AUDITADA PELO SETOR DE GESTÃO DE PESSOAS (RH)
                 </p>
-                <p>Operador Responsável: {operador.nome}</p>
+                <p>Operador Responsável: {operadorNome}</p>
                 <p>Data e Hora da Emissão: {dataHoraAtual}</p>
               </div>
               <div className="text-right bg-slate-100 px-3 py-1.5 rounded border border-slate-200 font-mono">

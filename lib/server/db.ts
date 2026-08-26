@@ -197,6 +197,32 @@ export async function deleteServidor(
   auditLog?: Omit<LogAuditoria, 'id' | 'dataHora'>
 ): Promise<Servidor | null> {
   const deleted = await prisma.$transaction(async (tx) => {
+    const storageReferences = await tx.servidor.findUnique({
+      where: { id },
+      select: {
+        fotoStorageBackend: true,
+        fotoStorageKey: true,
+        documentos: { select: { storageBackend: true, storageKey: true, arquivoUrl: true } },
+      },
+    });
+    if (!storageReferences) return null;
+
+    const deletionTasks = [
+      {
+        backend: storageReferences.fotoStorageBackend ?? 'LOCAL',
+        storageKey: storageReferences.fotoStorageKey,
+      },
+      ...storageReferences.documentos.map((documento) => ({
+        backend: documento.storageBackend ?? 'LOCAL',
+        storageKey: documento.storageKey ?? documento.arquivoUrl,
+      })),
+    ].filter((task): task is { backend: StorageBackend; storageKey: string } =>
+      Boolean(task.storageKey)
+    );
+
+    if (deletionTasks.length) {
+      await tx.storageDeletionTask.createMany({ data: deletionTasks, skipDuplicates: true });
+    }
     const servidor = await tx.servidor.delete({
       where: { id },
       select: SERVIDOR_SELECT,
@@ -214,6 +240,8 @@ export async function deleteServidor(
     }
     return servidor;
   });
+
+  if (!deleted) return null;
 
   return {
     ...deleted,
@@ -360,9 +388,20 @@ export async function deleteDocumento(id: string): Promise<{
   storageBackend: StorageBackend | null;
   storageKey: string | null;
 } | null> {
-  const documento = await prisma.documentoPDF.delete({
-    where: { id },
-    select: { titulo: true, arquivoUrl: true, storageBackend: true, storageKey: true },
+  const documento = await prisma.$transaction(async (tx) => {
+    const existing = await tx.documentoPDF.findUnique({
+      where: { id },
+      select: { titulo: true, arquivoUrl: true, storageBackend: true, storageKey: true },
+    });
+    if (!existing) return null;
+    await tx.storageDeletionTask.create({
+      data: {
+        backend: existing.storageBackend ?? 'LOCAL',
+        storageKey: existing.storageKey ?? existing.arquivoUrl,
+      },
+    });
+    await tx.documentoPDF.delete({ where: { id } });
+    return existing;
   });
 
   return documento;

@@ -8,6 +8,8 @@ const IP_HEADER_CANDIDATES = [
 ] as const;
 
 export function getRequestIp(request: Pick<Request, 'headers'>): string {
+  if (process.env.TRUST_PROXY !== 'true') return 'N/A';
+
   for (const headerName of IP_HEADER_CANDIDATES) {
     const value = request.headers.get(headerName);
     if (!value) continue;

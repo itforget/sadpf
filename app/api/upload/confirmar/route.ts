@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const buffer = await storage.download(data.storageKey);
     if (buffer.byteLength > MAX_DOCUMENT_SIZE) {
       await storage.delete(data.storageKey);
-      return NextResponse.json({ error: 'Arquivo deve ter no máximo 50mb.' }, { status: 400 });
+      return NextResponse.json({ error: 'Arquivo deve ter no máximo 50 MB.' }, { status: 400 });
     }
     if (!isPDF(data.fileName, 'application/pdf', buffer)) {
       await storage.delete(data.storageKey);

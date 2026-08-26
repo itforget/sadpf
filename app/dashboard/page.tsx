@@ -5,6 +5,7 @@ import { Archive, FileBarChart, FileText, UserCheck, UserMinus, Users } from 'lu
 import { useQuery } from '@tanstack/react-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
 import { fetchDashboardSummary } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
@@ -19,7 +20,11 @@ const emptyDashboard = {
 };
 
 export default function DashboardPage() {
-  const { data = emptyDashboard } = useQuery({
+  const {
+    data = emptyDashboard,
+    error,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: fetchDashboardSummary,
   });
@@ -70,6 +75,16 @@ export default function DashboardPage() {
           <FileBarChart size={16} className="mr-2" /> Relatório Sintético
         </Link>
       </div>
+
+      {isError && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {error instanceof Error
+              ? error.message
+              : 'Não foi possível carregar os indicadores do painel.'}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi) => (

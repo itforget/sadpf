@@ -110,14 +110,17 @@ export default function ConfiguracoesClient({
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Espaço utilizado</span>
-              <span className="font-semibold text-foreground">{formatBytes(data.storage.bytes)}</span>
+              <span className="font-semibold text-foreground">
+                {data.storage.measured ? formatBytes(data.storage.bytes) : 'Não disponível'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Arquivos armazenados</span>
               <span className="flex items-center gap-1.5 font-semibold text-foreground">
                 <FileText size={14} className="text-ssp-blue" />
-                {data.storage.count} PDF
-                {data.storage.count === 1 ? '' : 's'}
+                {data.storage.measured
+                  ? `${data.storage.count} PDF${data.storage.count === 1 ? '' : 's'}`
+                  : 'Não disponível'}
               </span>
             </div>
             <div className="flex items-center justify-between">

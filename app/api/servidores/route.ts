@@ -11,6 +11,7 @@ import {
 } from '@/lib/server/db';
 import { servidorSchema, servidorUpdateSchema } from '@/lib/validations/servidor';
 import { getRequestIp } from '@/lib/server/request-ip';
+import { processPendingStorageDeletionTasks } from '@/lib/server/storage-cleanup';
 
 export async function GET(request: Request) {
   try {
@@ -232,6 +233,7 @@ export async function DELETE(request: Request) {
       detalhes: `Excluiu a pasta funcional de ${servidor.nome} (Mat. ${servidor.matricula}).`,
       ip: getRequestIp(request),
     });
+    await processPendingStorageDeletionTasks();
     return NextResponse.json(deleted);
   } catch (error: unknown) {
     console.error('[DELETE /api/servidores]', error);

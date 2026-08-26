@@ -7,6 +7,13 @@ import { getRequestIp } from '@/lib/server/request-ip';
 
 const TIPOS_PERMITIDOS = new Set(['image/png', 'image/jpeg']);
 
+function isValidImage(buffer: Buffer, mimeType: string) {
+  if (mimeType === 'image/png') {
+    return buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  }
+  return mimeType === 'image/jpeg' && buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+}
+
 async function sessaoAutorizada(request: NextRequest) {
   const session = await getVerifiedSession(request);
   return session && ['ADMIN', 'OPERADOR'].includes(String(session.role)) ? session : null;
@@ -69,6 +76,12 @@ export async function POST(
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    if (!isValidImage(buffer, file.type)) {
+      return NextResponse.json(
+        { error: 'O conteúdo enviado não é uma imagem válida.' },
+        { status: 400 }
+      );
+    }
     const extensao = file.type === 'image/png' ? 'png' : 'jpg';
     const storageKey = `fotos/servidores/${id}/${randomBytes(24).toString('hex')}.${extensao}`;
     const storage = getStorage();
@@ -127,6 +140,13 @@ export async function DELETE(
     if (foto.fotoStorageKey && foto.fotoStorageBackend) {
       await getStorage(foto.fotoStorageBackend).delete(foto.fotoStorageKey);
     }
+    await addLog({
+      operador: String(session.nome),
+      operadorMatricula: String(session.matricula),
+      acao: 'ATUALIZACAO',
+      detalhes: `Removeu a foto do servidor ${id}.`,
+      ip: getRequestIp(request),
+    });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('[DELETE /api/servidores/[id]/foto]', error);

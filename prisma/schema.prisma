@@ -110,7 +110,21 @@ model DocumentoPDF {
   encaminhamentos Encaminhamento[]
 
   @@index([servidorId, ordem])
+  @@index([createdAt])
   @@map("documentos_pdf")
+}
+
+model StorageDeletionTask {
+  id          String         @id @default(uuid())
+  backend     StorageBackend
+  storageKey  String         @unique
+  attempts    Int            @default(0)
+  lastError   String?        @db.Text
+  processedAt DateTime?
+  createdAt   DateTime       @default(now())
+
+  @@index([processedAt, createdAt])
+  @@map("storage_deletion_tasks")
 }
 
 model Encaminhamento {
@@ -129,6 +143,8 @@ model Encaminhamento {
   documento DocumentoPDF? @relation(fields: [documentoId], references: [id], onDelete: SetNull)
 
   @@map("encaminhamentos")
+  @@index([dataGeracao])
+  @@index([dataExpiracao])
 }
 
 model LogAuditoria {
@@ -142,4 +158,6 @@ model LogAuditoria {
   createdAt         DateTime      @default(now())
 
   @@map("logs_auditoria")
+  @@index([createdAt])
+  @@index([acao, createdAt])
 }
