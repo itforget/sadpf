@@ -43,6 +43,11 @@ export default async function AutenticidadePage({ params }: PageProps<'/autentic
             <p className="break-all">
               <strong>Token de verificação:</strong> {token}
             </p>
+            <iframe
+              src={`/api/assinaturas/${token}/arquivo?assinado=true`}
+              title="Documento assinado e autenticado"
+              className="h-[680px] w-full rounded-xl border border-border bg-background"
+            />
           </div>
         ) : (
           <p className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">

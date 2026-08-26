@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const { token } = await context.params;
   const assinatura = await getAssinaturaEletronica(token);
-  if (!assinatura || assinatura.dataExpiracao <= new Date()) {
+  if (!assinatura || (!assinatura.assinadoEm && assinatura.dataExpiracao <= new Date())) {
     return NextResponse.json({ error: 'Link inválido ou expirado.' }, { status: 404 });
   }
   try {
