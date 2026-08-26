@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Printer, Send, Download } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, FileText, Printer, Send, Download } from 'lucide-react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 
 import PDFViewer from '@/app/components/PDFViewer';
 import PrintModal from '@/app/components/PrintModal';
 import EncaminharModal from '@/app/components/EncaminharModal';
-import { fetchDocumentoById, fetchServidores, fetchSession } from '@/lib/client/api';
+import { fetchDocumentoById, fetchServidores } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -22,10 +22,6 @@ export default function DocumentoDetailPage() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showEncaminharModal, setShowEncaminharModal] = useState(false);
 
-  const { data: sessionData } = useQuery({
-    queryKey: queryKeys.session,
-    queryFn: fetchSession,
-  });
   const documentoQuery = useQuery({
     queryKey: queryKeys.documento(id),
     queryFn: () => fetchDocumentoById(id),
@@ -66,12 +62,7 @@ export default function DocumentoDetailPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-300">
       {showPrintModal && (
-        <PrintModal
-          servidor={servidor}
-          documento={documento}
-          operadorNome={sessionData?.user?.nome || 'Operador autenticado'}
-          onClose={() => setShowPrintModal(false)}
-        />
+        <PrintModal documento={documento} onClose={() => setShowPrintModal(false)} />
       )}
       {showEncaminharModal && (
         <EncaminharModal
@@ -104,9 +95,16 @@ export default function DocumentoDetailPage() {
           <Button onClick={() => setShowPrintModal(true)} variant="outline">
             <Printer size={16} className="text-ssp-blue" /> Imprimir Documento
           </Button>
-          <Button onClick={() => setShowEncaminharModal(true)} variant="outline">
-            <Send size={16} className="text-ssp-blue" /> Encaminhar
-          </Button>
+          {documento.assinatura ? (
+            <div className="flex items-center gap-1.5 rounded-md border border-status-success/30 bg-status-success/10 px-3 py-2 text-sm font-semibold text-status-success">
+              <BadgeCheck size={16} /> Assinado em{' '}
+              {new Date(documento.assinatura.assinadoEm).toLocaleString('pt-BR')}
+            </div>
+          ) : (
+            <Button onClick={() => setShowEncaminharModal(true)} variant="outline">
+              <Send size={16} className="text-ssp-blue" /> Encaminhar
+            </Button>
+          )}
           <a
             href={documento.arquivoUrl}
             target="_blank"

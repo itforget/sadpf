@@ -320,13 +320,21 @@ function mapDocumento(
     categoria: string;
     processoSEI: string | null;
     arquivoUrl: string;
+    encaminhamentos?: { token: string; assinadoEm: Date | null }[];
   }
 ): DocumentoPDF {
+  const { encaminhamentos, ...dadosDocumento } = documento;
+  const assinatura = encaminhamentos?.[0];
+
   return {
-    ...documento,
+    ...dadosDocumento,
     categoria: mapCategoria(documento.categoria),
     processoSEI: documento.processoSEI ?? undefined,
     arquivoUrl: `/api/documentos/${documento.id}/arquivo`,
+    assinatura:
+      assinatura?.assinadoEm === null || !assinatura
+        ? undefined
+        : { token: assinatura.token, assinadoEm: assinatura.assinadoEm.toISOString() },
   };
 }
 
@@ -334,6 +342,14 @@ export async function getDocumentosByServidor(servidorId: string): Promise<Docum
   const docs = await prisma.documentoPDF.findMany({
     where: { servidorId },
     orderBy: [{ ordem: 'asc' }, { createdAt: 'desc' }],
+    include: {
+      encaminhamentos: {
+        where: { assinadoEm: { not: null } },
+        orderBy: { assinadoEm: 'desc' },
+        take: 1,
+        select: { token: true, assinadoEm: true },
+      },
+    },
   });
 
   return docs.map(mapDocumento);
@@ -364,7 +380,17 @@ export async function reordenarDocumentosDoServidor(
 }
 
 export async function getDocumentoById(id: string): Promise<DocumentoPDF | null> {
-  const d = await prisma.documentoPDF.findUnique({ where: { id } });
+  const d = await prisma.documentoPDF.findUnique({
+    where: { id },
+    include: {
+      encaminhamentos: {
+        where: { assinadoEm: { not: null } },
+        orderBy: { assinadoEm: 'desc' },
+        take: 1,
+        select: { token: true, assinadoEm: true },
+      },
+    },
+  });
   if (!d) return null;
 
   return mapDocumento(d);
@@ -376,6 +402,7 @@ export async function getDocumentoArquivoById(id: string): Promise<{
   storageBackend: StorageBackend | null;
   storageKey: string | null;
   assinadoEm: Date | null;
+  tokenAssinatura: string | null;
 } | null> {
   return prisma.documentoPDF
     .findUnique({
@@ -389,14 +416,18 @@ export async function getDocumentoArquivoById(id: string): Promise<{
           where: { assinadoEm: { not: null } },
           orderBy: { assinadoEm: 'desc' },
           take: 1,
-          select: { assinadoEm: true },
+          select: { assinadoEm: true, token: true },
         },
       },
     })
     .then((documento) => {
       if (!documento) return null;
       const { encaminhamentos, ...arquivo } = documento;
-      return { ...arquivo, assinadoEm: encaminhamentos[0]?.assinadoEm ?? null };
+      return {
+        ...arquivo,
+        assinadoEm: encaminhamentos[0]?.assinadoEm ?? null,
+        tokenAssinatura: encaminhamentos[0]?.token ?? null,
+      };
     });
 }
 

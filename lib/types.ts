@@ -31,6 +31,10 @@ export interface DocumentoPDF {
   processoSEI?: string;
   arquivoUrl: string;
   operadorRH: string;
+  assinatura?: {
+    token: string;
+    assinadoEm: string;
+  };
 }
 
 export interface ServidorComDocumentos {
