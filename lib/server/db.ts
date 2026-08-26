@@ -375,11 +375,29 @@ export async function getDocumentoArquivoById(id: string): Promise<{
   arquivoUrl: string;
   storageBackend: StorageBackend | null;
   storageKey: string | null;
+  assinadoEm: Date | null;
 } | null> {
-  return prisma.documentoPDF.findUnique({
-    where: { id },
-    select: { titulo: true, arquivoUrl: true, storageBackend: true, storageKey: true },
-  });
+  return prisma.documentoPDF
+    .findUnique({
+      where: { id },
+      select: {
+        titulo: true,
+        arquivoUrl: true,
+        storageBackend: true,
+        storageKey: true,
+        encaminhamentos: {
+          where: { assinadoEm: { not: null } },
+          orderBy: { assinadoEm: 'desc' },
+          take: 1,
+          select: { assinadoEm: true },
+        },
+      },
+    })
+    .then((documento) => {
+      if (!documento) return null;
+      const { encaminhamentos, ...arquivo } = documento;
+      return { ...arquivo, assinadoEm: encaminhamentos[0]?.assinadoEm ?? null };
+    });
 }
 
 export async function updateDocumento(
@@ -652,13 +670,23 @@ export async function getAssinaturaEletronica(token: string): Promise<Assinatura
   };
 }
 
-export async function assinarEletronicamente(token: string, ip: string) {
+function normalizarCpf(cpf: string): string {
+  return cpf.replace(/\D/g, '');
+}
+
+export async function assinarEletronicamente(token: string, cpf: string, ip: string) {
   return prisma.$transaction(async (tx) => {
     const encaminhamento = await tx.encaminhamento.findUnique({
       where: { token },
-      include: { servidor: { select: { nome: true, matricula: true } }, documento: true },
+      include: {
+        servidor: { select: { nome: true, matricula: true, cpf: true } },
+        documento: true,
+      },
     });
     if (!encaminhamento || !encaminhamento.documento) return { status: 'invalido' as const };
+    if (normalizarCpf(cpf) !== normalizarCpf(encaminhamento.servidor.cpf)) {
+      return { status: 'cpf_invalido' as const };
+    }
     if (encaminhamento.assinadoEm)
       return { status: 'assinado' as const, assinadoEm: encaminhamento.assinadoEm };
     if (encaminhamento.dataExpiracao <= new Date()) return { status: 'expirado' as const };
