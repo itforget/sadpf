@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   '/api/health',
   '/health',
   '/privacidade',
+  '/assinar',
   '/favicon.ico',
   '/robots.txt',
 ];
@@ -25,7 +26,11 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (PUBLIC_PATHS.includes(pathname)) {
+  if (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith('/assinar/') ||
+    pathname.startsWith('/api/assinaturas/')
+  ) {
     if (pathname === '/login') {
       const token = await getSessionToken(request);
       if (getSessionFromToken(token)) {

@@ -74,9 +74,9 @@ export default function EncaminhamentosPage() {
                     <TableCell className="font-mono">{enc.validade}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={enc.status === 'Ativo' ? 'default' : 'destructive'}
+                        variant={enc.status === 'Expirado' ? 'destructive' : 'default'}
                         className={
-                          enc.status === 'Ativo'
+                          enc.status !== 'Expirado'
                             ? 'bg-status-success/15 text-status-success border-status-success/20'
                             : ''
                         }

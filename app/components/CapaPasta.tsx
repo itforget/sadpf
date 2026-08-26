@@ -9,7 +9,6 @@ import {
   Mail,
   Phone,
   Printer,
-  Send,
   Download,
   Plus,
   FileText,
@@ -23,7 +22,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Servidor, DocumentoPDF } from '@/lib/types';
-import EncaminharModal from './EncaminharModal';
 import EditarServidorModal from './EditarServidorModal';
 import EditarDocumentoModal from './EditarDocumentoModal';
 import Image from 'next/image';
@@ -64,7 +62,6 @@ const CORES_CATEGORIA: Record<DocumentoPDF['categoria'], { cartao: string; etiqu
 };
 
 export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
-  const [showEncaminharModal, setShowEncaminharModal] = useState(false);
   const [documentosOrdenados, setDocumentosOrdenados] = useState(documentos);
   const [documentoMovendo, setDocumentoMovendo] = useState<string | null>(null);
   const [documentoArrastado, setDocumentoArrastado] = useState<string | null>(null);
@@ -204,9 +201,6 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-300">
-      {showEncaminharModal && (
-        <EncaminharModal servidor={servidor} onClose={() => setShowEncaminharModal(false)} />
-      )}
       {editorServidor && (
         <EditarServidorModal
           servidor={servidor}
@@ -256,15 +250,6 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
             onClick={() => setEditorServidor('foto')}
           >
             <Camera size={16} className="text-ssp-blue" /> Adicionar / editar foto
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowEncaminharModal(true)}
-          >
-            <Send size={16} className="text-ssp-blue" /> Encaminhar Pasta
           </Button>
 
           <Button type="button" variant="outline" size="sm" onClick={handleDownloadPasta}>

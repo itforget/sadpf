@@ -83,7 +83,7 @@ export interface Encaminhamento {
   destinatario: string;
   servidor: string;
   validade: string;
-  status: 'Ativo' | 'Expirado';
+  status: 'Pendente assinatura' | 'Assinado' | 'Expirado';
   justificativa: string;
 }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { DocumentoPDF } from '@/lib/types';
 import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
-import { enqueueOCR, extractTextFromPDF } from '@/lib/server/ocr';
+import { extractTextFromPDF } from '@/lib/server/ocr';
 import { getStorage } from '@/lib/storage';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { checkRateLimit } from '@/lib/server/rate-limit';
@@ -13,6 +13,8 @@ import {
   isPDF,
   MAX_DOCUMENT_SIZE,
 } from '@/lib/server/document-upload';
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,10 +108,6 @@ export async function POST(request: NextRequest) {
       await storage.delete(data.storageKey);
       throw error;
     }
-
-    await enqueueOCR({ id: doc.id, arquivo_url: data.storageKey }).catch((error) => {
-      console.error('[upload] erro ao enfileirar OCR:', error);
-    });
 
     await addLog({
       operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',

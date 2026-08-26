@@ -11,7 +11,7 @@ const supabaseResumableOrigin = supabaseStorageOrigin
   : '';
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pdf-parse', 'pdfkit'],
+  serverExternalPackages: ['pdf-parse', 'pdfkit', 'tesseract.js'],
   experimental: {
     proxyClientMaxBodySize: '50mb',
   },
@@ -54,6 +54,16 @@ const nextConfig: NextConfig = {
         // PDFs autenticados são exibidos no iframe da própria aplicação.
         // Esta regra posterior sobrescreve o bloqueio global apenas para o arquivo.
         source: '/api/documentos/:id/arquivo',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'none'; frame-ancestors 'self';",
+          },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
+      {
+        source: '/api/assinaturas/:token/arquivo',
         headers: [
           {
             key: 'Content-Security-Policy',

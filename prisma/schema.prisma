@@ -138,6 +138,8 @@ model Encaminhamento {
   token         String   @unique
   dataGeracao   DateTime @default(now())
   dataExpiracao DateTime
+  assinadoEm    DateTime?
+  assinadoIp    String?
 
   servidor  Servidor      @relation(fields: [servidorId], references: [id], onDelete: Cascade)
   documento DocumentoPDF? @relation(fields: [documentoId], references: [id], onDelete: SetNull)
@@ -145,6 +147,7 @@ model Encaminhamento {
   @@map("encaminhamentos")
   @@index([dataGeracao])
   @@index([dataExpiracao])
+  @@index([assinadoEm])
 }
 
 model LogAuditoria {

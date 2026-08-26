@@ -1,9 +1,15 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { addEncaminhamento, getEncaminhamentos } from '@/lib/server/db';
+import {
+  addEncaminhamento,
+  getDocumentoById,
+  getEncaminhamentos,
+  getServidorById,
+} from '@/lib/server/db';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { encaminhamentoSchema } from '@/lib/validations/encaminhamento';
 import { getRequestIp } from '@/lib/server/request-ip';
+import { sendSignatureRequestEmail } from '@/lib/server/email';
 
 export async function GET() {
   try {
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (typeof body.servidorId !== 'string' || body.servidorId.length === 0) {
       return NextResponse.json({ error: 'Servidor é obrigatório.' }, { status: 400 });
     }
-    if (body.documentoId !== undefined && typeof body.documentoId !== 'string') {
+    if (typeof body.documentoId !== 'string' || body.documentoId.length === 0) {
       return NextResponse.json({ error: 'Documento inválido.' }, { status: 400 });
     }
 
@@ -47,17 +53,34 @@ export async function POST(request: NextRequest) {
     const encaminhamento = await addEncaminhamento({
       servidorId: body.servidorId,
       documentoId: body.documentoId,
-      destinatario: data.destinatario,
       justificativa: data.justificativa,
       validadeDias: Number(data.validadeDias),
-      requerSenha: data.requerSenha,
       token: randomBytes(32).toString('base64url'),
       operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
       operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
       ip: getRequestIp(request),
     });
 
-    return NextResponse.json(encaminhamento, { status: 201 });
+    const applicationUrl = (process.env.APP_URL || new URL(request.url).origin).replace(/\/$/, '');
+    const assinaturaUrl = `${applicationUrl}/assinar/${encaminhamento.token}`;
+    let emailSent = true;
+    try {
+      const servidor = await getServidorById(body.servidorId);
+      const documento = await getDocumentoById(body.documentoId);
+      if (!servidor || !documento) throw new Error('Destinatário ou documento não encontrado.');
+      await sendSignatureRequestEmail({
+        recipient: servidor.email,
+        recipientName: servidor.nome,
+        documentTitle: documento.titulo,
+        signatureUrl: assinaturaUrl,
+        expiresAt: new Date(Date.now() + Number(data.validadeDias) * 24 * 60 * 60 * 1000),
+      });
+    } catch (emailError) {
+      console.error('[assinatura] falha ao enviar e-mail:', emailError);
+      emailSent = false;
+    }
+
+    return NextResponse.json({ ...encaminhamento, emailSent }, { status: 201 });
   } catch (error) {
     console.error('[POST /api/encaminhamentos]', error);
     const message = error instanceof Error ? error.message : 'Erro ao criar encaminhamento.';

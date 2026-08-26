@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Send, ShieldAlert, CheckCircle2, Copy, Link as LinkIcon } from 'lucide-react';
+import { Send, ShieldAlert, CheckCircle2, Copy, Link as LinkIcon, Mail } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Servidor, DocumentoPDF } from '@/lib/types';
@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -36,16 +35,15 @@ import { queryKeys } from '@/lib/client/query-keys';
 
 interface EncaminharModalProps {
   servidor: Servidor;
-  documento?: DocumentoPDF;
+  documento: DocumentoPDF;
   onClose: () => void;
 }
 
 export default function EncaminharModal({ servidor, documento, onClose }: EncaminharModalProps) {
-  const [enviando, setEnviando] = useState(false);
   const [linkGerado, setLinkGerado] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const queryClient = useQueryClient();
-
   const {
     register,
     handleSubmit,
@@ -55,52 +53,30 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
     reset,
   } = useForm<EncaminhamentoFormData>({
     resolver: zodResolver(encaminhamentoSchema),
-    defaultValues: {
-      destinatario: '',
-      justificativa: '',
-      validadeDias: '7',
-      requerSenha: true,
-    },
+    defaultValues: { justificativa: '', validadeDias: '7' },
   });
-
   const validadeDias = useWatch({ control, name: 'validadeDias' });
-  const requerSenha = useWatch({ control, name: 'requerSenha' });
-  const destinatario = useWatch({ control, name: 'destinatario' });
-  const encaminharMutation = useMutation({
-    mutationFn: async (data: EncaminhamentoFormData) => {
-      return fetchJson<{ token: string }>('/api/encaminhamentos', {
+
+  const assinaturaMutation = useMutation({
+    mutationFn: (data: EncaminhamentoFormData) =>
+      fetchJson<{ token: string; emailSent: boolean }>('/api/encaminhamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          servidorId: servidor.id,
-          documentoId: documento?.id,
-        }),
-      });
-    },
+        body: JSON.stringify({ ...data, servidorId: servidor.id, documentoId: documento.id }),
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.encaminhamentos });
     },
   });
 
   const onSubmit = async (data: EncaminhamentoFormData) => {
-    setEnviando(true);
-
     try {
-      const result = await encaminharMutation.mutateAsync(data);
-      setEnviando(false);
-      setLinkGerado(`${window.location.origin}/compartilhado/${result.token}`);
-    } catch (err) {
-      console.error('[EncaminharModal] erro ao criar encaminhamento:', err);
-      alert(err instanceof Error ? err.message : 'Não foi possível criar o encaminhamento.');
-      setEnviando(false);
+      const result = await assinaturaMutation.mutateAsync(data);
+      setLinkGerado(`${window.location.origin}/assinar/${result.token}`);
+      setEmailSent(result.emailSent);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível solicitar a assinatura.');
     }
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(linkGerado);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
   };
 
   const handleClose = () => {
@@ -110,15 +86,15 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
   };
 
   return (
-    <Dialog open={true} onOpenChange={handleClose}>
+    <Dialog open onOpenChange={handleClose}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <Send size={24} className="text-ssp-blue" />
             <div>
-              <DialogTitle>Encaminhar Pasta / Documento Funcional</DialogTitle>
+              <DialogTitle>Solicitar assinatura eletrônica</DialogTitle>
               <DialogDescription>
-                Envio Interno Restrito a Comissões e Órgãos de Controle da SSP-DF
+                O servidor titular receberá um link individual para revisar e assinar o documento.
               </DialogDescription>
             </div>
           </div>
@@ -126,44 +102,26 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
 
         {!linkGerado ? (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="bg-muted/40 p-4 rounded-xl border border-border text-xs space-y-1">
-              <p className="font-semibold text-foreground">Item a ser encaminhado:</p>
+            <div className="space-y-1 rounded-xl border border-border bg-muted/40 p-4 text-xs">
+              <p className="font-semibold text-foreground">Destinatário da assinatura</p>
               <p className="text-muted-foreground">
-                <strong className="text-foreground">Servidor:</strong> {servidor.nome} (Matrícula:{' '}
-                {servidor.matricula})
+                <strong className="text-foreground">{servidor.nome}</strong> · Matrícula{' '}
+                {servidor.matricula}
               </p>
-              {documento && (
-                <p className="text-muted-foreground">
-                  <strong className="text-foreground">Documento:</strong> {documento.titulo} (
-                  {documento.categoria})
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="destinatario">
-                Unidade / Comissão Destinatária <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="destinatario"
-                {...register('destinatario')}
-                placeholder="Ex.: Corregedoria Geral de Segurança Pública - CGP"
-                className={errors.destinatario ? 'border-destructive' : ''}
-              />
-              {errors.destinatario && (
-                <p className="text-sm text-destructive">{errors.destinatario.message}</p>
-              )}
+              <p className="text-muted-foreground">{servidor.email}</p>
+              <p className="pt-2 text-muted-foreground">
+                <strong className="text-foreground">Documento:</strong> {documento.titulo}
+              </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="justificativa">
-                Justificativa / Processo SEI de Referência{' '}
-                <span className="text-destructive">*</span>
+                Motivo da solicitação <span className="text-destructive">*</span>
               </Label>
               <Textarea
                 id="justificativa"
                 {...register('justificativa')}
-                placeholder="Informe o número do processo SEI e o motivo do envio..."
+                placeholder="Informe o motivo e a referência do processo SEI..."
                 rows={3}
                 className={errors.justificativa ? 'border-destructive' : ''}
               />
@@ -172,45 +130,31 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="validadeDias">Validade do Acesso</Label>
-                <Select
-                  value={validadeDias}
-                  onValueChange={(value) => {
-                    if (value) setValue('validadeDias', value as '1' | '7' | '15' | '30');
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">24 Horas</SelectItem>
-                    <SelectItem value="7">7 Dias (Padrão)</SelectItem>
-                    <SelectItem value="15">15 Dias</SelectItem>
-                    <SelectItem value="30">30 Dias</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2 pt-6">
-                <Checkbox
-                  id="requerSenha"
-                  checked={requerSenha}
-                  onCheckedChange={(checked) => setValue('requerSenha', checked as boolean)}
-                />
-                <Label htmlFor="requerSenha" className="text-xs cursor-pointer">
-                  Exigir senha temporária para abertura
-                </Label>
-              </div>
+            <div className="space-y-2">
+              <Label>Validade do link</Label>
+              <Select
+                value={validadeDias}
+                onValueChange={(value) =>
+                  value && setValue('validadeDias', value as '1' | '7' | '15' | '30')
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">24 horas</SelectItem>
+                  <SelectItem value="7">7 dias</SelectItem>
+                  <SelectItem value="15">15 dias</SelectItem>
+                  <SelectItem value="30">30 dias</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2.5">
-              <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-700 dark:text-amber-400">
+              <ShieldAlert size={18} className="mt-0.5 shrink-0" />
               <p>
-                O link gerado é de acesso temporário, individualizado e auditável. Qualquer consulta
-                realizada pelo destinatário será gravada na trilha de auditoria da Gestão de
-                Pessoas.
+                Esta é uma assinatura eletrônica interna: o link é individual, expira após o prazo
+                definido e o aceite fica registrado com data, hora e IP.
               </p>
             </div>
 
@@ -220,53 +164,56 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
               </Button>
               <Button
                 type="submit"
-                disabled={enviando}
+                disabled={assinaturaMutation.isPending}
                 className="bg-ssp-blue hover:bg-ssp-blueDark"
               >
-                {enviando ? 'Gerando Link...' : 'Gerar Link Seguro'}
+                {assinaturaMutation.isPending ? 'Enviando...' : 'Enviar para assinatura'}
               </Button>
             </DialogFooter>
           </form>
         ) : (
-          <div className="space-y-6 py-4 text-center">
-            <div className="w-16 h-16 bg-status-success/10 text-status-success rounded-full flex items-center justify-center mx-auto">
+          <div className="space-y-5 py-4 text-center">
+            <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-status-success/10 text-status-success">
               <CheckCircle2 size={36} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-foreground">Link de Encaminhamento Criado!</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Encaminhado para: <strong>{destinatario}</strong> (Válido por {validadeDias} dias)
+              <h3 className="text-xl font-bold text-foreground">Solicitação criada</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {emailSent ? (
+                  <>
+                    <Mail size={14} className="mr-1 inline" />
+                    E-mail enviado para {servidor.email}.
+                  </>
+                ) : (
+                  'O e-mail não pôde ser enviado; copie o link abaixo e encaminhe-o ao servidor.'
+                )}
               </p>
             </div>
-
-            <div className="bg-muted p-4 rounded-xl border border-border flex items-center gap-3">
-              <LinkIcon size={18} className="text-ssp-blue shrink-0" />
-              <Input
-                type="text"
-                readOnly
-                value={linkGerado}
-                className="bg-transparent text-xs font-mono"
-              />
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-muted p-4">
+              <LinkIcon size={18} className="shrink-0 text-ssp-blue" />
+              <Input readOnly value={linkGerado} className="bg-transparent font-mono text-xs" />
               <Button
-                onClick={handleCopy}
                 size="sm"
-                className="bg-ssp-blue hover:bg-ssp-blueDark shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(linkGerado);
+                  setCopiado(true);
+                  setTimeout(() => setCopiado(false), 2000);
+                }}
+                className="shrink-0 bg-ssp-blue hover:bg-ssp-blueDark"
               >
                 {copiado ? (
                   'Copiado!'
                 ) : (
                   <>
-                    <Copy size={14} className="mr-1" /> Copiar
+                    <Copy size={14} className="mr-1" />
+                    Copiar
                   </>
                 )}
               </Button>
             </div>
-
-            <div className="flex justify-center pt-2">
-              <Button onClick={handleClose} className="bg-ssp-blue hover:bg-ssp-blueDark">
-                Concluir
-              </Button>
-            </div>
+            <Button onClick={handleClose} className="bg-ssp-blue hover:bg-ssp-blueDark">
+              Concluir
+            </Button>
           </div>
         )}
       </DialogContent>

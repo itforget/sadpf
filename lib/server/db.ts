@@ -36,9 +36,25 @@ export interface EncaminhamentoResumo {
   destinatario: string;
   servidor: string;
   validade: string;
-  status: 'Ativo' | 'Expirado';
+  status: 'Pendente assinatura' | 'Assinado' | 'Expirado';
   justificativa: string;
 }
+
+export type AssinaturaEletronica = {
+  token: string;
+  documento: {
+    titulo: string;
+    tamanho: string;
+    paginas: number;
+    arquivoUrl: string;
+    storageBackend: StorageBackend | null;
+    storageKey: string | null;
+  };
+  servidor: { nome: string; matricula: string };
+  justificativa: string;
+  dataExpiracao: Date;
+  assinadoEm: Date | null;
+};
 
 export interface EncaminhamentoCriado extends EncaminhamentoResumo {
   token: string;
@@ -518,9 +534,14 @@ function mapEncaminhamentoResumo(encaminhamento: {
   validadeDias: number;
   dataGeracao: Date;
   dataExpiracao: Date;
+  assinadoEm: Date | null;
   servidor: { nome: string; matricula: string };
 }): EncaminhamentoResumo {
-  const expirado = encaminhamento.dataExpiracao <= new Date();
+  const status = encaminhamento.assinadoEm
+    ? 'Assinado'
+    : encaminhamento.dataExpiracao <= new Date()
+    ? 'Expirado'
+    : 'Pendente assinatura';
 
   return {
     id: encaminhamento.id,
@@ -530,7 +551,7 @@ function mapEncaminhamentoResumo(encaminhamento: {
     validade: `${encaminhamento.dataExpiracao.toLocaleDateString('pt-BR')} (${
       encaminhamento.validadeDias
     } ${encaminhamento.validadeDias === 1 ? 'Dia' : 'Dias'})`,
-    status: expirado ? 'Expirado' : 'Ativo',
+    status,
     justificativa: encaminhamento.justificativa,
   };
 }
@@ -547,10 +568,8 @@ export async function getEncaminhamentos(): Promise<EncaminhamentoResumo[]> {
 export async function addEncaminhamento(data: {
   servidorId: string;
   documentoId?: string;
-  destinatario: string;
   justificativa: string;
   validadeDias: number;
-  requerSenha: boolean;
   token: string;
   operador: string;
   operadorMatricula: string;
@@ -560,25 +579,27 @@ export async function addEncaminhamento(data: {
   dataExpiracao.setDate(dataExpiracao.getDate() + data.validadeDias);
 
   const encaminhamento = await prisma.$transaction(async (tx) => {
-    if (data.documentoId) {
-      const documento = await tx.documentoPDF.findFirst({
-        where: { id: data.documentoId, servidorId: data.servidorId },
-        select: { id: true },
-      });
+    if (!data.documentoId) {
+      throw new Error('Selecione um documento para solicitar a assinatura.');
+    }
 
-      if (!documento) {
-        throw new Error('Documento não encontrado para o servidor informado.');
-      }
+    const documento = await tx.documentoPDF.findFirst({
+      where: { id: data.documentoId, servidorId: data.servidorId },
+      select: { id: true },
+    });
+
+    if (!documento) {
+      throw new Error('Documento não encontrado para o servidor informado.');
     }
 
     const created = await tx.encaminhamento.create({
       data: {
         servidorId: data.servidorId,
-        documentoId: data.documentoId ?? null,
-        destinatario: data.destinatario,
+        documentoId: data.documentoId,
+        destinatario: 'Servidor titular da pasta',
         justificativa: data.justificativa,
         validadeDias: data.validadeDias,
-        requerSenha: data.requerSenha,
+        requerSenha: false,
         token: data.token,
         dataExpiracao,
       },
@@ -590,7 +611,7 @@ export async function addEncaminhamento(data: {
         operador: data.operador,
         operadorMatricula: data.operadorMatricula,
         acao: 'ENCAMINHAMENTO',
-        detalhes: `Gerou link seguro de encaminhamento para '${data.destinatario}' referente à pasta de ${created.servidor.nome} (Mat. ${created.servidor.matricula}). Motivo: ${data.justificativa}`,
+        detalhes: `Solicitou assinatura eletrônica interna de ${created.servidor.nome} (Mat. ${created.servidor.matricula}). Motivo: ${data.justificativa}`,
         ip: data.ip,
       },
     });
@@ -599,4 +620,66 @@ export async function addEncaminhamento(data: {
   });
 
   return { ...mapEncaminhamentoResumo(encaminhamento), token: encaminhamento.token };
+}
+
+export async function getAssinaturaEletronica(token: string): Promise<AssinaturaEletronica | null> {
+  const encaminhamento = await prisma.encaminhamento.findUnique({
+    where: { token },
+    include: {
+      servidor: { select: { nome: true, matricula: true } },
+      documento: {
+        select: {
+          titulo: true,
+          tamanho: true,
+          paginas: true,
+          arquivoUrl: true,
+          storageBackend: true,
+          storageKey: true,
+        },
+      },
+    },
+  });
+
+  if (!encaminhamento || !encaminhamento.documento) return null;
+
+  return {
+    token: encaminhamento.token,
+    documento: encaminhamento.documento,
+    servidor: encaminhamento.servidor,
+    justificativa: encaminhamento.justificativa,
+    dataExpiracao: encaminhamento.dataExpiracao,
+    assinadoEm: encaminhamento.assinadoEm,
+  };
+}
+
+export async function assinarEletronicamente(token: string, ip: string) {
+  return prisma.$transaction(async (tx) => {
+    const encaminhamento = await tx.encaminhamento.findUnique({
+      where: { token },
+      include: { servidor: { select: { nome: true, matricula: true } }, documento: true },
+    });
+    if (!encaminhamento || !encaminhamento.documento) return { status: 'invalido' as const };
+    if (encaminhamento.assinadoEm)
+      return { status: 'assinado' as const, assinadoEm: encaminhamento.assinadoEm };
+    if (encaminhamento.dataExpiracao <= new Date()) return { status: 'expirado' as const };
+
+    const assinadoEm = new Date();
+    const updated = await tx.encaminhamento.updateMany({
+      where: { id: encaminhamento.id, assinadoEm: null, dataExpiracao: { gt: assinadoEm } },
+      data: { assinadoEm, assinadoIp: ip },
+    });
+    if (updated.count === 0) return { status: 'indisponivel' as const };
+
+    await tx.logAuditoria.create({
+      data: {
+        operador: encaminhamento.servidor.nome,
+        operadorMatricula: encaminhamento.servidor.matricula,
+        acao: 'ENCAMINHAMENTO',
+        detalhes: `Assinou eletronicamente o documento '${encaminhamento.documento.titulo}' por link individual.`,
+        ip,
+      },
+    });
+
+    return { status: 'assinado' as const, assinadoEm };
+  });
 }
