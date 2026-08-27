@@ -63,6 +63,7 @@ export interface SessionUser {
   nome: string;
   matricula: string;
   email: string;
+  fotoUrl: string;
   role: Servidor['role'];
 }
 

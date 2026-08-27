@@ -9,6 +9,7 @@ export type VerifiedSession = {
   nome: string;
   matricula: string;
   email: string;
+  fotoUrl: string;
   role: 'ADMIN' | 'OPERADOR';
 };
 
@@ -28,6 +29,8 @@ export async function getVerifiedSession(request?: NextRequest): Promise<Verifie
       nome: true,
       matricula: true,
       email: true,
+      fotoUrl: true,
+      fotoStorageKey: true,
       role: true,
       status: true,
       senhaDefinidaEm: true,
@@ -49,6 +52,7 @@ export async function getVerifiedSession(request?: NextRequest): Promise<Verifie
     nome: user.nome,
     matricula: user.matricula,
     email: user.email,
+    fotoUrl: user.fotoStorageKey ? `/api/servidores/${user.id}/foto` : user.fotoUrl ?? '',
     role: user.role as VerifiedSession['role'],
   };
 }

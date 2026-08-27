@@ -13,6 +13,7 @@ export async function GET() {
           nome: String(session.nome || 'Usuário Autenticado'),
           matricula: String(session.matricula || '000000-0'),
           email: String(session.email || ''),
+          fotoUrl: session.fotoUrl,
           role: String(session.role || 'ADMIN'),
         }
       : null,

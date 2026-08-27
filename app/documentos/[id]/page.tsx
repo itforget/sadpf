@@ -58,21 +58,22 @@ export default function DocumentoDetailPage() {
   }
 
   const handlePrintDocument = () => {
-    const printFrame = document.createElement('iframe');
-    printFrame.setAttribute('aria-hidden', 'true');
-    printFrame.className = 'fixed h-px w-px border-0 opacity-0 pointer-events-none';
-    printFrame.src = documento.arquivoUrl;
+    // A própria janela do PDF é impressa, para que o diálogo nativo receba o documento correto.
+    const printWindow = window.open(documento.arquivoUrl, '_blank');
+    if (!printWindow) {
+      alert('O navegador bloqueou a abertura do PDF. Permita pop-ups para imprimir o documento.');
+      return;
+    }
 
-    printFrame.onload = () => {
-      const printWindow = printFrame.contentWindow;
-      if (!printWindow) return;
-      printWindow.addEventListener('afterprint', () => printFrame.remove(), { once: true });
+    let printStarted = false;
+    const printPdf = () => {
+      if (printStarted) return;
+      printStarted = true;
       printWindow.focus();
       printWindow.print();
-      window.setTimeout(() => printFrame.remove(), 60_000);
     };
+    printWindow.addEventListener('load', () => window.setTimeout(printPdf, 250), { once: true });
 
-    document.body.appendChild(printFrame);
     void fetchJson(`/api/documentos/${documento.id}/impressao`, { method: 'POST' }).catch(
       (error) => {
         console.error('[DocumentoDetailPage] erro ao registrar impressão:', error);
