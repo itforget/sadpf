@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cpfEstaCompleto, formatarCpf } from '@/lib/cpf';
 
 export const servidorSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório'),
@@ -7,7 +8,8 @@ export const servidorSchema = z.object({
   cpf: z
     .string()
     .min(1, 'CPF é obrigatório')
-    .regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido'),
+    .transform(formatarCpf)
+    .refine(cpfEstaCompleto, 'CPF inválido'),
   cargoEfetivo: z.string().min(1, 'Cargo efetivo é obrigatório'),
   cargoOcupado: z.string().optional(),
   lotacao: z.string().min(1, 'Lotação é obrigatória'),
@@ -38,14 +40,24 @@ export const servidorUpdateSchema = servidorSchema.partial().extend({
 });
 
 /** Dados que a gestão de usuários pode alterar sem acessar o cadastro pessoal. */
-export const usuarioOperacionalSchema = z.object({
-  status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
-    message: 'Status é obrigatório',
-  }),
-  role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {
-    message: 'Perfil de acesso é obrigatório',
-  }),
-  senha: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres').optional().or(z.literal('')),
-});
+export const usuarioOperacionalSchema = z
+  .object({
+    status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
+      message: 'Status é obrigatório',
+    }),
+    role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {
+      message: 'Perfil de acesso é obrigatório',
+    }),
+    senha: z
+      .string()
+      .min(12, 'Senha deve ter no mínimo 12 caracteres')
+      .optional()
+      .or(z.literal('')),
+    confirmarSenha: z.string().optional().or(z.literal('')),
+  })
+  .refine((data) => !data.senha || data.senha === data.confirmarSenha, {
+    message: 'As senhas não coincidem.',
+    path: ['confirmarSenha'],
+  });
 
 export type UsuarioOperacionalData = z.infer<typeof usuarioOperacionalSchema>;

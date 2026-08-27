@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/server/prisma';
 import type { StorageBackend } from '@/prisma/generated';
+import { normalizarCpf } from '@/lib/cpf';
 
 export type AssinaturaEletronica = {
   token: string;
@@ -44,8 +45,6 @@ export async function getAssinaturaEletronica(token: string): Promise<Assinatura
     assinadoEm: encaminhamento.assinadoEm,
   };
 }
-
-const normalizarCpf = (cpf: string) => cpf.replace(/\D/g, '');
 
 export async function assinarEletronicamente(token: string, cpf: string, ip: string) {
   return prisma.$transaction(async (tx) => {

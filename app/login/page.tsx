@@ -22,6 +22,8 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    getValues,
+    trigger,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -37,6 +39,16 @@ export default function LoginPage() {
           body: JSON.stringify(data),
         }
       );
+    },
+  });
+
+  const resetRequestMutation = useMutation({
+    mutationFn: async (email: string) => {
+      return fetchJson<{ message: string }>('/api/auth/solicitar-redefinicao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
     },
   });
 
@@ -63,6 +75,23 @@ export default function LoginPage() {
         err instanceof Error
           ? err.message
           : 'Não foi possível conectar ao servidor. Tente novamente.'
+      );
+    }
+  };
+
+  const requestPasswordReset = async () => {
+    setError(null);
+    setNotice(null);
+    if (!(await trigger('email'))) return;
+
+    try {
+      const result = await resetRequestMutation.mutateAsync(getValues('email'));
+      setNotice(result.message);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível solicitar a redefinição de senha. Tente novamente.'
       );
     }
   };
@@ -156,6 +185,16 @@ export default function LoginPage() {
                 : passwordRequired
                 ? 'Entrar no Sistema'
                 : 'Continuar'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="link"
+              className="w-full text-ssp-blue"
+              disabled={resetRequestMutation.isPending}
+              onClick={requestPasswordReset}
+            >
+              {resetRequestMutation.isPending ? 'Enviando link...' : 'Redefinir senha'}
             </Button>
           </form>
 

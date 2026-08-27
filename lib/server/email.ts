@@ -4,6 +4,7 @@ type PasswordSetupEmail = {
   recipient: string;
   recipientName: string;
   resetUrl: string;
+  purpose: 'first-access' | 'password-reset';
 };
 
 type SignatureRequestEmail = {
@@ -31,6 +32,7 @@ export async function sendPasswordSetupEmail({
   recipient,
   recipientName,
   resetUrl,
+  purpose,
 }: PasswordSetupEmail): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
@@ -40,22 +42,33 @@ export async function sendPasswordSetupEmail({
   }
 
   const resend = new Resend(apiKey);
+  const isPasswordReset = purpose === 'password-reset';
+  const actionLabel = isPasswordReset ? 'Redefinir minha senha' : 'Definir minha senha';
+  const subject = isPasswordReset
+    ? 'SADPF — redefinição de senha solicitada'
+    : 'SADPF — defina sua senha de acesso';
+  const introduction = isPasswordReset
+    ? 'Recebemos uma solicitação para redefinir a senha da sua conta SADPF.'
+    : 'Para acessar o SADPF pela primeira vez, defina sua senha no link abaixo.';
   const { error } = await resend.emails.send({
     from,
     to: [recipient],
-    subject: 'SADPF — defina sua senha de acesso',
+    subject,
     html: `
-      <p>Olá, ${escapeHtml(recipientName)}.</p>
-      <p>Para acessar o SADPF pela primeira vez, defina sua senha no link abaixo.</p>
-      <p><a href="${resetUrl}">Definir minha senha</a></p>
-      <p>Este link expira em 15 minutos e só pode ser usado uma vez.</p>
-      <p>Se você não solicitou este acesso, ignore esta mensagem.</p>
+      <main style="max-width:560px;margin:0 auto;padding:32px;font-family:Arial,sans-serif;color:#1f2937">
+        <h1 style="margin:0 0 20px;color:#003f7d;font-size:24px">SADPF</h1>
+        <p>Olá, ${escapeHtml(recipientName)}.</p>
+        <p>${introduction}</p>
+        <p style="margin:28px 0"><a href="${resetUrl}" style="display:inline-block;background:#005ca9;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:700">${actionLabel}</a></p>
+        <p style="font-size:13px;color:#4b5563">Este link expira em 15 minutos e só pode ser usado uma vez.</p>
+        <p style="font-size:13px;color:#4b5563">Se você não solicitou esta ação, ignore esta mensagem.</p>
+      </main>
     `,
   });
 
   if (error) {
     console.error('[email] Falha ao enviar mensagem:', error);
-    throw new Error('Não foi possível enviar o e-mail de primeiro acesso.');
+    throw new Error('Não foi possível enviar o e-mail com o link de senha.');
   }
 }
 

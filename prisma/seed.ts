@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/prisma/generated';
 import bcrypt from 'bcryptjs';
+import { formatarCpf } from '@/lib/cpf';
 
 const connectionString = process.env.DATABASE_URL!;
 const adapter = new PrismaPg({ connectionString });
@@ -26,7 +27,7 @@ async function main() {
 
   const senhaHash = await bcrypt.hash(process.env.INITIAL_ADMIN_PASSWORD!, 12);
   const matricula = process.env.INITIAL_ADMIN_MATRICULA!;
-  const cpf = process.env.INITIAL_ADMIN_CPF!;
+  const cpf = formatarCpf(process.env.INITIAL_ADMIN_CPF!);
 
   await prisma.servidor.deleteMany({
     where: {

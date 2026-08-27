@@ -7,6 +7,7 @@ import type {
   StorageBackend,
 } from '@/prisma/generated';
 import type { Servidor, DocumentoPDF, LogAuditoria, NovoDocumentoPDF } from '../types';
+import { formatarCpf } from '@/lib/cpf';
 
 const SERVIDOR_SELECT = {
   id: true,
@@ -79,6 +80,7 @@ export async function getServidores(filter?: {
 
   return list.map((s) => ({
     ...s,
+    cpf: formatarCpf(s.cpf),
     fotoUrl: s.fotoStorageKey ? `/api/servidores/${s.id}/foto` : s.fotoUrl ?? '',
     status: s.status as Servidor['status'],
     role: s.role as Servidor['role'],
@@ -97,6 +99,7 @@ export async function getServidorById(id: string): Promise<Servidor | null> {
 
   return {
     ...s,
+    cpf: formatarCpf(s.cpf),
     fotoUrl: s.fotoStorageKey ? `/api/servidores/${s.id}/foto` : s.fotoUrl ?? '',
     status: s.status as Servidor['status'],
     role: s.role as Servidor['role'],
@@ -115,7 +118,7 @@ export async function addServidor(
       matricula: data.matricula,
       matriculaCargoEfetivo: data.matriculaCargoEfetivo,
       nome: data.nome,
-      cpf: data.cpf,
+      cpf: formatarCpf(data.cpf),
       fotoUrl: data.fotoUrl || null,
       cargoEfetivo: data.cargoEfetivo,
       cargoOcupado: data.cargoOcupado,
@@ -133,6 +136,7 @@ export async function addServidor(
 
   return {
     ...created,
+    cpf: formatarCpf(created.cpf),
     fotoUrl: created.fotoUrl ?? '',
     status: created.status as Servidor['status'],
     role: created.role as Servidor['role'],
@@ -149,7 +153,7 @@ export async function updateServidor(
     ...(data.matriculaCargoEfetivo !== undefined && {
       matriculaCargoEfetivo: data.matriculaCargoEfetivo,
     }),
-    ...(data.cpf !== undefined && { cpf: data.cpf }),
+    ...(data.cpf !== undefined && { cpf: formatarCpf(data.cpf) }),
     ...(data.nome !== undefined && { nome: data.nome }),
     ...(data.email !== undefined && { email: data.email }),
     ...(data.telefone !== undefined && { telefone: data.telefone }),
@@ -186,6 +190,7 @@ export async function updateServidor(
 
   return {
     ...updated,
+    cpf: formatarCpf(updated.cpf),
     fotoUrl: updated.fotoUrl ?? '',
     status: updated.status as Servidor['status'],
     role: updated.role as Servidor['role'],

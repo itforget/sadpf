@@ -45,7 +45,11 @@ export default function RedefinirSenhaForm({ token }: Props) {
       await resetMutation.mutateAsync(data);
       router.replace('/login');
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Não foi possível conectar ao servidor. Tente novamente.');
+      setMessage(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível conectar ao servidor. Tente novamente.'
+      );
     }
   };
 
@@ -70,6 +74,20 @@ export default function RedefinirSenhaForm({ token }: Props) {
             />
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Repita a nova senha</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              {...register('confirmPassword')}
+              className={errors.confirmPassword ? 'border-destructive' : ''}
+            />
+            {errors.confirmPassword && (
+              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
             )}
           </div>
 

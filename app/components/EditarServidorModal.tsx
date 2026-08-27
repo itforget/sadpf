@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { fetchSession } from '@/lib/client/api';
+import { formatarCpf } from '@/lib/cpf';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 import { useQuery } from '@tanstack/react-query';
 
@@ -238,7 +239,7 @@ export default function EditarServidorModal({
                   id="cpf"
                   label="CPF"
                   value={dados.cpf}
-                  onChange={(value) => atualizar('cpf', value)}
+                  onChange={(value) => atualizar('cpf', formatarCpf(value))}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">

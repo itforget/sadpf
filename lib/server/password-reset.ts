@@ -22,7 +22,7 @@ function getApplicationUrl(): string {
   return applicationUrl.replace(/\/$/, '');
 }
 
-export async function sendFirstAccessEmail(account: Account): Promise<void> {
+async function sendPasswordLink(account: Account, purpose: 'first-access' | 'password-reset') {
   const now = new Date();
   const activeToken = await prisma.passwordResetToken.findFirst({
     where: {
@@ -32,7 +32,10 @@ export async function sendFirstAccessEmail(account: Account): Promise<void> {
     },
   });
 
-  if (activeToken) return;
+  if (activeToken) {
+    if (purpose === 'first-access') return;
+    await prisma.passwordResetToken.delete({ where: { id: activeToken.id } });
+  }
 
   const token = randomBytes(32).toString('base64url');
   const savedToken = await prisma.passwordResetToken.create({
@@ -49,11 +52,29 @@ export async function sendFirstAccessEmail(account: Account): Promise<void> {
       recipient: account.email,
       recipientName: account.nome,
       resetUrl,
+      purpose,
     });
   } catch (error) {
     await prisma.passwordResetToken.delete({ where: { id: savedToken.id } });
     throw error;
   }
+}
+
+export async function sendFirstAccessEmail(account: Account): Promise<void> {
+  await sendPasswordLink(account, 'first-access');
+}
+
+/** Solicita uma nova senha sem revelar se o e-mail possui uma conta válida. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const account = await prisma.servidor.findFirst({
+    where: {
+      email: { equals: email.trim(), mode: 'insensitive' },
+      status: 'Ativo',
+      role: { in: ['ADMIN', 'OPERADOR'] },
+    },
+    select: { id: true, email: true, nome: true },
+  });
+  if (account) await sendPasswordLink(account, 'password-reset');
 }
 
 export async function resetPassword(token: string, senhaHash: string): Promise<boolean> {

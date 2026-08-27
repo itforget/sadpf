@@ -5,6 +5,7 @@ import { CheckCircle2, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { cpfEstaCompleto, formatarCpf } from '@/lib/cpf';
 
 export default function AssinaturaClient({
   token,
@@ -80,8 +81,8 @@ export default function AssinaturaClient({
                 autoComplete="off"
                 maxLength={14}
                 value={cpf}
-                onChange={(event) => setCpf(event.target.value.replace(/\D/g, '').slice(0, 11))}
-                placeholder="Somente números"
+                onChange={(event) => setCpf(formatarCpf(event.target.value))}
+                placeholder="000.000.000-00"
               />
             </div>
             <label className="flex items-start gap-3 text-sm">
@@ -92,7 +93,7 @@ export default function AssinaturaClient({
               </span>
             </label>
             <Button
-              disabled={!aceite || cpf.length !== 11 || loading}
+              disabled={!aceite || !cpfEstaCompleto(cpf) || loading}
               onClick={sign}
               className="bg-ssp-blue hover:bg-ssp-blueDark"
             >

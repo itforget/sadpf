@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cpfEstaCompleto, formatarCpf } from '@/lib/cpf';
 
 export const usuarioSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório'),
@@ -6,7 +7,8 @@ export const usuarioSchema = z.object({
   cpf: z
     .string()
     .min(1, 'CPF é obrigatório')
-    .regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido'),
+    .transform(formatarCpf)
+    .refine(cpfEstaCompleto, 'CPF inválido'),
   email: z.email('Email inválido'),
   status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
     message: 'Status é obrigatório',

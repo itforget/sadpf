@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { servidorSchema, type ServidorFormData } from '@/lib/validations/servidor';
+import { formatarCpf } from '@/lib/cpf';
 import { fetchJson, fetchServidores } from '@/lib/client/api';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 import { Badge } from '@/components/ui/badge';
@@ -199,7 +200,12 @@ export default function ServidoresListPage() {
                 <Input
                   id="cpf"
                   {...register('cpf')}
+                  onChange={(event) =>
+                    setValue('cpf', formatarCpf(event.target.value), { shouldValidate: true })
+                  }
                   placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  maxLength={14}
                   className={`font-mono ${errors.cpf ? 'border-destructive' : ''}`}
                 />
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}

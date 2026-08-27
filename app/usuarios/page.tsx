@@ -157,6 +157,7 @@ export default function UsuariosPage() {
       status: user.status,
       role: user.role,
       senha: '',
+      confirmarSenha: '',
     });
     setFeedback(null);
   };
@@ -514,6 +515,22 @@ export default function UsuariosPage() {
                 {editForm.formState.errors.senha && (
                   <p className="text-sm text-destructive">
                     {editForm.formState.errors.senha.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="edit-confirmarSenha">Repita a nova senha</Label>
+                <Input
+                  id="edit-confirmarSenha"
+                  type="password"
+                  placeholder="Repita a nova senha para confirmar"
+                  {...editForm.register('confirmarSenha')}
+                  className={editForm.formState.errors.confirmarSenha ? 'border-destructive' : ''}
+                />
+                {editForm.formState.errors.confirmarSenha && (
+                  <p className="text-sm text-destructive">
+                    {editForm.formState.errors.confirmarSenha.message}
                   </p>
                 )}
               </div>
