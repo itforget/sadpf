@@ -16,18 +16,6 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: '50mb',
     optimizePackageImports: ['lucide-react'],
   },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'avatars.githubusercontent.com',
-      },
-    ],
-  },
   async headers() {
     return [
       {
