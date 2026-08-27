@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, BadgeCheck, FileText, Printer, Send, Download } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, FileText, Send, Download } from 'lucide-react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 
 import PDFViewer from '@/app/components/PDFViewer';
 import EncaminharModal from '@/app/components/EncaminharModal';
-import { fetchDocumentoById, fetchJson, fetchServidores } from '@/lib/client/api';
+import { fetchDocumentoById, fetchServidores } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -57,30 +57,6 @@ export default function DocumentoDetailPage() {
     );
   }
 
-  const handlePrintDocument = () => {
-    // A própria janela do PDF é impressa, para que o diálogo nativo receba o documento correto.
-    const printWindow = window.open(documento.arquivoUrl, '_blank');
-    if (!printWindow) {
-      alert('O navegador bloqueou a abertura do PDF. Permita pop-ups para imprimir o documento.');
-      return;
-    }
-
-    let printStarted = false;
-    const printPdf = () => {
-      if (printStarted) return;
-      printStarted = true;
-      printWindow.focus();
-      printWindow.print();
-    };
-    printWindow.addEventListener('load', () => window.setTimeout(printPdf, 250), { once: true });
-
-    void fetchJson(`/api/documentos/${documento.id}/impressao`, { method: 'POST' }).catch(
-      (error) => {
-        console.error('[DocumentoDetailPage] erro ao registrar impressão:', error);
-      }
-    );
-  };
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-300">
       {showEncaminharModal && (
@@ -111,9 +87,6 @@ export default function DocumentoDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Button onClick={handlePrintDocument} variant="outline">
-            <Printer size={16} className="text-ssp-blue" /> Imprimir Documento
-          </Button>
           {documento.assinatura ? (
             <div className="flex items-center gap-1.5 rounded-md border border-status-success/30 bg-status-success/10 px-3 py-2 text-sm font-semibold text-status-success">
               <BadgeCheck size={16} /> Assinado em{' '}
