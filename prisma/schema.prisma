@@ -130,7 +130,6 @@ model Encaminhamento {
   servidorId    String
   documentoId   String?
   destinatario  String
-  justificativa String
   validadeDias  Int
   requerSenha   Boolean  @default(true)
   token         String   @unique

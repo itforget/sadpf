@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
     const encaminhamento = await addEncaminhamento({
       servidorId: body.servidorId,
       documentoId: body.documentoId,
-      justificativa: data.justificativa,
       validadeDias: Number(data.validadeDias),
       token: randomBytes(32).toString('base64url'),
       operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',

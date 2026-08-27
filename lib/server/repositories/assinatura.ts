@@ -13,7 +13,6 @@ export type AssinaturaEletronica = {
     storageKey: string | null;
   };
   servidor: { nome: string; matricula: string };
-  justificativa: string;
   dataExpiracao: Date;
   assinadoEm: Date | null;
 };
@@ -40,7 +39,6 @@ export async function getAssinaturaEletronica(token: string): Promise<Assinatura
     token: encaminhamento.token,
     documento: encaminhamento.documento,
     servidor: encaminhamento.servidor,
-    justificativa: encaminhamento.justificativa,
     dataExpiracao: encaminhamento.dataExpiracao,
     assinadoEm: encaminhamento.assinadoEm,
   };

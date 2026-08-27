@@ -85,7 +85,6 @@ export interface Encaminhamento {
   servidor: string;
   validade: string;
   status: 'Pendente assinatura' | 'Assinado' | 'Expirado';
-  justificativa: string;
 }
 
 export type DocumentoSearchResult = DocumentoPDF;

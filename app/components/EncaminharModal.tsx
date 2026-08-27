@@ -10,7 +10,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -44,16 +43,9 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
   const [emailSent, setEmailSent] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const queryClient = useQueryClient();
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors },
-    setValue,
-    reset,
-  } = useForm<EncaminhamentoFormData>({
+  const { handleSubmit, control, setValue, reset } = useForm<EncaminhamentoFormData>({
     resolver: zodResolver(encaminhamentoSchema),
-    defaultValues: { justificativa: '', validadeDias: '7' },
+    defaultValues: { validadeDias: '7' },
   });
   const validadeDias = useWatch({ control, name: 'validadeDias' });
 
@@ -112,22 +104,6 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
               <p className="pt-2 text-muted-foreground">
                 <strong className="text-foreground">Documento:</strong> {documento.titulo}
               </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="justificativa">
-                Motivo da solicitação <span className="text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="justificativa"
-                {...register('justificativa')}
-                placeholder="Informe o motivo e a referência do processo SEI..."
-                rows={3}
-                className={errors.justificativa ? 'border-destructive' : ''}
-              />
-              {errors.justificativa && (
-                <p className="text-sm text-destructive">{errors.justificativa.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">

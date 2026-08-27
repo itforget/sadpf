@@ -76,7 +76,6 @@ export default function EncaminhamentosPage() {
                   <TableHead>Data de Geração</TableHead>
                   <TableHead>Unidade Destinatária</TableHead>
                   <TableHead>Pasta / Servidor</TableHead>
-                  <TableHead>Justificativa</TableHead>
                   <TableHead>Validade</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -89,9 +88,6 @@ export default function EncaminhamentosPage() {
                       {enc.destinatario}
                     </TableCell>
                     <TableCell className="font-medium">{enc.servidor}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">
-                      {enc.justificativa}
-                    </TableCell>
                     <TableCell className="font-mono">{enc.validade}</TableCell>
                     <TableCell>
                       <Badge

@@ -38,7 +38,6 @@ export interface EncaminhamentoResumo {
   servidor: string;
   validade: string;
   status: 'Pendente assinatura' | 'Assinado' | 'Expirado';
-  justificativa: string;
 }
 
 export interface EncaminhamentoCriado extends EncaminhamentoResumo {
@@ -508,7 +507,6 @@ function formatarDataHora(data: Date): string {
 function mapEncaminhamentoResumo(encaminhamento: {
   id: string;
   destinatario: string;
-  justificativa: string;
   validadeDias: number;
   dataGeracao: Date;
   dataExpiracao: Date;
@@ -530,7 +528,6 @@ function mapEncaminhamentoResumo(encaminhamento: {
       encaminhamento.validadeDias
     } ${encaminhamento.validadeDias === 1 ? 'Dia' : 'Dias'})`,
     status,
-    justificativa: encaminhamento.justificativa,
   };
 }
 
@@ -546,7 +543,6 @@ export async function getEncaminhamentos(): Promise<EncaminhamentoResumo[]> {
 export async function addEncaminhamento(data: {
   servidorId: string;
   documentoId?: string;
-  justificativa: string;
   validadeDias: number;
   token: string;
   operador: string;
@@ -575,7 +571,6 @@ export async function addEncaminhamento(data: {
         servidorId: data.servidorId,
         documentoId: data.documentoId,
         destinatario: 'Servidor titular da pasta',
-        justificativa: data.justificativa,
         validadeDias: data.validadeDias,
         requerSenha: false,
         token: data.token,
@@ -589,7 +584,7 @@ export async function addEncaminhamento(data: {
         operador: data.operador,
         operadorMatricula: data.operadorMatricula,
         acao: 'ENCAMINHAMENTO',
-        detalhes: `Solicitou assinatura eletrônica interna de ${created.servidor.nome} (Mat. ${created.servidor.matricula}). Motivo: ${data.justificativa}`,
+        detalhes: `Solicitou assinatura eletrônica interna de ${created.servidor.nome} (Mat. ${created.servidor.matricula}).`,
         ip: data.ip,
       },
     });
