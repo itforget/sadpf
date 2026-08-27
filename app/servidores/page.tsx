@@ -46,6 +46,7 @@ export default function ServidoresListPage() {
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const {
@@ -65,7 +66,9 @@ export default function ServidoresListPage() {
       cargoEfetivo: '',
       cargoOcupado: '',
       lotacao: '',
+      dataIngresso: '',
       email: '',
+      telefone: '',
       status: 'Ativo',
       role: 'PASTA',
       senha: '',
@@ -107,6 +110,7 @@ export default function ServidoresListPage() {
         summaryQueryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
       );
       setShowAddModal(false);
+      setCreateError(null);
       reset();
     },
   });
@@ -114,19 +118,28 @@ export default function ServidoresListPage() {
   const onSubmit = async (data: ServidorFormData) => {
     try {
       await createMutation.mutateAsync(data);
-    } catch (err) {
-      console.error(err);
+    } catch (error: unknown) {
+      setCreateError(
+        error instanceof Error ? error.message : 'Não foi possível criar a pasta funcional.'
+      );
     }
   };
 
   const handleCloseModal = () => {
     setShowAddModal(false);
+    setCreateError(null);
     reset();
   };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+      <Dialog
+        open={showAddModal}
+        onOpenChange={(open) => {
+          setShowAddModal(open);
+          if (!open) setCreateError(null);
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <div className="flex items-center gap-3">
@@ -193,7 +206,7 @@ export default function ServidoresListPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail institucional</Label>
+                <Label htmlFor="email">E-mail institucional *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -202,6 +215,20 @@ export default function ServidoresListPage() {
                   className={errors.email ? 'border-destructive' : ''}
                 />
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone *</Label>
+                <Input
+                  id="telefone"
+                  type="tel"
+                  {...register('telefone')}
+                  placeholder="(61) 99999-9999"
+                  className={errors.telefone ? 'border-destructive' : ''}
+                />
+                {errors.telefone && (
+                  <p className="text-sm text-destructive">{errors.telefone.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -221,6 +248,19 @@ export default function ServidoresListPage() {
                     <SelectItem value="Aposentado">Aposentado</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dataIngresso">Data de admissão *</Label>
+                <Input
+                  id="dataIngresso"
+                  {...register('dataIngresso')}
+                  placeholder="DD/MM/AAAA"
+                  className={errors.dataIngresso ? 'border-destructive' : ''}
+                />
+                {errors.dataIngresso && (
+                  <p className="text-sm text-destructive">{errors.dataIngresso.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -258,6 +298,7 @@ export default function ServidoresListPage() {
             </div>
 
             <DialogFooter>
+              {createError && <p className="mr-auto text-sm text-destructive">{createError}</p>}
               <Button type="button" variant="outline" onClick={handleCloseModal}>
                 Cancelar
               </Button>

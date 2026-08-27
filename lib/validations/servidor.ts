@@ -11,7 +11,7 @@ export const servidorSchema = z.object({
   cargoEfetivo: z.string().min(1, 'Cargo efetivo é obrigatório'),
   cargoOcupado: z.string().optional(),
   lotacao: z.string().min(1, 'Lotação é obrigatória'),
-  dataIngresso: z.string().min(1, 'Data de admissão é obrigatória').optional(),
+  dataIngresso: z.string().min(1, 'Data de admissão é obrigatória'),
   status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
     message: 'Status é obrigatório',
   }),
@@ -19,8 +19,8 @@ export const servidorSchema = z.object({
     message: 'Função de acesso é obrigatória',
   }),
   senha: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres').optional().or(z.literal('')),
-  email: z.email('Email inválido').optional().or(z.literal('')),
-  telefone: z.string().optional(),
+  email: z.email('Email inválido'),
+  telefone: z.string().min(1, 'Telefone é obrigatório'),
 });
 
 export type ServidorFormData = z.infer<typeof servidorSchema>;
@@ -36,3 +36,16 @@ export const servidorUpdateSchema = servidorSchema.partial().extend({
     )
     .optional(),
 });
+
+/** Dados que a gestão de usuários pode alterar sem acessar o cadastro pessoal. */
+export const usuarioOperacionalSchema = z.object({
+  status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
+    message: 'Status é obrigatório',
+  }),
+  role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {
+    message: 'Perfil de acesso é obrigatório',
+  }),
+  senha: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres').optional().or(z.literal('')),
+});
+
+export type UsuarioOperacionalData = z.infer<typeof usuarioOperacionalSchema>;

@@ -59,7 +59,7 @@ model Servidor {
   status          StatusServidor @default(Ativo)
   role            Role           @default(PASTA)
   dataIngresso    String
-  email           String
+  email           String         @unique
   telefone        String
   senhaHash       String?
   senhaDefinidaEm DateTime?      @default(now())

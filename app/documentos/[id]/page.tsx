@@ -8,9 +8,8 @@ import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 
 import PDFViewer from '@/app/components/PDFViewer';
-import PrintModal from '@/app/components/PrintModal';
 import EncaminharModal from '@/app/components/EncaminharModal';
-import { fetchDocumentoById, fetchServidores } from '@/lib/client/api';
+import { fetchDocumentoById, fetchJson, fetchServidores } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -19,7 +18,6 @@ export default function DocumentoDetailPage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [showPrintModal, setShowPrintModal] = useState(false);
   const [showEncaminharModal, setShowEncaminharModal] = useState(false);
 
   const documentoQuery = useQuery({
@@ -59,11 +57,31 @@ export default function DocumentoDetailPage() {
     );
   }
 
+  const handlePrintDocument = () => {
+    const printFrame = document.createElement('iframe');
+    printFrame.setAttribute('aria-hidden', 'true');
+    printFrame.className = 'fixed h-px w-px border-0 opacity-0 pointer-events-none';
+    printFrame.src = documento.arquivoUrl;
+
+    printFrame.onload = () => {
+      const printWindow = printFrame.contentWindow;
+      if (!printWindow) return;
+      printWindow.addEventListener('afterprint', () => printFrame.remove(), { once: true });
+      printWindow.focus();
+      printWindow.print();
+      window.setTimeout(() => printFrame.remove(), 60_000);
+    };
+
+    document.body.appendChild(printFrame);
+    void fetchJson(`/api/documentos/${documento.id}/impressao`, { method: 'POST' }).catch(
+      (error) => {
+        console.error('[DocumentoDetailPage] erro ao registrar impressão:', error);
+      }
+    );
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-300">
-      {showPrintModal && (
-        <PrintModal documento={documento} onClose={() => setShowPrintModal(false)} />
-      )}
       {showEncaminharModal && (
         <EncaminharModal
           servidor={servidor}
@@ -92,7 +110,7 @@ export default function DocumentoDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Button onClick={() => setShowPrintModal(true)} variant="outline">
+          <Button onClick={handlePrintDocument} variant="outline">
             <Printer size={16} className="text-ssp-blue" /> Imprimir Documento
           </Button>
           {documento.assinatura ? (

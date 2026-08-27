@@ -5,7 +5,6 @@ import { UserCog, Search, Pencil, Power, Trash2, Users, KeyRound } from 'lucide-
 import type { Servidor } from '@/lib/types';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
@@ -40,22 +39,7 @@ import {
 import { fetchJson, fetchServidores } from '@/lib/client/api';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 
-const usuarioEditSchema = z.object({
-  nome: z.string().min(1, 'Nome é obrigatório'),
-  email: z.email('Email inválido').optional().or(z.literal('')),
-  telefone: z.string().optional(),
-  cargoEfetivo: z.string().optional(),
-  cargoOcupado: z.string().optional(),
-  lotacao: z.string().optional(),
-  status: z.enum(['Ativo', 'Inativo', 'Aposentado'], {
-    message: 'Status é obrigatório',
-  }),
-  role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {
-    message: 'Função de acesso é obrigatória',
-  }),
-  senha: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres').optional().or(z.literal('')),
-});
-type UsuarioEditData = z.infer<typeof usuarioEditSchema>;
+import { usuarioOperacionalSchema, type UsuarioOperacionalData } from '@/lib/validations/servidor';
 
 const ROLE_LABELS: Record<Servidor['role'], string> = {
   ADMIN: 'Administrador',
@@ -81,8 +65,8 @@ export default function UsuariosPage() {
   );
   const queryClient = useQueryClient();
 
-  const editForm = useForm<UsuarioEditData>({
-    resolver: zodResolver(usuarioEditSchema),
+  const editForm = useForm<UsuarioOperacionalData>({
+    resolver: zodResolver(usuarioOperacionalSchema),
   });
 
   const editStatus = useWatch({ control: editForm.control, name: 'status' });
@@ -108,9 +92,9 @@ export default function UsuariosPage() {
   };
 
   const editMutation = useMutation({
-    mutationFn: async (data: UsuarioEditData) => {
+    mutationFn: async (data: UsuarioOperacionalData) => {
       if (!editingUser) throw new Error('Usuário não encontrado.');
-      await fetchJson(`/api/servidores?id=${editingUser.id}`, {
+      await fetchJson(`/api/usuarios/${editingUser.id}/operacional`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -170,12 +154,6 @@ export default function UsuariosPage() {
   const openEdit = (user: Servidor) => {
     setEditingUser(user);
     editForm.reset({
-      nome: user.nome,
-      email: user.email || '',
-      telefone: user.telefone || '',
-      cargoEfetivo: user.cargoEfetivo || '',
-      cargoOcupado: user.cargoOcupado || '',
-      lotacao: user.lotacao || '',
       status: user.status,
       role: user.role,
       senha: '',
@@ -189,11 +167,11 @@ export default function UsuariosPage() {
     setFeedback(null);
   };
 
-  const onSubmitEdit = async (data: UsuarioEditData) => {
+  const onSubmitEdit = async (data: UsuarioOperacionalData) => {
     if (!editingUser) return;
     try {
       await editMutation.mutateAsync(data);
-      showFeedback('success', `Dados de ${data.nome} atualizados com sucesso.`);
+      showFeedback('success', `Acesso de ${editingUser.nome} atualizado com sucesso.`);
       setEditingUser(null);
       editForm.reset();
       await invalidateUsuarios();
@@ -475,7 +453,8 @@ export default function UsuariosPage() {
               <div>
                 <DialogTitle>Editar usuário</DialogTitle>
                 <DialogDescription>
-                  Atualize os dados, o perfil de acesso ou redefina a senha de {editingUser?.nome}.
+                  Altere somente os controles de acesso de {editingUser?.nome}. Os dados pessoais
+                  permanecem disponíveis na pasta funcional.
                 </DialogDescription>
               </div>
             </div>
@@ -483,55 +462,6 @@ export default function UsuariosPage() {
 
           <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-nome">Nome completo</Label>
-                <Input
-                  id="edit-nome"
-                  {...editForm.register('nome')}
-                  className={editForm.formState.errors.nome ? 'border-destructive' : ''}
-                />
-                {editForm.formState.errors.nome && (
-                  <p className="text-sm text-destructive">
-                    {editForm.formState.errors.nome.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  {...editForm.register('email')}
-                  className={editForm.formState.errors.email ? 'border-destructive' : ''}
-                />
-                {editForm.formState.errors.email && (
-                  <p className="text-sm text-destructive">
-                    {editForm.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-telefone">Telefone</Label>
-                <Input id="edit-telefone" {...editForm.register('telefone')} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-cargo">Cargo efetivo</Label>
-                <Input id="edit-cargo" {...editForm.register('cargoEfetivo')} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-cargoOcupado">Cargo ocupado</Label>
-                <Input id="edit-cargoOcupado" {...editForm.register('cargoOcupado')} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-lotacao">Lotação</Label>
-                <Input id="edit-lotacao" {...editForm.register('lotacao')} />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Perfil de acesso</Label>
                 <Select

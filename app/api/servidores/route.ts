@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { StatusServidor } from '@/prisma/generated';
+import { Prisma, StatusServidor } from '@/prisma/generated';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import {
   getServidores,
@@ -95,9 +95,9 @@ export async function POST(request: Request) {
       cargoOcupado: data.cargoOcupado || 'Sem cargo comissionado',
       lotacao: data.lotacao,
       status: data.status,
-      dataIngresso: new Date().toLocaleDateString('pt-BR'),
-      email: data.email || '',
-      telefone: data.telefone || '',
+      dataIngresso: data.dataIngresso,
+      email: data.email,
+      telefone: data.telefone,
       role: data.role,
       senhaHash,
       senhaDefinidaEm: null,
@@ -106,6 +106,12 @@ export async function POST(request: Request) {
     return NextResponse.json(newServidor, { status: 201 });
   } catch (error: unknown) {
     console.error('[POST /api/servidores]', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Já existe uma pasta funcional com esta matrícula, CPF ou e-mail.' },
+        { status: 409 }
+      );
+    }
     const message = error instanceof Error ? error.message : 'Erro ao cadastrar servidor.';
 
     return NextResponse.json({ error: message }, { status: 500 });
@@ -196,6 +202,12 @@ export async function PUT(request: Request) {
     return NextResponse.json(updated);
   } catch (error: unknown) {
     console.error('[PUT /api/servidores]', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Já existe uma pasta funcional com esta matrícula, CPF ou e-mail.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: 'Erro ao atualizar servidor.' }, { status: 500 });
   }
 }

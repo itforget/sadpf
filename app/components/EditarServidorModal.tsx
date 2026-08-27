@@ -360,7 +360,7 @@ function Campo({
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required={id !== 'email' && id !== 'telefone'}
+        required
       />
     </div>
   );
