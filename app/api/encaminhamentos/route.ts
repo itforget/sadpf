@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
     const assinaturaUrl = `${applicationUrl}/assinar/${encaminhamento.token}`;
     let emailSent = true;
     try {
-      const servidor = await getServidorById(body.servidorId);
-      const documento = await getDocumentoById(body.documentoId);
+      const [servidor, documento] = await Promise.all([
+        getServidorById(body.servidorId),
+        getDocumentoById(body.documentoId),
+      ]);
       if (!servidor || !documento) throw new Error('Destinatário ou documento não encontrado.');
       await sendSignatureRequestEmail({
         recipient: servidor.email,

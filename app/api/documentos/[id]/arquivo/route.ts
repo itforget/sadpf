@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedSession } from '@/lib/server/access';
-import { getDocumentoArquivoById } from '@/lib/server/db';
-import { getStorage } from '@/lib/storage';
-import { adicionarMarcaDaguaDeAssinatura } from '@/lib/server/signature-watermark';
+import { getDocumentoArquivoById } from '@/lib/server/repositories/documento';
+import { getPdfArtifact } from '@/lib/server/pdf-artifact';
 
 export async function GET(
   request: NextRequest,
@@ -20,23 +19,18 @@ export async function GET(
       return NextResponse.json({ error: 'Documento não encontrado.' }, { status: 404 });
     }
 
-    const storage = getStorage(documento.storageBackend ?? 'local');
-    const arquivo = await storage.download(documento.storageKey ?? documento.arquivoUrl);
-    const nomeArquivo = documento.titulo.replace(/[\r\n"]/g, '_');
-
-    const arquivoComMarca =
-      documento.assinadoEm && documento.tokenAssinatura
-        ? await adicionarMarcaDaguaDeAssinatura(
-            arquivo,
-            documento.assinadoEm,
-            documento.tokenAssinatura,
-            new URL(`/autenticidade/${documento.tokenAssinatura}`, request.url).toString()
-          )
-        : arquivo;
-    return new NextResponse(new Uint8Array(arquivoComMarca), {
+    const artifact = await getPdfArtifact({
+      ...documento,
+      token: documento.tokenAssinatura ?? undefined,
+      assinadoEm: documento.assinadoEm,
+      validationUrl: documento.tokenAssinatura
+        ? new URL(`/autenticidade/${documento.tokenAssinatura}`, request.url).toString()
+        : undefined,
+    });
+    return new NextResponse(Buffer.from(artifact.bytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${nomeArquivo}"`,
+        'Content-Disposition': `inline; filename="${artifact.fileName}"`,
         'Cache-Control': 'private, no-store, max-age=0',
         'X-Content-Type-Options': 'nosniff',
       },

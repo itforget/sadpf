@@ -1,12 +1,13 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import type { DocumentoPDF } from '@/lib/types';
-import { addDocumento, addLog, getServidorById } from '@/lib/server/db';
+import { getServidorById } from '@/lib/server/repositories/servidor';
 import { getStorage } from '@/lib/storage';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getRequestIp } from '@/lib/server/request-ip';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
+import { persistUploadedDocument } from '@/lib/server/upload-service';
 
 const categoriasDocumento = CATEGORIAS_DOCUMENTO;
 
@@ -84,39 +85,19 @@ export async function POST(request: NextRequest) {
     const storage = getStorage();
     const storedFile = await storage.upload(buffer, storageKey, file.type);
 
-    let paginas = 1;
-    try {
-      const { PDF } = await import('@libpdf/core');
-      paginas = (await PDF.load(new Uint8Array(buffer))).getPageCount();
-    } catch (pdfError: unknown) {
-      console.error('[upload] falha ao ler páginas do PDF:', pdfError);
-    }
-
-    let doc: DocumentoPDF;
-    try {
-      doc = await addDocumento({
-        servidorId,
-        titulo,
-        categoria,
-        dataUpload: new Date().toLocaleDateString('pt-BR'),
-        tamanho: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        paginas,
-        processoSEI,
-        arquivoUrl: storedFile.key,
-        storageBackend: storedFile.backend,
-        storageKey: storedFile.key,
-        operadorRH: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
-      });
-    } catch (error) {
-      await storage.delete(storedFile.key);
-      throw error;
-    }
-
-    await addLog({
+    const doc = await persistUploadedDocument({
+      buffer,
+      fileSize: file.size,
+      servidorId,
+      servidorNome: servidor.nome,
+      servidorMatricula: servidor.matricula,
+      titulo,
+      categoria,
+      processoSEI,
+      storageKey: storedFile.key,
+      storageBackend: storedFile.backend,
       operador: typeof session.nome === 'string' ? session.nome : 'Operador não identificado',
       operadorMatricula: typeof session.matricula === 'string' ? session.matricula : 'N/A',
-      acao: 'UPLOAD',
-      detalhes: `Anexou documento PDF '${titulo}' na pasta do servidor ${servidor.nome} (Mat. ${servidor.matricula})`,
       ip: getRequestIp(request),
     });
 

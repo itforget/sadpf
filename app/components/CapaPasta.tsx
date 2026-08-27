@@ -40,24 +40,24 @@ interface CapaPastaProps {
 
 const CORES_CATEGORIA: Record<DocumentoPDF['categoria'], { cartao: string; etiqueta: string }> = {
   'Pasta Física Digitalizada': {
-    cartao: 'bg-sky-50/70 border-sky-200 hover:border-sky-400',
-    etiqueta: 'text-sky-800 bg-sky-100 border-sky-200',
+    cartao: 'bg-ssp-blue/5 border-ssp-blue/20 hover:border-ssp-blue/50',
+    etiqueta: 'text-ssp-blue bg-ssp-blue/10 border-ssp-blue/20',
   },
   'Posse Eletrônica': {
-    cartao: 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-400',
-    etiqueta: 'text-emerald-800 bg-emerald-100 border-emerald-200',
+    cartao: 'bg-status-success/5 border-status-success/20 hover:border-status-success/50',
+    etiqueta: 'text-status-success bg-status-success/10 border-status-success/20',
   },
   'Documentos Pessoais': {
-    cartao: 'bg-violet-50/70 border-violet-200 hover:border-violet-400',
-    etiqueta: 'text-violet-800 bg-violet-100 border-violet-200',
+    cartao: 'bg-muted border-border hover:border-ssp-blue/50',
+    etiqueta: 'text-muted-foreground bg-muted border-border',
   },
   Publicações: {
-    cartao: 'bg-amber-50/70 border-amber-200 hover:border-amber-400',
-    etiqueta: 'text-amber-800 bg-amber-100 border-amber-200',
+    cartao: 'bg-status-warning/5 border-status-warning/20 hover:border-status-warning/50',
+    etiqueta: 'text-status-warning bg-status-warning/10 border-status-warning/20',
   },
   'Certidões/Declarações': {
-    cartao: 'bg-rose-50/70 border-rose-200 hover:border-rose-400',
-    etiqueta: 'text-rose-800 bg-rose-100 border-rose-200',
+    cartao: 'bg-status-danger/5 border-status-danger/20 hover:border-status-danger/50',
+    etiqueta: 'text-status-danger bg-status-danger/10 border-status-danger/20',
   },
 };
 

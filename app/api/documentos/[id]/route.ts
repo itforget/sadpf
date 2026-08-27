@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
-import { addLog, deleteDocumento, getDocumentoById, updateDocumento } from '@/lib/server/db';
+import { deleteDocumento, getDocumentoById, updateDocumento } from '@/lib/server/repositories/documento';
+import { addLog } from '@/lib/server/repositories/auditoria';
 import { processPendingStorageDeletionTasks } from '@/lib/server/storage-cleanup';
 import { z } from 'zod';
 import { getRequestIp } from '@/lib/server/request-ip';

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
-import { addLog, getServidorById, reordenarDocumentosDoServidor } from '@/lib/server/db';
+import { getServidorById } from '@/lib/server/repositories/servidor';
+import { reordenarDocumentosDoServidor } from '@/lib/server/repositories/documento';
+import { addLog } from '@/lib/server/repositories/auditoria';
 import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function PATCH(request: NextRequest) {

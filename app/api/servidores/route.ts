@@ -8,7 +8,7 @@ import {
   updateServidor,
   deleteServidor,
   getServidorById,
-} from '@/lib/server/db';
+} from '@/lib/server/repositories/servidor';
 import { servidorSchema, servidorUpdateSchema } from '@/lib/validations/servidor';
 import { getRequestIp } from '@/lib/server/request-ip';
 import { processPendingStorageDeletionTasks } from '@/lib/server/storage-cleanup';

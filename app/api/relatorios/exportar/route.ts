@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedSession } from '@/lib/server/access';
-import { getServidores, getTodosDocumentos, addLog } from '@/lib/server/db';
+import { getServidores } from '@/lib/server/repositories/servidor';
+import { getTodosDocumentos } from '@/lib/server/repositories/documento';
+import { addLog } from '@/lib/server/repositories/auditoria';
 import {
   criarDocumento,
   finalizarDocumento,

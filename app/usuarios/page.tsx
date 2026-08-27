@@ -65,8 +65,8 @@ const ROLE_LABELS: Record<Servidor['role'], string> = {
 
 const ROLE_BADGE: Record<Servidor['role'], string> = {
   ADMIN: 'bg-ssp-blue/10 text-ssp-blue border-ssp-blue/30',
-  OPERADOR: 'bg-amber-100 text-amber-800 border-amber-300',
-  PASTA: 'bg-slate-100 text-slate-600 border-slate-300',
+  OPERADOR: 'bg-status-warning/10 text-status-warning border-status-warning/30',
+  PASTA: 'bg-muted text-muted-foreground border-border',
 };
 
 const ROLE_FILTERS = ['Todos', 'ADMIN', 'OPERADOR', 'PASTA'] as const;
@@ -91,6 +91,8 @@ export default function UsuariosPage() {
   const {
     data: usuarios = [],
     isLoading,
+    isError,
+    error,
     refetch,
   } = useQuery({
     queryKey: queryKeys.servidores(),
@@ -284,7 +286,7 @@ export default function UsuariosPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-amber-600">{counts.operador}</p>
+            <p className="text-3xl font-bold text-status-warning">{counts.operador}</p>
             <p className="text-xs text-muted-foreground mt-2">Acesso operacional, sem gestão.</p>
           </CardContent>
         </Card>
@@ -295,7 +297,7 @@ export default function UsuariosPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-slate-500">{counts.pasta}</p>
+            <p className="text-3xl font-bold text-muted-foreground">{counts.pasta}</p>
             <p className="text-xs text-muted-foreground mt-2">Registros sem acesso ao painel.</p>
           </CardContent>
         </Card>
@@ -351,6 +353,23 @@ export default function UsuariosPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="p-8 text-center text-muted-foreground">
                     Carregando usuários...
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-6">
+                    <Alert variant="destructive">
+                      <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                        <span>
+                          {error instanceof Error
+                            ? error.message
+                            : 'Não foi possível carregar os usuários.'}
+                        </span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                          Tentar novamente
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
                   </TableCell>
                 </TableRow>
               ) : filteredUsuarios.length > 0 ? (

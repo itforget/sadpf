@@ -91,7 +91,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         </div>
 
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
-          <div className="p-3 bg-indigo-500/10 text-indigo-600 w-fit rounded-xl">
+          <div className="w-fit rounded-xl bg-ssp-blue/10 p-3 text-ssp-blue">
             <FileText size={24} />
           </div>
           <h3 className="text-sm font-semibold text-muted-foreground">
@@ -106,7 +106,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         </div>
 
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
-          <div className="p-3 bg-amber-500/10 text-amber-600 w-fit rounded-xl">
+          <div className="w-fit rounded-xl bg-status-warning/10 p-3 text-status-warning">
             <Gauge size={24} />
           </div>
           <h3 className="text-sm font-semibold text-muted-foreground">Média por Servidor</h3>
@@ -119,7 +119,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         </div>
 
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
-          <div className="p-3 bg-emerald-500/10 text-emerald-600 w-fit rounded-xl">
+          <div className="w-fit rounded-xl bg-status-success/10 p-3 text-status-success">
             <ShieldCheck size={24} />
           </div>
           <h3 className="text-sm font-semibold text-muted-foreground">Conformidade LGPD</h3>
@@ -204,7 +204,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
                   subtitle={`${Math.round(
                     (item.quantidade / data.totalDocumentos) * 100
                   )}% do acervo`}
-                  tone="bg-emerald-500"
+                  tone="bg-status-success"
                 />
               ))}
             </div>
@@ -259,7 +259,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-indigo-500"
+                      className="h-full rounded-full bg-ssp-blue"
                       style={{
                         width: `${Math.max(
                           (item.quantidade / Math.max(data.topServidores[0].quantidade, 1)) * 100,
@@ -277,7 +277,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
-          <div className="p-3 bg-indigo-500/10 text-indigo-600 w-fit rounded-xl">
+          <div className="w-fit rounded-xl bg-ssp-blue/10 p-3 text-ssp-blue">
             <ShieldCheck size={24} />
           </div>
           <h3 className="text-sm font-semibold text-muted-foreground">Páginas indexadas</h3>
@@ -292,7 +292,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         </div>
 
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
-          <div className="p-3 bg-amber-500/10 text-amber-600 w-fit rounded-xl">
+          <div className="w-fit rounded-xl bg-status-warning/10 p-3 text-status-warning">
             <FolderOpen size={24} />
           </div>
           <h3 className="text-sm font-semibold text-muted-foreground">Pastas sem acervo</h3>
@@ -303,7 +303,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         </div>
 
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
-          <div className="p-3 bg-emerald-500/10 text-emerald-600 w-fit rounded-xl">
+          <div className="w-fit rounded-xl bg-status-success/10 p-3 text-status-success">
             <Users size={24} />
           </div>
           <h3 className="text-sm font-semibold text-muted-foreground">Servidores ativos</h3>

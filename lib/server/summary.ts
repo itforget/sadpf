@@ -14,14 +14,31 @@ function formatUptime(seconds: number) {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
   if (days > 0) return `${days}d ${hours}h ${minutes}min`;
   if (hours > 0) return `${hours}h ${minutes}min`;
+  if (minutes === 0) return `${remainingSeconds}s`;
   return `${minutes}min`;
 }
 
-async function getStorageStats() {
-  if ((process.env.STORAGE_PROVIDER || 'local').toLowerCase() !== 'local') {
-    return { count: 0, bytes: 0, measured: false };
+function parseStoredSize(value: string): number {
+  const match = value.trim().match(/^(\d+(?:[.,]\d+)?)\s*(B|KB|MB|GB|TB)$/i);
+  if (!match) return 0;
+  const amount = Number(match[1].replace(',', '.'));
+  const unit = match[2].toUpperCase();
+  const exponent = { B: 0, KB: 1, MB: 2, GB: 3, TB: 4 }[unit as 'B' | 'KB' | 'MB' | 'GB' | 'TB'];
+  return Number.isFinite(amount) ? amount * 1024 ** exponent : 0;
+}
+
+async function getStorageStats(documentosCount: number) {
+  const provider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase();
+  if (provider !== 'local') {
+    const documentos = await prisma.documentoPDF.findMany({ select: { tamanho: true } });
+    return {
+      count: documentosCount,
+      bytes: documentos.reduce((total, documento) => total + parseStoredSize(documento.tamanho), 0),
+      measured: true,
+    };
   }
 
   const uploadDir = join(process.cwd(), 'storage', 'uploads');
@@ -46,7 +63,15 @@ async function getStorageStats() {
     await visit(uploadDir);
   } catch {}
 
-  return { count, bytes, measured: true };
+  if (count > 0 || documentosCount === 0) return { count, bytes, measured: true };
+
+  // Em ambientes sem volume local persistente, usa o tamanho registrado no banco.
+  const documentos = await prisma.documentoPDF.findMany({ select: { tamanho: true } });
+  return {
+    count: documentosCount,
+    bytes: documentos.reduce((total, documento) => total + parseStoredSize(documento.tamanho), 0),
+    measured: true,
+  };
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
@@ -164,12 +189,12 @@ export async function getRelatoriosSummary(): Promise<RelatoriosSummary> {
 }
 
 export async function getConfiguracoesSummary(): Promise<ConfiguracoesSummary> {
-  const [servidoresCount, documentosCount, logsCount, storage] = await Promise.all([
+  const [servidoresCount, documentosCount, logsCount] = await Promise.all([
     prisma.servidor.count(),
     prisma.documentoPDF.count(),
     prisma.logAuditoria.count(),
-    getStorageStats(),
   ]);
+  const storage = await getStorageStats(documentosCount);
 
   return {
     dbOk: true,

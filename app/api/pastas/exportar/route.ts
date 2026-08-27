@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { PDFDocument } from 'pdf-lib';
 import { getVerifiedSession } from '@/lib/server/access';
+import { getServidorById } from '@/lib/server/repositories/servidor';
 import {
-  getServidorById,
   getDocumentosByServidor,
   getDocumentoArquivoById,
-  addLog,
-} from '@/lib/server/db';
+} from '@/lib/server/repositories/documento';
+import { addLog } from '@/lib/server/repositories/auditoria';
 import { getStorage } from '@/lib/storage';
 import {
   criarDocumento,
@@ -30,12 +30,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'servidorId é obrigatório.' }, { status: 400 });
     }
 
-    const servidor = await getServidorById(servidorId);
+    const [servidor, documentos] = await Promise.all([
+      getServidorById(servidorId),
+      getDocumentosByServidor(servidorId),
+    ]);
     if (!servidor) {
       return NextResponse.json({ error: 'Servidor não encontrado.' }, { status: 404 });
     }
-
-    const documentos = await getDocumentosByServidor(servidorId);
 
     const data = new Date();
     const dataFmt = data.toLocaleDateString('pt-BR');

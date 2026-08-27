@@ -150,7 +150,7 @@ export default function EncaminharModal({ servidor, documento, onClose }: Encami
               </Select>
             </div>
 
-            <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-700 dark:text-amber-400">
+            <div className="flex items-start gap-2.5 rounded-xl border border-status-warning/20 bg-status-warning/10 p-3.5 text-xs text-status-warning">
               <ShieldAlert size={18} className="mt-0.5 shrink-0" />
               <p>
                 Esta é uma assinatura eletrônica interna: o link é individual, expira após o prazo

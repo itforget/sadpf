@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { assinarEletronicamente } from '@/lib/server/db';
+import { signSignature } from '@/lib/server/signature-service';
 import { isSameOriginMutation } from '@/lib/server/access';
 import { getRequestIp } from '@/lib/server/request-ip';
 
@@ -16,7 +16,7 @@ export async function POST(
     return NextResponse.json({ error: 'Informe o CPF com 11 dígitos.' }, { status: 400 });
   }
   const { token } = await context.params;
-  const result = await assinarEletronicamente(token, body.cpf, getRequestIp(request));
+  const result = await signSignature(token, body.cpf, getRequestIp(request));
   if (result.status === 'assinado') return NextResponse.json(result);
   const messages = {
     invalido: 'Solicitação de assinatura inválida.',

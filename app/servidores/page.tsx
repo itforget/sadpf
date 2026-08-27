@@ -30,6 +30,7 @@ import { servidorSchema, type ServidorFormData } from '@/lib/validations/servido
 import { fetchJson, fetchServidores } from '@/lib/client/api';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -72,7 +73,13 @@ export default function ServidoresListPage() {
   });
 
   const status = useWatch({ control, name: 'status' });
-  const { data: servidores = [], isLoading } = useQuery({
+  const {
+    data: servidores = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.servidores({ status: statusFilter, search: searchQuery }),
     queryFn: () =>
       fetchServidores({
@@ -315,6 +322,21 @@ export default function ServidoresListPage() {
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-sm font-semibold">Carregando acervo de servidores...</p>
+          </div>
+        ) : isError ? (
+          <div className="p-6">
+            <Alert variant="destructive">
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  {error instanceof Error
+                    ? error.message
+                    : 'Não foi possível carregar o acervo de servidores.'}
+                </span>
+                <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                  Tentar novamente
+                </Button>
+              </AlertDescription>
+            </Alert>
           </div>
         ) : servidores.length > 0 ? (
           <Table className="text-left text-sm">

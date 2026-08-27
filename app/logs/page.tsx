@@ -8,6 +8,7 @@ import { queryKeys } from '@/lib/client/query-keys';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -23,6 +24,8 @@ export default function LogsPage() {
   const {
     data: logs = [],
     isLoading,
+    isError,
+    error,
     refetch,
   } = useQuery({
     queryKey: queryKeys.logs,
@@ -42,19 +45,19 @@ export default function LogsPage() {
   const getBadgeClass = (acao: string) => {
     switch (acao) {
       case 'IMPRESSAO':
-        return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+        return 'bg-muted text-muted-foreground border-border';
       case 'EXPORTACAO':
-        return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+        return 'bg-ssp-blue/10 text-ssp-blue border-ssp-blue/20';
       case 'ENCAMINHAMENTO':
-        return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+        return 'bg-status-warning/10 text-status-warning border-status-warning/20';
       case 'UPLOAD':
-        return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+        return 'bg-status-success/10 text-status-success border-status-success/20';
       case 'ATUALIZACAO':
         return 'bg-status-warning/10 text-status-warning border-status-warning/20';
       case 'EXCLUSAO':
         return 'bg-status-danger/10 text-status-danger border-status-danger/20';
       default:
-        return 'bg-gray-500/10 text-gray-600 border-gray-500/20';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -78,12 +81,12 @@ export default function LogsPage() {
       </div>
 
       <div className="p-4 bg-ssp-blueDark text-white rounded-2xl flex items-center gap-4 shadow-corporate">
-        <Lock size={32} className="text-blue-300 shrink-0" />
+        <Lock size={32} className="text-white/70 shrink-0" />
         <div className="text-xs space-y-1">
           <p className="font-bold text-sm">
             Garantia de Integridade e Sigilo - Lei nº 13.709/2018 (LGPD)
           </p>
-          <p className="text-blue-100">
+          <p className="text-white/80">
             Todas as pesquisas, acessos a assentamentos funcionais, exportações em PDF, impressões e
             demais eventos registrados no SADPF são auditados individualmente com carimbo de
             data/hora, matrícula do operador e endereço IP.
@@ -139,6 +142,21 @@ export default function LogsPage() {
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-sm font-semibold">Carregando trilha de auditoria...</p>
+          </div>
+        ) : isError ? (
+          <div className="p-6">
+            <Alert variant="destructive">
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  {error instanceof Error
+                    ? error.message
+                    : 'Não foi possível carregar a trilha de auditoria.'}
+                </span>
+                <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                  Tentar novamente
+                </Button>
+              </AlertDescription>
+            </Alert>
           </div>
         ) : filteredLogs.length > 0 ? (
           <Table className="text-left text-sm">

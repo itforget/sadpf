@@ -124,7 +124,7 @@ export default function DocumentoDetailPage() {
               {documento.tamanho} • {documento.paginas} páginas
             </span>
           </div>
-          <div className="p-4 flex-1 bg-slate-900/5 min-h-[600px]">
+          <div className="flex min-h-[420px] flex-1 bg-muted/50 p-2 sm:min-h-[600px] sm:p-4">
             <PDFViewer src={documento.arquivoUrl} />
           </div>
         </Card>

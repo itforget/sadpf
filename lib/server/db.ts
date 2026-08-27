@@ -40,22 +40,6 @@ export interface EncaminhamentoResumo {
   justificativa: string;
 }
 
-export type AssinaturaEletronica = {
-  token: string;
-  documento: {
-    titulo: string;
-    tamanho: string;
-    paginas: number;
-    arquivoUrl: string;
-    storageBackend: StorageBackend | null;
-    storageKey: string | null;
-  };
-  servidor: { nome: string; matricula: string };
-  justificativa: string;
-  dataExpiracao: Date;
-  assinadoEm: Date | null;
-};
-
 export interface EncaminhamentoCriado extends EncaminhamentoResumo {
   token: string;
 }
@@ -479,20 +463,23 @@ function mapCategoriaToEnum(categoria: DocumentoPDF['categoria']): CategoriaDocu
 export async function addDocumento(docData: NovoDocumentoPDF): Promise<DocumentoPDF> {
   const catEnum = mapCategoriaToEnum(docData.categoria);
 
-  const created = await prisma.documentoPDF.create({
-    data: {
-      servidorId: docData.servidorId,
-      titulo: docData.titulo,
-      categoria: catEnum,
-      dataUpload: docData.dataUpload,
-      tamanho: docData.tamanho,
-      paginas: docData.paginas || 1,
-      processoSEI: docData.processoSEI ?? null,
-      arquivoUrl: docData.arquivoUrl,
-      storageBackend: docData.storageBackend.toUpperCase() as StorageBackend,
-      storageKey: docData.storageKey,
-      operadorRH: docData.operadorRH,
-    },
+  const created = await prisma.$transaction(async (tx) => {
+    const documento = await tx.documentoPDF.create({
+      data: {
+        servidorId: docData.servidorId,
+        titulo: docData.titulo,
+        categoria: catEnum,
+        dataUpload: docData.dataUpload,
+        tamanho: docData.tamanho,
+        paginas: docData.paginas || 1,
+        processoSEI: docData.processoSEI ?? null,
+        arquivoUrl: docData.arquivoUrl,
+        storageBackend: docData.storageBackend.toUpperCase() as StorageBackend,
+        storageKey: docData.storageKey,
+        operadorRH: docData.operadorRH,
+      },
+    });
+    return documento;
   });
 
   return mapDocumento(created);
@@ -504,48 +491,6 @@ export async function getTodosDocumentos(): Promise<DocumentoPDF[]> {
   });
 
   return docs.map(mapDocumento);
-}
-
-export async function getLogs(): Promise<LogAuditoria[]> {
-  const logs = await prisma.logAuditoria.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
-
-  return logs.map((l) => ({
-    id: l.id,
-    dataHora: `${l.dataHora.toLocaleDateString('pt-BR')} ${l.dataHora.toLocaleTimeString('pt-BR')}`,
-    operador: l.operador,
-    operadorMatricula: l.operadorMatricula,
-    acao: l.acao as LogAuditoria['acao'],
-    detalhes: l.detalhes,
-    ip: l.ip,
-  }));
-}
-
-export async function addLog(
-  logData: Omit<LogAuditoria, 'id' | 'dataHora'>
-): Promise<LogAuditoria> {
-  const created = await prisma.logAuditoria.create({
-    data: {
-      operador: logData.operador,
-      operadorMatricula: logData.operadorMatricula,
-      acao: logData.acao as AcaoAuditoria,
-      detalhes: logData.detalhes,
-      ip: logData.ip,
-    },
-  });
-
-  return {
-    id: created.id,
-    dataHora: `${created.dataHora.toLocaleDateString(
-      'pt-BR'
-    )} ${created.dataHora.toLocaleTimeString('pt-BR')}`,
-    operador: created.operador,
-    operadorMatricula: created.operadorMatricula,
-    acao: created.acao as LogAuditoria['acao'],
-    detalhes: created.detalhes,
-    ip: created.ip,
-  };
 }
 
 function formatarDataHora(data: Date): string {
@@ -648,76 +593,4 @@ export async function addEncaminhamento(data: {
   });
 
   return { ...mapEncaminhamentoResumo(encaminhamento), token: encaminhamento.token };
-}
-
-export async function getAssinaturaEletronica(token: string): Promise<AssinaturaEletronica | null> {
-  const encaminhamento = await prisma.encaminhamento.findUnique({
-    where: { token },
-    include: {
-      servidor: { select: { nome: true, matricula: true } },
-      documento: {
-        select: {
-          titulo: true,
-          tamanho: true,
-          paginas: true,
-          arquivoUrl: true,
-          storageBackend: true,
-          storageKey: true,
-        },
-      },
-    },
-  });
-
-  if (!encaminhamento || !encaminhamento.documento) return null;
-
-  return {
-    token: encaminhamento.token,
-    documento: encaminhamento.documento,
-    servidor: encaminhamento.servidor,
-    justificativa: encaminhamento.justificativa,
-    dataExpiracao: encaminhamento.dataExpiracao,
-    assinadoEm: encaminhamento.assinadoEm,
-  };
-}
-
-function normalizarCpf(cpf: string): string {
-  return cpf.replace(/\D/g, '');
-}
-
-export async function assinarEletronicamente(token: string, cpf: string, ip: string) {
-  return prisma.$transaction(async (tx) => {
-    const encaminhamento = await tx.encaminhamento.findUnique({
-      where: { token },
-      include: {
-        servidor: { select: { nome: true, matricula: true, cpf: true } },
-        documento: true,
-      },
-    });
-    if (!encaminhamento || !encaminhamento.documento) return { status: 'invalido' as const };
-    if (normalizarCpf(cpf) !== normalizarCpf(encaminhamento.servidor.cpf)) {
-      return { status: 'cpf_invalido' as const };
-    }
-    if (encaminhamento.assinadoEm)
-      return { status: 'assinado' as const, assinadoEm: encaminhamento.assinadoEm };
-    if (encaminhamento.dataExpiracao <= new Date()) return { status: 'expirado' as const };
-
-    const assinadoEm = new Date();
-    const updated = await tx.encaminhamento.updateMany({
-      where: { id: encaminhamento.id, assinadoEm: null, dataExpiracao: { gt: assinadoEm } },
-      data: { assinadoEm, assinadoIp: ip },
-    });
-    if (updated.count === 0) return { status: 'indisponivel' as const };
-
-    await tx.logAuditoria.create({
-      data: {
-        operador: encaminhamento.servidor.nome,
-        operadorMatricula: encaminhamento.servidor.matricula,
-        acao: 'ENCAMINHAMENTO',
-        detalhes: `Assinou eletronicamente o documento '${encaminhamento.documento.titulo}' por link individual.`,
-        ip,
-      },
-    });
-
-    return { status: 'assinado' as const, assinadoEm };
-  });
 }

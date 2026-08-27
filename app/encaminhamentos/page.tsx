@@ -13,11 +13,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { fetchEncaminhamentos } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 
 export default function EncaminhamentosPage() {
-  const { data: encaminhamentos = [], isLoading } = useQuery({
+  const {
+    data: encaminhamentos = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.encaminhamentos,
     queryFn: fetchEncaminhamentos,
   });
@@ -40,6 +48,19 @@ export default function EncaminhamentosPage() {
               <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-sm font-semibold">Carregando encaminhamentos...</p>
             </div>
+          ) : isError ? (
+            <Alert variant="destructive">
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  {error instanceof Error
+                    ? error.message
+                    : 'Não foi possível carregar os encaminhamentos.'}
+                </span>
+                <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                  Tentar novamente
+                </Button>
+              </AlertDescription>
+            </Alert>
           ) : encaminhamentos.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground space-y-3">
               <Send size={48} className="mx-auto opacity-40" />

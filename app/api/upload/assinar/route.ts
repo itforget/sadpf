@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServidorById } from '@/lib/server/db';
+import { getServidorById } from '@/lib/server/repositories/servidor';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { checkRateLimit } from '@/lib/server/rate-limit';
-import { createDocumentStorageKey, signedUploadSchema } from '@/lib/server/document-upload';
-import { createSupabaseSignedUploadUrl } from '@/lib/storage/supabase';
+import { signedUploadSchema } from '@/lib/server/document-upload';
+import { prepareDirectUpload } from '@/lib/server/upload-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,13 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const storageKey = createDocumentStorageKey(servidor.id);
-    const { signedUrl } = await createSupabaseSignedUploadUrl(storageKey);
-
-    return NextResponse.json({
-      storageKey,
-      signedUrl,
-    });
+    return NextResponse.json(await prepareDirectUpload(servidor.id));
   } catch (error: unknown) {
     console.error('[POST /api/upload/assinar]', error);
     const message = error instanceof Error ? error.message : 'Erro ao preparar upload do arquivo.';

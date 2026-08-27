@@ -104,7 +104,7 @@ export default function ConfiguracoesClient({
               <CardTitle>Armazenamento de Documentos</CardTitle>
             </div>
             <CardDescription>
-              Espaço ocupado pelos PDFs das pastas funcionais em uploads locais.
+              Espaço ocupado pelos PDFs registrados nas pastas funcionais.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">

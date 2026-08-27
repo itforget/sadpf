@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
-import { addLog, getDocumentoById } from '@/lib/server/db';
+import { getDocumentoById } from '@/lib/server/repositories/documento';
+import { addLog } from '@/lib/server/repositories/auditoria';
 import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function POST(

@@ -1,10 +1,16 @@
 import { CheckCircle2, CircleX, FileCheck2, ShieldCheck } from 'lucide-react';
-import { getAssinaturaEletronica } from '@/lib/server/db';
+import { getPublicVerification } from '@/lib/server/signature-service';
 
 export default async function AutenticidadePage({ params }: PageProps<'/autenticidade/[token]'>) {
   const { token } = await params;
-  const assinatura = await getAssinaturaEletronica(token);
-  const autentico = Boolean(assinatura?.assinadoEm);
+  const verificacao = await getPublicVerification(token);
+  const autentico = verificacao.status === 'signed';
+  const assinatura = autentico ? verificacao : null;
+  const mensagemStatus = {
+    pending: 'Este convite ainda não foi assinado.',
+    expired: 'Este convite expirou e não pode mais ser assinado.',
+    invalid: 'O código informado não corresponde a uma assinatura registrada.',
+  } as const;
 
   return (
     <main className="min-h-screen bg-muted/40 px-4 py-10 sm:px-6">
@@ -21,65 +27,74 @@ export default async function AutenticidadePage({ params }: PageProps<'/autentic
           </div>
         </div>
         <div className="space-y-6 p-6 sm:p-10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             {autentico ? (
-              <CheckCircle2 className="text-status-success" size={30} />
+              <CheckCircle2
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-status-success"
+                size={30}
+              />
             ) : (
-              <CircleX className="text-status-danger" size={30} />
+              <CircleX
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 text-status-danger"
+                size={30}
+              />
             )}
-            <div>
+            <div className="min-w-0">
               <h2 className="text-xl font-bold">
                 {autentico ? 'Assinatura autêntica' : 'Assinatura não validada'}
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
                 {autentico
                   ? 'Os dados abaixo foram confirmados pelo SADPF.'
-                  : 'Não foi possível confirmar os dados desta assinatura.'}
+                  : mensagemStatus[verificacao.status as keyof typeof mensagemStatus]}
               </p>
             </div>
           </div>
 
           {autentico && assinatura ? (
             <div className="divide-y divide-border rounded-xl border border-border text-sm">
-              <p className="flex items-center gap-2 bg-status-success/10 px-4 py-3 font-semibold text-status-success">
-                <FileCheck2 size={18} /> Documento autenticado eletronicamente
-              </p>
-              <div className="grid gap-4 p-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Documento
-                  </p>
-                  <p className="mt-1 font-medium">{assinatura.documento.titulo}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Assinado por
-                  </p>
-                  <p className="mt-1 font-medium">{assinatura.servidor.nome}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Matrícula {assinatura.servidor.matricula}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Data e hora
-                  </p>
-                  <p className="mt-1 font-medium">
-                    {assinatura.assinadoEm?.toLocaleString('pt-BR')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Validade do registro
-                  </p>
-                  <p className="mt-1 font-medium">Registro permanente</p>
-                </div>
+              <div className="flex items-center gap-2 bg-status-success/10 px-4 py-3 font-semibold text-status-success">
+                <FileCheck2 aria-hidden="true" size={18} />
+                <span>Documento autenticado eletronicamente</span>
               </div>
+              <dl className="grid gap-x-6 gap-y-5 p-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Documento
+                  </dt>
+                  <dd className="mt-1 break-words font-medium">{assinatura.documento.titulo}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Assinado por
+                  </dt>
+                  <dd className="mt-1 font-medium">{assinatura.servidor.nome}</dd>
+                  <dd className="text-xs text-muted-foreground">
+                    Matrícula {assinatura.servidor.matricula}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Data e hora
+                  </dt>
+                  <dd className="mt-1 font-medium">
+                    {assinatura.assinadoEm?.toLocaleString('pt-BR') ?? 'Não informado'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Validade do registro
+                  </dt>
+                  <dd className="mt-1 font-medium">Registro permanente</dd>
+                </div>
+              </dl>
               <div className="break-all bg-muted/50 px-4 py-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Código de validação
                 </p>
-                <p className="mt-1 font-mono text-xs">{token}</p>
+                <p className="mt-1 font-mono text-xs text-foreground">{token}</p>
               </div>
             </div>
           ) : (

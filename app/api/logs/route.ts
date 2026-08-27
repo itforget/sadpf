@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLogs, addLog } from '@/lib/server/db';
+import { getLogs, addLog } from '@/lib/server/repositories/auditoria';
 import { auditLogSchema } from '@/lib/validations/log';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { getRequestIp } from '@/lib/server/request-ip';

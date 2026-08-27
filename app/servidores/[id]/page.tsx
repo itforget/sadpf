@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 
 import ServidorClient from './servidor-client';
-import { getDocumentosByServidor, getServidorById } from '@/lib/server/db';
+import { getDocumentosByServidor } from '@/lib/server/repositories/documento';
+import { getServidorById } from '@/lib/server/repositories/servidor';
 
 interface PageProps {
   params: Promise<{ id: string }>;

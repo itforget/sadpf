@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import AssinaturaClient from './AssinaturaClient';
-import { getAssinaturaEletronica } from '@/lib/server/db';
+import { getSigningRequest } from '@/lib/server/signature-service';
 
 export default async function AssinarPage({ params }: PageProps<'/assinar/[token]'>) {
   const { token } = await params;
-  const assinatura = await getAssinaturaEletronica(token);
+  const assinatura = await getSigningRequest(token);
   if (!assinatura) notFound();
   return (
     <AssinaturaClient

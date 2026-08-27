@@ -79,7 +79,7 @@ export default function LoginPage() {
           className="mb-6 h-auto w-auto"
         />
         <h1 className="text-4xl font-bold mb-4 z-10 tracking-tight">SADPF</h1>
-        <p className="text-xl text-center text-blue-100/90 max-w-md z-10 font-light leading-relaxed">
+        <p className="z-10 max-w-md text-center text-xl font-light leading-relaxed text-white/80">
           Sistema de Arquivo Digital de Pastas Funcionais da Secretaria de Estado de Segurança
           Pública do Distrito Federal - SSP DF
         </p>

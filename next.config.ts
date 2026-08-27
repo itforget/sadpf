@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['pdfkit'],
   experimental: {
     proxyClientMaxBodySize: '50mb',
+    optimizePackageImports: ['lucide-react'],
   },
   images: {
     remotePatterns: [

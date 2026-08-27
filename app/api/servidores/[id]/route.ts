@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedSession } from '@/lib/server/access';
-import { getDocumentosByServidor, getServidorById } from '@/lib/server/db';
+import { getDocumentosByServidor } from '@/lib/server/repositories/documento';
+import { getServidorById } from '@/lib/server/repositories/servidor';
 
 export async function GET(request: NextRequest, context: RouteContext<'/api/servidores/[id]'>) {
   const session = await getVerifiedSession(request);

@@ -61,7 +61,7 @@ export default function AssinaturaClient({
         <iframe
           src={`/api/assinaturas/${token}/arquivo?assinado=${signed}`}
           title="Documento para assinatura"
-          className="h-[560px] w-full rounded-xl border border-border"
+          className="h-[420px] w-full rounded-xl border border-border sm:h-[560px]"
         />
         {status ? (
           <p className="flex items-center gap-2 text-status-success">
