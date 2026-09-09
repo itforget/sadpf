@@ -44,84 +44,97 @@ export async function adicionarSeloDeAssinatura(
   const logo = await pdf.embedPng(logoBytes);
   const { width } = pagina.getSize();
   const margem = 28;
-  const seloY = 30;
+  const seloY = 24;
   const larguraSelo = width - margem * 2;
   const textoAutenticidade = 'A autenticidade deste documento pode ser conferida no site.';
+  const centralizar = (texto: string, tamanho: number, fonte = fonteRegular) =>
+    (width - fonte.widthOfTextAtSize(texto, tamanho)) / 2;
 
   pagina.drawLine({
-    start: { x: margem, y: seloY + 112 },
-    end: { x: width - margem, y: seloY + 112 },
+    start: { x: margem, y: seloY + 138 },
+    end: { x: width - margem, y: seloY + 138 },
     thickness: 0.7,
     color: AZUL_SSP,
   });
-  pagina.drawText('DOCUMENTO ASSINADO ELETRONICAMENTE', {
-    x: margem,
-    y: seloY + 100,
-    size: 7,
+  const tituloAssinatura = 'DOCUMENTO ASSINADO ELETRONICAMENTE';
+  pagina.drawText(tituloAssinatura, {
+    x: centralizar(tituloAssinatura, 9, fonteNegrito),
+    y: seloY + 123,
+    size: 9,
     font: fonteNegrito,
     color: AZUL_SSP,
   });
 
-  const logoDimensoes = logo.scaleToFit(30, 30);
+  const logoDimensoes = logo.scaleToFit(38, 38);
+  const linhasInstitucionais = 'Secretaria de Estado\nde Segurança Pública\ndo Distrito Federal';
+  const larguraInstitucional = Math.max(
+    ...linhasInstitucionais.split('\n').map((linha) => fonteRegular.widthOfTextAtSize(linha, 7))
+  );
+  const larguraGrupoInstitucional = logoDimensoes.width + 10 + larguraInstitucional;
+  const grupoInstitucionalX = (width - larguraGrupoInstitucional) / 2;
   pagina.drawImage(logo, {
-    x: margem,
-    y: seloY + 58,
+    x: grupoInstitucionalX,
+    y: seloY + 73,
     width: logoDimensoes.width,
     height: logoDimensoes.height,
   });
-  const textoInstitucionalX = margem + logoDimensoes.width + 8;
+  const textoInstitucionalX = grupoInstitucionalX + logoDimensoes.width + 10;
   pagina.drawText('SSPDF', {
     x: textoInstitucionalX,
-    y: seloY + 82,
+    y: seloY + 101,
+    size: 10,
+    font: fonteNegrito,
+    color: AZUL_SSP,
+  });
+  pagina.drawText(linhasInstitucionais, {
+    x: textoInstitucionalX,
+    y: seloY + 89,
+    size: 7,
+    lineHeight: 8,
+    font: fonteRegular,
+    color: AZUL_SSP,
+  });
+
+  pagina.drawText(tituloAssinatura, {
+    x: centralizar(tituloAssinatura, 8, fonteNegrito),
+    y: seloY + 57,
     size: 8,
     font: fonteNegrito,
     color: AZUL_SSP,
   });
-  pagina.drawText('Secretaria de Estado\nde Segurança Pública\ndo Distrito Federal', {
-    x: textoInstitucionalX,
-    y: seloY + 72,
-    size: 5.8,
-    lineHeight: 7,
-    font: fonteRegular,
-    color: AZUL_SSP,
-  });
-
-  pagina.drawText('DOCUMENTO ASSINADO ELETRONICAMENTE', {
-    x: margem,
-    y: seloY + 42,
-    size: 6.5,
-    font: fonteNegrito,
-    color: AZUL_SSP,
-  });
-  pagina.drawText(`Assinado em ${formatarDataAssinatura(assinadoEm)}`, {
-    x: margem,
-    y: seloY + 31,
-    size: 6,
+  const textoData = `Assinado em ${formatarDataAssinatura(assinadoEm)}`;
+  pagina.drawText(textoData, {
+    x: centralizar(textoData, 7),
+    y: seloY + 43,
+    size: 7,
     font: fonteRegular,
     color: rgb(0.12, 0.16, 0.22),
   });
   pagina.drawText(textoAutenticidade, {
-    x: margem,
-    y: seloY + 21,
-    size: 5.5,
+    x: centralizar(textoAutenticidade, 6.4),
+    y: seloY + 30,
+    size: 6.4,
     font: fonteRegular,
     color: rgb(0.12, 0.16, 0.22),
   });
-  pagina.drawText(`Código de verificação: ${formatarCodigoVerificacao(token)}`, {
-    x: margem,
-    y: seloY + 11,
-    size: 5.2,
+  const textoCodigo = `Código de verificação: ${formatarCodigoVerificacao(token)}`;
+  pagina.drawText(textoCodigo, {
+    x: centralizar(textoCodigo, 6),
+    y: seloY + 17,
+    size: 6,
     font: fonteRegular,
     color: rgb(0.12, 0.16, 0.22),
     maxWidth: larguraSelo,
   });
 
-  const larguraLink = fonteRegular.widthOfTextAtSize(textoAutenticidade, 5.5);
+  const tamanhoTextoAutenticidade = 6.4;
+  const larguraLink = fonteRegular.widthOfTextAtSize(textoAutenticidade, tamanhoTextoAutenticidade);
+  const linkX = centralizar(textoAutenticidade, tamanhoTextoAutenticidade);
   const link = pdf.context.register(
     pdf.context.obj({
       Type: 'Annot',
       Subtype: 'Link',
-      Rect: [margem, seloY + 20, margem + larguraLink, seloY + 27],
+      Rect: [linkX, seloY + 29, linkX + larguraLink, seloY + 37],
       Border: [0, 0, 0],
       A: { S: 'URI', URI: urlValidacao },
     })
