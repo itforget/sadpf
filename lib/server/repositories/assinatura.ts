@@ -12,7 +12,7 @@ export type AssinaturaEletronica = {
     storageBackend: StorageBackend | null;
     storageKey: string | null;
   };
-  servidor: { nome: string; matricula: string };
+  servidor: { nome: string; matricula: string; cargoEfetivo: string; cargoOcupado: string };
   dataExpiracao: Date;
   assinadoEm: Date | null;
 };
@@ -21,7 +21,7 @@ export async function getAssinaturaEletronica(token: string): Promise<Assinatura
   const encaminhamento = await prisma.encaminhamento.findUnique({
     where: { token },
     include: {
-      servidor: { select: { nome: true, matricula: true } },
+      servidor: { select: { nome: true, matricula: true, cargoEfetivo: true, cargoOcupado: true } },
       documento: {
         select: {
           titulo: true,

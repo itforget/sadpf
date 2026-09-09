@@ -23,6 +23,7 @@ export async function GET(
       ...documento,
       token: documento.tokenAssinatura ?? undefined,
       assinadoEm: documento.assinadoEm,
+      assinante: documento.assinante,
       validationUrl: documento.tokenAssinatura
         ? new URL(`/autenticidade/${documento.tokenAssinatura}`, request.url).toString()
         : undefined,

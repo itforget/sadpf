@@ -393,6 +393,7 @@ export async function getDocumentoArquivoById(id: string): Promise<{
   storageKey: string | null;
   assinadoEm: Date | null;
   tokenAssinatura: string | null;
+  assinante: { nome: string; matricula: string; cargo: string };
 } | null> {
   return prisma.documentoPDF
     .findUnique({
@@ -402,6 +403,9 @@ export async function getDocumentoArquivoById(id: string): Promise<{
         arquivoUrl: true,
         storageBackend: true,
         storageKey: true,
+        servidor: {
+          select: { nome: true, matricula: true, cargoEfetivo: true, cargoOcupado: true },
+        },
         encaminhamentos: {
           where: { assinadoEm: { not: null } },
           orderBy: { assinadoEm: 'desc' },
@@ -412,11 +416,16 @@ export async function getDocumentoArquivoById(id: string): Promise<{
     })
     .then((documento) => {
       if (!documento) return null;
-      const { encaminhamentos, ...arquivo } = documento;
+      const { encaminhamentos, servidor, ...arquivo } = documento;
       return {
         ...arquivo,
         assinadoEm: encaminhamentos[0]?.assinadoEm ?? null,
         tokenAssinatura: encaminhamentos[0]?.token ?? null,
+        assinante: {
+          nome: servidor.nome,
+          matricula: servidor.matricula,
+          cargo: servidor.cargoEfetivo || servidor.cargoOcupado,
+        },
       };
     });
 }

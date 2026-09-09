@@ -16,6 +16,11 @@ export async function GET(
       ...assinatura.documento,
       token: assinatura.token,
       assinadoEm: assinatura.assinadoEm,
+      assinante: {
+        nome: assinatura.servidor.nome,
+        matricula: assinatura.servidor.matricula,
+        cargo: assinatura.servidor.cargoEfetivo || assinatura.servidor.cargoOcupado,
+      },
       validationUrl: new URL(`/autenticidade/${assinatura.token}`, request.url).toString(),
     });
     return new NextResponse(Buffer.from(artifact.bytes), {

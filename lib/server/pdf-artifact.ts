@@ -9,6 +9,7 @@ export type PdfArtifactRequest = {
   token?: string;
   assinadoEm?: Date | null;
   validationUrl?: string;
+  assinante?: { nome: string; matricula: string; cargo: string };
 };
 
 export type PdfArtifact = { bytes: Uint8Array; fileName: string };
@@ -23,7 +24,8 @@ export async function getPdfArtifact(request: PdfArtifactRequest): Promise<PdfAr
           arquivo,
           request.assinadoEm,
           request.token,
-          request.validationUrl
+          request.validationUrl,
+          request.assinante
         )
       : arquivo;
   return { bytes: new Uint8Array(bytes), fileName: request.titulo.replace(/[\r\n"]/g, '_') };
