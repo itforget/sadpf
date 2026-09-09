@@ -59,6 +59,14 @@ const CORES_CATEGORIA: Record<DocumentoPDF['categoria'], { cartao: string; etiqu
     cartao: 'bg-status-danger/5 border-status-danger/20 hover:border-status-danger/50',
     etiqueta: 'text-status-danger bg-status-danger/10 border-status-danger/20',
   },
+  Processos: {
+    cartao: 'bg-ssp-blue/5 border-ssp-blue/20 hover:border-ssp-blue/50',
+    etiqueta: 'text-ssp-blue bg-ssp-blue/10 border-ssp-blue/20',
+  },
+  Outros: {
+    cartao: 'bg-muted border-border hover:border-ssp-blue/50',
+    etiqueta: 'text-muted-foreground bg-muted border-border',
+  },
 };
 
 export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {

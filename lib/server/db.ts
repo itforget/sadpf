@@ -290,6 +290,8 @@ const CATEGORIA_ENUM: Record<DocumentoPDF['categoria'], CategoriaDocumento> = {
   'Documentos Pessoais': 'Documentos_Pessoais',
   Publicações: 'Publicacoes',
   'Certidões/Declarações': 'Certidoes_Declaracoes',
+  Processos: 'Processos',
+  Outros: 'Outros',
 };
 
 const CATEGORIA_DISPLAY = Object.fromEntries(

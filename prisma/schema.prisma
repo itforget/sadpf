@@ -25,6 +25,8 @@ enum CategoriaDocumento {
   Documentos_Pessoais
   Publicacoes
   Certidoes_Declaracoes
+  Outros
+  Processos
 }
 
 enum StorageBackend {

@@ -4,6 +4,8 @@ export const CATEGORIAS_DOCUMENTO = [
   'Documentos Pessoais',
   'Publicações',
   'Certidões/Declarações',
+  'Processos',
+  'Outros',
 ] as const;
 
 export type CategoriaDocumentoLabel = (typeof CATEGORIAS_DOCUMENTO)[number];

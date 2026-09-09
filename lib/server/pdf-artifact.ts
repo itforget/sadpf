@@ -1,5 +1,5 @@
 import { getStorage, type StorageBackend } from '@/lib/storage';
-import { adicionarMarcaDaguaDeAssinatura } from '@/lib/server/signature-watermark';
+import { adicionarSeloDeAssinatura } from '@/lib/server/signature-watermark';
 
 export type PdfArtifactRequest = {
   storageBackend?: StorageBackend | string | null;
@@ -19,7 +19,7 @@ export async function getPdfArtifact(request: PdfArtifactRequest): Promise<PdfAr
   const arquivo = await storage.download(request.storageKey ?? request.arquivoUrl);
   const bytes =
     request.assinadoEm && request.token && request.validationUrl
-      ? await adicionarMarcaDaguaDeAssinatura(
+      ? await adicionarSeloDeAssinatura(
           arquivo,
           request.assinadoEm,
           request.token,
