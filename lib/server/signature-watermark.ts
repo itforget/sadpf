@@ -45,269 +45,179 @@ export async function adicionarSeloDeAssinatura(
   const [fonteRegular, fonteNegrito, qrBytes] = await Promise.all([
     pdf.embedFont(StandardFonts.Helvetica),
     pdf.embedFont(StandardFonts.HelveticaBold),
-    QRCode.toBuffer(urlValidacao, { errorCorrectionLevel: 'M', margin: 1, width: 256 }),
+    QRCode.toBuffer(urlValidacao, { errorCorrectionLevel: 'M', margin: 1, width: 128 }),
   ]);
   const qrCode = await pdf.embedPng(qrBytes);
   const { width } = pagina.getSize();
-  const margem = 34;
-  const larguraCartao = width - margem * 2;
-  const larguraQr = 67;
-  const xSeparadorEsquerdo = margem + 130;
-  const xSeparadorDireito = margem + larguraCartao - 100;
-  const xConteudo = xSeparadorEsquerdo + 18;
+  const larguraCartao = Math.min(440, width - 56);
+  const xCartao = (width - larguraCartao) / 2;
+  const yCartao = 30;
+  const alturaCartao = 154;
+  const xSeparadorEsquerdo = xCartao + 106;
+  const xSeparadorDireito = xCartao + larguraCartao - 78;
+  const xConteudo = xSeparadorEsquerdo + 14;
+  const larguraQr = 52;
   const codigo = formatarCodigoVerificacao(token);
-  const yAutenticidade = 30;
-  const alturaAutenticidade = 112;
-  const yAssinatura = yAutenticidade + alturaAutenticidade + 13;
-  const alturaAssinatura = 142;
 
-  const desenharCartao = (y: number, altura: number, corBorda: typeof AZUL_SSP) => {
-    pagina.drawRectangle({
-      x: margem,
-      y,
-      width: larguraCartao,
-      height: altura,
-      borderColor: corBorda,
-      borderWidth: 1.2,
-    });
-  };
-  const adicionarLink = (x: number, y: number, largura: number, altura: number) => {
-    const link = pdf.context.register(
-      pdf.context.obj({
-        Type: 'Annot',
-        Subtype: 'Link',
-        Rect: [x, y, x + largura, y + altura],
-        Border: [0, 0, 0],
-        A: { S: 'URI', URI: urlValidacao },
-      })
-    );
-    pagina.node.addAnnot(link);
-  };
-
-  desenharCartao(yAssinatura, alturaAssinatura, AZUL_SSP);
+  pagina.drawRectangle({
+    x: xCartao,
+    y: yCartao,
+    width: larguraCartao,
+    height: alturaCartao,
+    borderColor: AZUL_SSP,
+    borderWidth: 1.2,
+  });
   pagina.drawLine({
-    start: { x: xSeparadorEsquerdo, y: yAssinatura + 14 },
-    end: { x: xSeparadorEsquerdo, y: yAssinatura + alturaAssinatura - 14 },
+    start: { x: xSeparadorEsquerdo, y: yCartao + 56 },
+    end: { x: xSeparadorEsquerdo, y: yCartao + alturaCartao - 10 },
     thickness: 0.6,
     color: CINZA_BORDA,
   });
   pagina.drawLine({
-    start: { x: xSeparadorDireito, y: yAssinatura + 14 },
-    end: { x: xSeparadorDireito, y: yAssinatura + alturaAssinatura - 14 },
+    start: { x: xSeparadorDireito, y: yCartao + 56 },
+    end: { x: xSeparadorDireito, y: yCartao + alturaCartao - 10 },
     thickness: 0.6,
     color: CINZA_BORDA,
   });
+
   pagina.drawText('SSPDF', {
-    x: margem + 19,
-    y: yAssinatura + 87,
-    size: 27,
+    x: xCartao + 15,
+    y: yCartao + 111,
+    size: 22,
     font: fonteNegrito,
     color: AZUL_SSP,
   });
   pagina.drawText('Secretaria de Estado\nde Segurança Pública\ndo Distrito Federal', {
-    x: margem + 20,
-    y: yAssinatura + 63,
-    size: 10.5,
-    lineHeight: 15,
+    x: xCartao + 16,
+    y: yCartao + 92,
+    size: 8.2,
+    lineHeight: 11,
     font: fonteRegular,
     color: AZUL_TEXTO,
   });
 
-  const centroCheck = { x: xConteudo + 15, y: yAssinatura + 111 };
-  pagina.drawCircle({ x: centroCheck.x, y: centroCheck.y, size: 14, color: AZUL_SSP });
+  const centroCheck = { x: xConteudo + 11, y: yCartao + 127 };
+  pagina.drawCircle({ x: centroCheck.x, y: centroCheck.y, size: 11, color: AZUL_SSP });
   pagina.drawLine({
-    start: { x: centroCheck.x - 6, y: centroCheck.y },
-    end: { x: centroCheck.x - 1, y: centroCheck.y - 5 },
-    thickness: 2.1,
+    start: { x: centroCheck.x - 5, y: centroCheck.y },
+    end: { x: centroCheck.x - 1, y: centroCheck.y - 4 },
+    thickness: 1.7,
     color: rgb(1, 1, 1),
   });
   pagina.drawLine({
-    start: { x: centroCheck.x - 1, y: centroCheck.y - 5 },
-    end: { x: centroCheck.x + 8, y: centroCheck.y + 6 },
-    thickness: 2.1,
+    start: { x: centroCheck.x - 1, y: centroCheck.y - 4 },
+    end: { x: centroCheck.x + 6, y: centroCheck.y + 5 },
+    thickness: 1.7,
     color: rgb(1, 1, 1),
   });
-  const xDetalhesAssinatura = xConteudo + 38;
+  const xDetalhesAssinatura = xConteudo + 30;
   pagina.drawText('DOCUMENTO ASSINADO ELETRONICAMENTE', {
     x: xDetalhesAssinatura,
-    y: yAssinatura + 114,
-    size: 10.4,
+    y: yCartao + 130,
+    size: 9.3,
     font: fonteNegrito,
     color: AZUL_TEXTO,
   });
-  const textoData = `Assinado em ${formatarDataAssinatura(assinadoEm)}`;
-  pagina.drawText(textoData, {
+  pagina.drawText(`Assinado em ${formatarDataAssinatura(assinadoEm)}`, {
     x: xDetalhesAssinatura,
-    y: yAssinatura + 96,
-    size: 9.5,
-    font: fonteRegular,
-    color: AZUL_TEXTO,
-  });
-  pagina.drawText('conforme Decreto nº 36.756, de 16 de setembro de 2015.', {
-    x: xDetalhesAssinatura,
-    y: yAssinatura + 80,
-    size: 8.8,
+    y: yCartao + 116,
+    size: 7.4,
     font: fonteRegular,
     color: AZUL_TEXTO,
   });
   pagina.drawLine({
-    start: { x: xConteudo, y: yAssinatura + 65 },
-    end: { x: xSeparadorDireito - 12, y: yAssinatura + 65 },
+    start: { x: xConteudo, y: yCartao + 101 },
+    end: { x: xSeparadorDireito - 9, y: yCartao + 101 },
     thickness: 0.7,
     color: AZUL_SSP,
   });
   pagina.drawText(assinante.nome.toLocaleUpperCase('pt-BR'), {
     x: xConteudo,
-    y: yAssinatura + 46,
-    size: 10.8,
+    y: yCartao + 85,
+    size: 9.2,
     font: fonteNegrito,
     color: AZUL_TEXTO,
-    maxWidth: xSeparadorDireito - xConteudo - 12,
+    maxWidth: xSeparadorDireito - xConteudo - 9,
   });
   pagina.drawText(assinante.cargo || 'Função não informada', {
     x: xConteudo,
-    y: yAssinatura + 31,
-    size: 9.5,
+    y: yCartao + 72,
+    size: 8.2,
     font: fonteRegular,
     color: AZUL_TEXTO,
-    maxWidth: xSeparadorDireito - xConteudo - 12,
+    maxWidth: xSeparadorDireito - xConteudo - 9,
   });
   pagina.drawText(`Matrícula: ${assinante.matricula}`, {
     x: xConteudo,
-    y: yAssinatura + 17,
-    size: 9.5,
-    font: fonteRegular,
-    color: AZUL_TEXTO,
-  });
-  pagina.drawImage(qrCode, {
-    x: xSeparadorDireito + 16,
-    y: yAssinatura + 61,
-    width: larguraQr,
-    height: larguraQr,
-  });
-  adicionarLink(xSeparadorDireito + 16, yAssinatura + 61, larguraQr, larguraQr);
-  pagina.drawRectangle({
-    x: xSeparadorDireito + 19,
-    y: yAssinatura + 22,
-    width: 13,
-    height: 11,
-    color: AZUL_SSP,
-  });
-  pagina.drawCircle({
-    x: xSeparadorDireito + 25.5,
-    y: yAssinatura + 34,
-    size: 5.5,
-    borderColor: AZUL_SSP,
-    borderWidth: 2,
-  });
-  pagina.drawText('Assinatura digital\nválida e segura', {
-    x: xSeparadorDireito + 39,
-    y: yAssinatura + 22,
-    size: 7.8,
-    lineHeight: 10,
+    y: yCartao + 59,
+    size: 8.2,
     font: fonteRegular,
     color: AZUL_TEXTO,
   });
 
-  desenharCartao(yAutenticidade, alturaAutenticidade, CINZA_BORDA);
-  const centroEscudo = { x: margem + 42, y: yAutenticidade + 57 };
+  const xQr = xSeparadorDireito + 13;
+  const yQr = yCartao + 92;
+  pagina.drawImage(qrCode, { x: xQr, y: yQr, width: larguraQr, height: larguraQr });
+  const link = pdf.context.register(
+    pdf.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [xQr, yQr, xQr + larguraQr, yQr + larguraQr],
+      Border: [0, 0, 0],
+      A: { S: 'URI', URI: urlValidacao },
+    })
+  );
+  pagina.node.addAnnot(link);
+
+  pagina.drawLine({
+    start: { x: xCartao + 12, y: yCartao + 47 },
+    end: { x: xCartao + larguraCartao - 12, y: yCartao + 47 },
+    thickness: 0.7,
+    color: CINZA_BORDA,
+  });
+  const centroEscudo = { x: xCartao + 29, y: yCartao + 24 };
   pagina.drawCircle({
     x: centroEscudo.x,
     y: centroEscudo.y,
-    size: 27,
+    size: 14,
     borderColor: AZUL_SSP,
-    borderWidth: 1.5,
+    borderWidth: 1.2,
   });
   pagina.drawLine({
-    start: { x: centroEscudo.x - 11, y: centroEscudo.y + 6 },
-    end: { x: centroEscudo.x, y: centroEscudo.y + 13 },
-    thickness: 1.8,
+    start: { x: centroEscudo.x - 5, y: centroEscudo.y - 1 },
+    end: { x: centroEscudo.x - 1, y: centroEscudo.y - 5 },
+    thickness: 1.4,
     color: AZUL_SSP,
   });
   pagina.drawLine({
-    start: { x: centroEscudo.x, y: centroEscudo.y + 13 },
-    end: { x: centroEscudo.x + 11, y: centroEscudo.y + 6 },
-    thickness: 1.8,
+    start: { x: centroEscudo.x - 1, y: centroEscudo.y - 5 },
+    end: { x: centroEscudo.x + 6, y: centroEscudo.y + 3 },
+    thickness: 1.4,
     color: AZUL_SSP,
   });
-  pagina.drawLine({
-    start: { x: centroEscudo.x - 11, y: centroEscudo.y + 6 },
-    end: { x: centroEscudo.x - 8, y: centroEscudo.y - 10 },
-    thickness: 1.8,
-    color: AZUL_SSP,
-  });
-  pagina.drawLine({
-    start: { x: centroEscudo.x - 8, y: centroEscudo.y - 10 },
-    end: { x: centroEscudo.x, y: centroEscudo.y - 15 },
-    thickness: 1.8,
-    color: AZUL_SSP,
-  });
-  pagina.drawLine({
-    start: { x: centroEscudo.x, y: centroEscudo.y - 15 },
-    end: { x: centroEscudo.x + 8, y: centroEscudo.y - 10 },
-    thickness: 1.8,
-    color: AZUL_SSP,
-  });
-  pagina.drawLine({
-    start: { x: centroEscudo.x + 8, y: centroEscudo.y - 10 },
-    end: { x: centroEscudo.x + 11, y: centroEscudo.y + 6 },
-    thickness: 1.8,
-    color: AZUL_SSP,
-  });
-  pagina.drawLine({
-    start: { x: centroEscudo.x - 7, y: centroEscudo.y - 1 },
-    end: { x: centroEscudo.x - 1, y: centroEscudo.y - 7 },
-    thickness: 1.8,
-    color: AZUL_SSP,
-  });
-  pagina.drawLine({
-    start: { x: centroEscudo.x - 1, y: centroEscudo.y - 7 },
-    end: { x: centroEscudo.x + 8, y: centroEscudo.y + 4 },
-    thickness: 1.8,
-    color: AZUL_SSP,
-  });
-  const xAutenticidade = margem + 82;
+  const xAutenticidade = xCartao + 52;
   pagina.drawText('AUTENTICIDADE DO DOCUMENTO', {
     x: xAutenticidade,
-    y: yAutenticidade + 80,
-    size: 10.5,
+    y: yCartao + 34,
+    size: 7.4,
     font: fonteNegrito,
     color: AZUL_TEXTO,
   });
-  pagina.drawText(
-    'A autenticidade deste documento pode ser conferida no site da SSPDF\nou por meio do QR Code ao lado.',
-    {
-      x: xAutenticidade,
-      y: yAutenticidade + 61,
-      size: 8.7,
-      lineHeight: 12,
-      font: fonteRegular,
-      color: AZUL_TEXTO,
-    }
-  );
+  pagina.drawText('Valide pelo QR Code ou pelo link de conferência.', {
+    x: xAutenticidade,
+    y: yCartao + 23,
+    size: 6.3,
+    font: fonteRegular,
+    color: AZUL_TEXTO,
+  });
   pagina.drawText(`Código de verificação: ${codigo}`, {
     x: xAutenticidade,
-    y: yAutenticidade + 38,
-    size: 8.8,
+    y: yCartao + 11,
+    size: 6.8,
     font: fonteNegrito,
     color: AZUL_TEXTO,
-    maxWidth: xSeparadorDireito - xAutenticidade - 10,
+    maxWidth: larguraCartao - (xAutenticidade - xCartao) - 12,
   });
-  pagina.drawText(`Para verificar a autenticidade, acesse: ${urlValidacao}`, {
-    x: xAutenticidade,
-    y: yAutenticidade + 17,
-    size: 5.7,
-    font: fonteRegular,
-    color: AZUL_SSP,
-    maxWidth: xSeparadorDireito - xAutenticidade - 10,
-  });
-  pagina.drawImage(qrCode, {
-    x: xSeparadorDireito + 16,
-    y: yAutenticidade + 22,
-    width: larguraQr,
-    height: larguraQr,
-  });
-  adicionarLink(xSeparadorDireito + 16, yAutenticidade + 22, larguraQr, larguraQr);
 
-  return pdf.save();
+  return pdf.save({ useObjectStreams: true, addDefaultPage: false });
 }

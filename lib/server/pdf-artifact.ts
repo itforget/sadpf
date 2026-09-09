@@ -28,5 +28,7 @@ export async function getPdfArtifact(request: PdfArtifactRequest): Promise<PdfAr
           request.assinante
         )
       : arquivo;
-  return { bytes: new Uint8Array(bytes), fileName: request.titulo.replace(/[\r\n"]/g, '_') };
+  const titulo = request.titulo.replace(/[\r\n"]/g, '_').trim() || 'documento';
+  const fileName = titulo.toLowerCase().endsWith('.pdf') ? titulo : `${titulo}.pdf`;
+  return { bytes: new Uint8Array(bytes), fileName };
 }
