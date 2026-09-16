@@ -118,10 +118,6 @@ export async function fetchServidores(filters: ServidoresFilters = {}): Promise<
   return fetchJson<Servidor[]>(url);
 }
 
-export async function fetchServidoresAtivos(): Promise<Servidor[]> {
-  return fetchServidores({ status: 'Ativo' });
-}
-
 export async function fetchEncaminhamentos(): Promise<Encaminhamento[]> {
   return fetchJson<Encaminhamento[]>('/api/encaminhamentos');
 }

@@ -49,12 +49,6 @@ export async function POST(request: NextRequest) {
     if (!servidor) {
       return NextResponse.json({ error: 'Servidor não encontrado.' }, { status: 404 });
     }
-    if (servidor.status !== 'Ativo') {
-      return NextResponse.json(
-        { error: 'Documentos só podem ser incluídos em pastas funcionais de servidores ativos.' },
-        { status: 400 }
-      );
-    }
 
     const storage = getStorage();
     if (storage.backend !== 'supabase') {

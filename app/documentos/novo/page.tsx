@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { documentoSchema, type DocumentoFormData } from '@/lib/validations/documento';
-import { fetchJson, fetchServidorProfile, fetchServidoresAtivos } from '@/lib/client/api';
+import { fetchJson, fetchServidorProfile, fetchServidores } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 import { uploadSupabaseSignedFile } from '@/lib/storage/supabase-browser';
@@ -58,8 +58,8 @@ function NovoDocumentoForm() {
   const categoria = useWatch({ control, name: 'categoria' });
 
   const { data: servidores = [] } = useQuery({
-    queryKey: queryKeys.servidoresAtivos,
-    queryFn: fetchServidoresAtivos,
+    queryKey: queryKeys.servidores(),
+    queryFn: () => fetchServidores(),
   });
 
   const { data: servidorDaPasta } = useQuery({
