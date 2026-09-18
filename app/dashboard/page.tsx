@@ -1,7 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Archive, FileBarChart, FileText, UserCheck, UserMinus, Users } from 'lucide-react';
+import {
+  Archive,
+  FileBarChart,
+  FileText,
+  TriangleAlert,
+  UserCheck,
+  UserMinus,
+  Users,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +23,7 @@ const emptyDashboard = {
   servidoresInativos: 0,
   servidoresAposentados: 0,
   totalPastasFuncionais: 0,
+  servidoresComAlerta: [],
   ultimasInsercoes: [],
   volumePorServidor: [],
 };
@@ -117,6 +126,52 @@ export default function DashboardPage() {
                 </Card>
               ))}
             </div>
+
+            <Card className="border-status-warning/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <TriangleAlert size={20} className="text-status-warning" aria-hidden="true" />
+                  Alertas cadastrais
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {data.servidoresComAlerta.length}{' '}
+                  {data.servidoresComAlerta.length === 1
+                    ? 'servidor com alerta'
+                    : 'servidores com alerta'}
+                </p>
+              </CardHeader>
+              <CardContent>
+                {data.servidoresComAlerta.length ? (
+                  <ul className="divide-y divide-border">
+                    {data.servidoresComAlerta.map((item) => (
+                      <li
+                        key={item.servidorId}
+                        className="grid gap-3 py-4 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+                      >
+                        <div className="min-w-0">
+                          <Link
+                            href={`/servidores/${item.servidorId}`}
+                            className="break-words font-semibold text-ssp-blue hover:underline"
+                          >
+                            {item.servidorNome}
+                          </Link>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Matrícula: <span className="whitespace-nowrap">{item.matricula}</span>
+                          </p>
+                        </div>
+                        <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                          {item.alerta}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum servidor com alerta cadastral.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <Card className="lg:col-span-2">

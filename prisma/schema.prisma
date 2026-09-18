@@ -63,6 +63,7 @@ model Servidor {
   dataIngresso    String
   email           String         @unique
   telefone        String
+  alerta          String         @default("") @db.Text
   senhaHash       String?
   senhaDefinidaEm DateTime?      @default(now())
   createdAt       DateTime       @default(now())

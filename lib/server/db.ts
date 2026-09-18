@@ -28,6 +28,7 @@ const SERVIDOR_SELECT = {
   dataIngresso: true,
   email: true,
   telefone: true,
+  alerta: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.ServidorSelect;
@@ -148,7 +149,8 @@ export async function getServidorById(id: string): Promise<Servidor | null> {
 }
 
 export async function addServidor(
-  data: Omit<Servidor, 'id'> & {
+  data: Omit<Servidor, 'id' | 'alerta'> & {
+    alerta?: string;
     role?: Servidor['role'];
     senhaHash?: string;
     senhaDefinidaEm?: Date | null;
@@ -169,6 +171,7 @@ export async function addServidor(
       dataIngresso: data.dataIngresso,
       email: data.email,
       telefone: data.telefone,
+      alerta: data.alerta ?? '',
       senhaHash: data.senhaHash ?? null,
       ...(data.senhaDefinidaEm !== undefined && { senhaDefinidaEm: data.senhaDefinidaEm }),
     },
@@ -198,6 +201,7 @@ export async function updateServidor(
     ...(data.nome !== undefined && { nome: data.nome }),
     ...(data.email !== undefined && { email: data.email }),
     ...(data.telefone !== undefined && { telefone: data.telefone }),
+    ...(data.alerta !== undefined && { alerta: data.alerta }),
     ...(data.fotoUrl !== undefined && { fotoUrl: data.fotoUrl || null }),
     ...(data.cargoEfetivo !== undefined && { cargoEfetivo: data.cargoEfetivo }),
     ...(data.cargoOcupado !== undefined && { cargoOcupado: data.cargoOcupado }),

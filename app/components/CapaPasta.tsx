@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import type { Servidor, DocumentoPDF } from '@/lib/types';
 import EditarServidorModal from './EditarServidorModal';
+import AlertaServidor from './AlertaServidor';
 import EditarDocumentoModal from './EditarDocumentoModal';
 import Image from 'next/image';
 import { useQueryClient } from '@tanstack/react-query';
@@ -591,6 +592,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
           </div>
         </CardContent>
       </Card>
+      <AlertaServidor servidor={servidor} />
       <Card className="gap-0 border-0 py-0 shadow-corporate">
         <CardContent className="space-y-5 p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

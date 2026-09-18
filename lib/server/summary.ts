@@ -95,6 +95,15 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     servidoresInativos,
     servidoresAposentados,
     totalPastasFuncionais: servidores.length,
+    servidoresComAlerta: servidores
+      .filter((servidor) => servidor.alerta.trim().length > 0)
+      .map((servidor) => ({
+        servidorId: servidor.id,
+        servidorNome: servidor.nome,
+        matricula: servidor.matricula,
+        alerta: servidor.alerta,
+      }))
+      .sort((a, b) => a.servidorNome.localeCompare(b.servidorNome, 'pt-BR')),
     ultimasInsercoes: documentos.slice(0, 5).map((documento) => ({
       id: documento.id,
       titulo: documento.titulo,

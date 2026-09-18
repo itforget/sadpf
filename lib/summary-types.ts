@@ -6,6 +6,12 @@ export type DashboardSummary = {
   servidoresInativos: number;
   servidoresAposentados: number;
   totalPastasFuncionais: number;
+  servidoresComAlerta: {
+    servidorId: string;
+    servidorNome: string;
+    matricula: string;
+    alerta: string;
+  }[];
   ultimasInsercoes: {
     id: string;
     titulo: string;

@@ -1,0 +1,1 @@
+ALTER TABLE "servidores" ADD COLUMN "alerta" TEXT NOT NULL DEFAULT '';

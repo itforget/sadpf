@@ -18,6 +18,7 @@ export interface Servidor {
   dataIngresso: string;
   email: string;
   telefone: string;
+  alerta: string;
 }
 
 export interface DocumentoPDF {
