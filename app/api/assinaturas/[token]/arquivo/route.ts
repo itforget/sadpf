@@ -18,8 +18,6 @@ export async function GET(
       assinadoEm: assinatura.assinadoEm,
       assinante: {
         nome: assinatura.servidor.nome,
-        matricula: assinatura.servidor.matricula,
-        cargo: assinatura.servidor.cargoEfetivo || assinatura.servidor.cargoOcupado,
       },
       validationUrl: new URL(`/autenticidade/${assinatura.token}`, request.url).toString(),
     });

@@ -1,5 +1,8 @@
 import { getStorage, type StorageBackend } from '@/lib/storage';
-import { adicionarSeloDeAssinatura } from '@/lib/server/signature-watermark';
+import {
+  adicionarSeloDeAssinatura,
+  prepararPdfParaAssinatura,
+} from '@/lib/server/signature-watermark';
 
 export type PdfArtifactRequest = {
   storageBackend?: StorageBackend | string | null;
@@ -9,7 +12,7 @@ export type PdfArtifactRequest = {
   token?: string;
   assinadoEm?: Date | null;
   validationUrl?: string;
-  assinante?: { nome: string; matricula: string; cargo: string };
+  assinante?: { nome: string };
 };
 
 export type PdfArtifact = { bytes: Uint8Array; fileName: string };
@@ -27,6 +30,8 @@ export async function getPdfArtifact(request: PdfArtifactRequest): Promise<PdfAr
           request.validationUrl,
           request.assinante
         )
+      : request.token && request.validationUrl
+      ? await prepararPdfParaAssinatura(arquivo)
       : arquivo;
   const titulo = request.titulo.replace(/[\r\n"]/g, '_').trim() || 'documento';
   const fileName = titulo.toLowerCase().endsWith('.pdf') ? titulo : `${titulo}.pdf`;
