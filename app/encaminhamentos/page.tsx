@@ -83,12 +83,14 @@ export default function EncaminhamentosPage() {
               <TableBody>
                 {encaminhamentos.map((enc) => (
                   <TableRow key={enc.id}>
-                    <TableCell className="font-mono font-bold">{enc.dataHora}</TableCell>
+                    <TableCell className="font-mono font-bold whitespace-nowrap">
+                      {enc.dataHora}
+                    </TableCell>
                     <TableCell className="font-semibold text-ssp-blue">
                       {enc.destinatario}
                     </TableCell>
                     <TableCell className="font-medium">{enc.servidor}</TableCell>
-                    <TableCell className="font-mono">{enc.validade}</TableCell>
+                    <TableCell className="font-mono whitespace-nowrap">{enc.validade}</TableCell>
                     <TableCell>
                       <Badge
                         variant={enc.status === 'Expirado' ? 'destructive' : 'default'}

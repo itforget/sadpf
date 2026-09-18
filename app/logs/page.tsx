@@ -179,12 +179,12 @@ export default function LogsPage() {
             <TableBody className="font-mono text-xs">
               {filteredLogs.map((log) => (
                 <TableRow key={log.id}>
-                  <TableCell className="px-6 py-4 font-bold text-foreground">
+                  <TableCell className="px-6 py-4 font-bold text-foreground whitespace-nowrap">
                     {log.dataHora}
                   </TableCell>
                   <TableCell className="px-6 py-4">
                     <p className="font-bold text-foreground font-sans">{log.operador}</p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground whitespace-nowrap">
                       Mat.: {log.operadorMatricula}
                     </p>
                   </TableCell>
@@ -206,7 +206,7 @@ export default function LogsPage() {
                       <p className="mt-2 break-words">{log.detalhes}</p>
                     </details>
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-right font-mono text-muted-foreground">
+                  <TableCell className="px-6 py-4 text-right font-mono text-muted-foreground whitespace-nowrap">
                     {log.ip}
                   </TableCell>
                 </TableRow>

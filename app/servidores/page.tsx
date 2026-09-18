@@ -530,11 +530,13 @@ export default function ServidoresListPage() {
                         >
                           {s.nome}
                         </Link>
-                        <p className="text-xs text-muted-foreground font-mono">CPF: {s.cpf}</p>
+                        <p className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+                          CPF: {s.cpf}
+                        </p>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-4 font-mono font-bold text-ssp-blue">
+                  <TableCell className="px-6 py-4 font-mono font-bold text-ssp-blue whitespace-nowrap">
                     <p>{s.matricula}</p>
                     <p className="text-xs text-muted-foreground">{s.matriculaCargoEfetivo}</p>
                   </TableCell>

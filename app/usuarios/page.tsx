@@ -379,7 +379,9 @@ export default function UsuariosPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-ssp-blue">{user.matricula}</TableCell>
+                    <TableCell className="font-mono text-ssp-blue whitespace-nowrap">
+                      {user.matricula}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={ROLE_BADGE[user.role]}>
                         {ROLE_LABELS[user.role]}
