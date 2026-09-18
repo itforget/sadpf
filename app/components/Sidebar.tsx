@@ -32,7 +32,7 @@ const MENU_ITEMS = [
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
-  OPERADOR: 'Operador do RH',
+  OPERADOR: 'Operador',
   PASTA: 'Pasta',
 };
 

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
-  OPERADOR: 'Operador do RH',
+  OPERADOR: 'Operador',
   PASTA: 'Pasta',
 };
 
@@ -42,7 +42,7 @@ export default function Topbar() {
 
   const session = data?.user ?? null;
   const displayName = session?.nome || 'Usuário';
-  const displayRole = session ? ROLE_LABELS[session.role] ?? session.role : 'Operador do RH';
+  const displayRole = session ? ROLE_LABELS[session.role] ?? session.role : 'Operador';
   const initials =
     displayName
       .split(' ')

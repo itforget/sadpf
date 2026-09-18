@@ -556,11 +556,7 @@ export default function ServidoresListPage() {
                           : 'bg-muted text-muted-foreground border-border'
                       }`}
                     >
-                      {
-                        { ADMIN: 'Administrador', OPERADOR: 'Operador do RH', PASTA: 'Pasta' }[
-                          s.role
-                        ]
-                      }
+                      {{ ADMIN: 'Administrador', OPERADOR: 'Operador', PASTA: 'Pasta' }[s.role]}
                     </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-4">
