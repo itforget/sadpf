@@ -45,16 +45,20 @@ export default function ExportButton() {
         onClick={handleExportar}
         disabled={exportMutation.isPending}
         size="lg"
-        className="bg-ssp-blue hover:bg-ssp-blueDark"
+        className="h-auto min-h-9 whitespace-normal text-left bg-ssp-blue hover:bg-ssp-blueDark"
       >
         {exportMutation.isPending ? (
           <Loader2 size={18} className="animate-spin" />
         ) : (
           <Download size={18} />
         )}
-        {exportMutation.isPending ? 'Gerando Relatório...' : 'Exportar Relatório Sintético (PDF)'}
+        {exportMutation.isPending ? 'Gerando Relatório…' : 'Exportar Relatório Sintético (PDF)'}
       </Button>
-      {erro && <p className="text-xs text-status-danger font-medium">{erro}</p>}
+      {erro && (
+        <p role="alert" className="text-xs text-status-danger font-medium">
+          {erro}
+        </p>
+      )}
     </div>
   );
 }

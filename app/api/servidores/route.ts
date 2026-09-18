@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import { parsePage } from '@/lib/pagination';
 import { Prisma, StatusServidor } from '@/prisma/generated';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import {
   getServidores,
+  getServidoresPage,
   addServidor,
   updateServidor,
   deleteServidor,
@@ -35,6 +37,16 @@ export async function GET(request: Request) {
         ? 'Todos'
         : undefined;
 
+    if (role && !['ADMIN', 'OPERADOR', 'PASTA'].includes(role)) {
+      return NextResponse.json({ error: 'Perfil de acesso inválido.' }, { status: 400 });
+    }
+    if (searchParams.has('page')) {
+      const result = await getServidoresPage(
+        { status, search, role: role ?? undefined },
+        parsePage(searchParams.get('page'))
+      );
+      return NextResponse.json(result);
+    }
     const servidores = await getServidores({
       status,
       search,

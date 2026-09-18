@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import {
   User,
   Briefcase,
@@ -25,6 +25,9 @@ import type { Servidor, DocumentoPDF } from '@/lib/types';
 import EditarServidorModal from './EditarServidorModal';
 import EditarDocumentoModal from './EditarDocumentoModal';
 import Image from 'next/image';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUrlFilters } from '@/lib/client/use-url-filters';
+import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 import { fetchBlob, fetchJson } from '@/lib/client/api';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 import { Badge } from '@/components/ui/badge';
@@ -44,20 +47,20 @@ const CORES_CATEGORIA: Record<DocumentoPDF['categoria'], { cartao: string; etiqu
     etiqueta: 'text-ssp-blue bg-ssp-blue/10 border-ssp-blue/20',
   },
   'Posse Eletrônica': {
-    cartao: 'bg-status-success/5 border-status-success/20 hover:border-status-success/50',
-    etiqueta: 'text-status-success bg-status-success/10 border-status-success/20',
+    cartao: 'bg-category-green/5 border-category-green/20 hover:border-category-green/50',
+    etiqueta: 'text-category-green bg-category-green/10 border-category-green/20',
   },
   'Documentos Pessoais': {
     cartao: 'bg-muted border-border hover:border-ssp-blue/50',
     etiqueta: 'text-muted-foreground bg-muted border-border',
   },
   Publicações: {
-    cartao: 'bg-status-warning/5 border-status-warning/20 hover:border-status-warning/50',
-    etiqueta: 'text-status-warning bg-status-warning/10 border-status-warning/20',
+    cartao: 'bg-category-amber/5 border-category-amber/20 hover:border-category-amber/50',
+    etiqueta: 'text-category-amber bg-category-amber/10 border-category-amber/20',
   },
   'Certidões/Declarações': {
-    cartao: 'bg-status-danger/5 border-status-danger/20 hover:border-status-danger/50',
-    etiqueta: 'text-status-danger bg-status-danger/10 border-status-danger/20',
+    cartao: 'bg-category-violet/5 border-category-violet/20 hover:border-category-violet/50',
+    etiqueta: 'text-category-violet bg-category-violet/10 border-category-violet/20',
   },
   Processos: {
     cartao: 'bg-ssp-blue/5 border-ssp-blue/20 hover:border-ssp-blue/50',
@@ -70,15 +73,30 @@ const CORES_CATEGORIA: Record<DocumentoPDF['categoria'], { cartao: string; etiqu
 };
 
 export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
-  const [documentosOrdenados, setDocumentosOrdenados] = useState(documentos);
+  const queryClient = useQueryClient();
+  const { params, updateFilters } = useUrlFilters();
+  const activeTab = params.get('categoria') ?? 'Todos';
+  const searchDocQuery = params.get('search') ?? '';
+  const [ordem, setOrdem] = useState<string[] | null>(null);
+  const documentosPorId = new Map(documentos.map((doc) => [doc.id, doc]));
+  const documentosOrdenados = ordem
+    ? [
+        ...ordem.flatMap((id) => (documentosPorId.has(id) ? [documentosPorId.get(id)!] : [])),
+        ...documentos.filter((doc) => !ordem.includes(doc.id)),
+      ]
+    : documentos;
+  const setDocumentosOrdenados = (docs: DocumentoPDF[]) => setOrdem(docs.map((doc) => doc.id));
+  const [exportando, setExportando] = useState(false);
+  const [erroAcao, setErroAcao] = useState('');
+  const [progressoPesquisa, setProgressoPesquisa] = useState('');
+  const workerRef = useRef<Worker | null>(null);
+  useEffect(() => () => workerRef.current?.terminate(), []);
   const [documentoMovendo, setDocumentoMovendo] = useState<string | null>(null);
   const [documentoArrastado, setDocumentoArrastado] = useState<string | null>(null);
   const [documentoSobreposto, setDocumentoSobreposto] = useState<string | null>(null);
   const [editorServidor, setEditorServidor] = useState<'dados' | 'foto' | null>(null);
   const [documentoEditando, setDocumentoEditando] = useState<DocumentoPDF | null>(null);
   const [documentoExcluindo, setDocumentoExcluindo] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('Todos');
-  const [searchDocQuery, setSearchDocQuery] = useState('');
   const [consultaExecutada, setConsultaExecutada] = useState('');
   const [paginasEncontradas, setPaginasEncontradas] = useState<Record<string, number[]>>({});
   const [pesquisaEmAndamento, setPesquisaEmAndamento] = useState(false);
@@ -112,39 +130,82 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
     setErroPesquisa(null);
     setPaginasEncontradas({});
 
+    workerRef.current?.terminate();
+    let worker: Worker;
     try {
-      const { PDF } = await import('@libpdf/core');
-      const resultados = await Promise.all(
-        documentosOrdenados.map(async (documento) => {
-          const response = await fetch(documento.arquivoUrl);
-          if (!response.ok) {
-            throw new Error(`Não foi possível abrir ${documento.titulo}.`);
-          }
-
-          const bytes = new Uint8Array(await response.arrayBuffer());
-          const pdf = await PDF.load(bytes);
-          const paginas = pdf
-            .extractText()
-            .filter((pagina) =>
-              pagina.text.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))
-            )
-            .map((pagina) => pagina.pageIndex + 1);
-
-          return [documento.id, paginas] as const;
-        })
-      );
-
-      setPaginasEncontradas(Object.fromEntries(resultados));
-      setConsultaExecutada(query);
-    } catch (error) {
-      console.error('[CapaPasta] erro ao pesquisar conteúdo dos PDFs:', error);
-      setErroPesquisa('Não foi possível pesquisar o conteúdo de todos os PDFs desta pasta.');
-    } finally {
+      worker = new Worker(new URL('../../lib/client/pdf-search.worker.ts', import.meta.url), {
+        type: 'module',
+      });
+    } catch {
       setPesquisaEmAndamento(false);
+      setErroPesquisa(
+        'Este navegador não conseguiu iniciar a pesquisa. Atualize a página e tente novamente.'
+      );
+      return;
     }
+    workerRef.current = worker;
+    setProgressoPesquisa('Iniciando pesquisa…');
+    worker.onmessage = (
+      message: MessageEvent<{
+        type: 'progress' | 'complete';
+        completed: number;
+        total: number;
+        query: string;
+        results: Record<string, number[]>;
+        failures: string[];
+        withoutText: number;
+      }>
+    ) => {
+      if (message.data.type === 'progress') {
+        setProgressoPesquisa(
+          `Pesquisando documento ${message.data.completed} de ${message.data.total}…`
+        );
+        return;
+      }
+      setPaginasEncontradas(message.data.results);
+      setConsultaExecutada(message.data.query);
+      const warnings = [];
+      if (message.data.failures.length)
+        warnings.push(
+          `${message.data.failures.length} arquivo(s) indisponível(is). Os demais resultados foram preservados.`
+        );
+      if (message.data.withoutText)
+        warnings.push(
+          `${message.data.withoutText} PDF(s) sem texto selecionável precisam de OCR para pesquisa de conteúdo.`
+        );
+      setErroPesquisa(warnings.join(' ') || null);
+      setPesquisaEmAndamento(false);
+      setProgressoPesquisa('Pesquisa concluída.');
+      worker.terminate();
+      workerRef.current = null;
+    };
+    worker.onerror = () => {
+      setErroPesquisa('Não foi possível pesquisar os PDFs. Tente novamente.');
+      setPesquisaEmAndamento(false);
+      worker.terminate();
+      workerRef.current = null;
+    };
+    worker.postMessage({
+      query,
+      documentos: documentosOrdenados.map(({ id, titulo, arquivoUrl }) => ({
+        id,
+        titulo,
+        arquivoUrl,
+      })),
+    });
+  };
+
+  const cancelarPesquisa = () => {
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    setPesquisaEmAndamento(false);
+    setProgressoPesquisa('Pesquisa cancelada.');
   };
 
   const handleDownloadPasta = async () => {
+    if (exportando) return;
+    setExportando(true);
+    setErroAcao('');
     try {
       const blob = await fetchBlob(
         `/api/pastas/exportar?servidorId=${encodeURIComponent(servidor.id)}`,
@@ -163,7 +224,9 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
     } catch (e: unknown) {
       console.error('[CapaPasta] erro ao gerar pasta funcional:', e);
       const message = e instanceof Error ? e.message : 'Erro ao gerar a pasta funcional em PDF.';
-      alert(message);
+      setErroAcao(message);
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -187,7 +250,11 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
     } catch (error) {
       console.error('[CapaPasta] erro ao reordenar documentos:', error);
       setDocumentosOrdenados(ordemAnterior);
-      alert(error instanceof Error ? error.message : 'Não foi possível salvar a nova ordem.');
+      setErroAcao(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível salvar a nova ordem. Tente novamente.'
+      );
     } finally {
       setDocumentoMovendo(null);
     }
@@ -244,7 +311,13 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
     );
   };
 
-  const atualizarPagina = () => window.location.reload();
+  const atualizarPagina = async () => {
+    await Promise.all(
+      [queryKeys.servidor(servidor.id), ['servidores'], ['logs'], ...summaryQueryKeys].map(
+        (queryKey) => queryClient.invalidateQueries({ queryKey })
+      )
+    );
+  };
 
   const excluirDocumento = async (documento: DocumentoPDF) => {
     if (!window.confirm(`Excluir permanentemente o documento “${documento.titulo}”?`)) return;
@@ -252,9 +325,14 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
     setDocumentoExcluindo(documento.id);
     try {
       await fetchJson(`/api/documentos/${documento.id}`, { method: 'DELETE' });
-      atualizarPagina();
+      await atualizarPagina();
+      requestAnimationFrame(() => document.getElementById('titulo-acervo')?.focus());
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Não foi possível excluir o documento.');
+      setErroAcao(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível excluir o documento. Tente novamente.'
+      );
     } finally {
       setDocumentoExcluindo(null);
     }
@@ -313,8 +391,15 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
             <Camera size={16} className="text-ssp-blue" /> Adicionar / editar foto
           </Button>
 
-          <Button type="button" variant="outline" size="sm" onClick={handleDownloadPasta}>
-            <Download size={16} className="text-ssp-blue" /> Salvar / Baixar
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={exportando}
+            onClick={handleDownloadPasta}
+          >
+            <Download size={16} className="text-ssp-blue" />{' '}
+            {exportando ? 'Gerando pasta…' : 'Baixar pasta em PDF'}
           </Button>
 
           <Link
@@ -326,6 +411,14 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
         </div>
       </div>
 
+      {erroAcao && (
+        <p
+          role="alert"
+          className="rounded-lg border border-status-danger/20 bg-status-danger/10 p-3 text-sm text-status-danger"
+        >
+          {erroAcao}
+        </p>
+      )}
       <Card className="gap-0 overflow-hidden border-0 py-0 shadow-corporate">
         <div className="flex flex-wrap items-center justify-between gap-3 bg-ssp-blueDark px-5 py-2.5 text-white sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -336,11 +429,9 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
               height={32}
               className="h-8 w-8 object-contain"
             />
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Pasta Funcional Digital
-            </span>
+            <span className="text-xs font-semibold ">Pasta Funcional Digital</span>
           </div>
-          <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider">
+          <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-semibold ">
             USO EXCLUSIVO RH
           </span>
         </div>
@@ -376,16 +467,12 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  servidor.status === 'Ativo'
-                    ? 'bg-status-success animate-pulse'
-                    : 'bg-status-danger'
+                  servidor.status === 'Ativo' ? 'bg-status-success' : 'bg-status-danger'
                 }`}
               />
               Status: {servidor.status}
             </Badge>
-            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Pasta Funcional
-            </p>
+            <p className="mt-6 text-xs font-semibold  text-muted-foreground">Pasta Funcional</p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Acervo administrativo e histórico funcional do servidor.
             </p>
@@ -394,7 +481,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
           <div className="space-y-6 p-6 sm:p-8">
             <div>
               <div className="mb-1 flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                <h1 className="break-words text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                   {servidor.nome}
                 </h1>
                 <BadgeCheck className="text-ssp-blue" size={24} />
@@ -411,7 +498,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
             </div>
 
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="mb-3 text-xs font-semibold  text-muted-foreground">
                 Vínculos e identificação
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -421,7 +508,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                 >
                   <CardContent className="space-y-4 p-4">
                     <div className="space-y-1">
-                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                         Matrícula SSP-DF
                       </span>
                       <p className="font-mono text-sm font-bold text-ssp-blue">
@@ -430,7 +517,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                     </div>
                     <div className="space-y-1">
                       <Separator className="mb-3" />
-                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                         <Briefcase size={14} className="text-ssp-blue" /> Cargo SSP-DF
                       </span>
                       <p className="font-bold text-sm text-foreground">
@@ -446,7 +533,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                 >
                   <CardContent className="space-y-4 p-4">
                     <div className="space-y-1">
-                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                         Matrícula do cargo efetivo
                       </span>
                       <p className="font-mono text-sm font-bold text-ssp-blue">
@@ -455,7 +542,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                     </div>
                     <div className="space-y-1">
                       <Separator className="mb-3" />
-                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                         <Briefcase size={14} className="text-ssp-blue" /> Cargo efetivo
                       </span>
                       <p className="font-bold text-sm text-foreground">{servidor.cargoEfetivo}</p>
@@ -467,23 +554,23 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
               <div className="p-1">
-                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                   <MapPin size={14} className="text-ssp-blue" /> Lotação Atual
                 </span>
-                <p className="font-bold text-sm text-foreground">{servidor.lotacao}</p>
+                <p className="break-words font-bold text-sm text-foreground">{servidor.lotacao}</p>
               </div>
 
               <div className="p-1">
-                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                   <CalendarDays size={14} className="text-ssp-blue" /> Data de Admissão
                 </span>
                 <p className="font-semibold text-sm text-foreground">{servidor.dataIngresso}</p>
               </div>
 
               <div className="p-1">
-                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                   <Mail size={14} className="text-ssp-blue" /> E-mail Institucional
                 </span>
                 <p
@@ -495,7 +582,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
               </div>
 
               <div className="p-1">
-                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="flex items-center gap-1.5 text-xs font-semibold  text-muted-foreground">
                   <Phone size={14} className="text-ssp-blue" /> Telefone
                 </span>
                 <p className="font-semibold text-sm text-foreground">{servidor.telefone || '—'}</p>
@@ -508,11 +595,16 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
         <CardContent className="space-y-5 p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">
+              <h2
+                id="titulo-acervo"
+                tabIndex={-1}
+                className="text-xl font-bold tracking-tight text-foreground"
+              >
                 Documentos Anexados (Acervo PDF)
               </h2>
               <p className="text-xs text-muted-foreground">
-                Arraste os documentos para definir a ordem usada ao baixar ou imprimir a pasta.
+                Arraste os documentos ou use os botões de mover para definir a ordem da pasta. A
+                pesquisa de conteúdo exige texto selecionável no PDF.
               </p>
             </div>
 
@@ -524,25 +616,39 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                 />
                 <Input
                   type="search"
-                  placeholder="Pesquisar nos PDFs desta pasta..."
+                  name="search"
+                  aria-label="Pesquisar títulos e conteúdo dos PDFs desta pasta"
+                  placeholder="Pesquisar nos PDFs desta pasta…"
                   value={searchDocQuery}
-                  onChange={(e) => setSearchDocQuery(e.target.value)}
+                  onChange={(e) => updateFilters({ search: e.target.value })}
                   className="h-8 pl-9 text-xs"
                 />
               </div>
               <Button type="submit" size="sm" disabled={pesquisaEmAndamento}>
-                {pesquisaEmAndamento ? 'Pesquisando...' : 'Pesquisar'}
+                {pesquisaEmAndamento ? 'Pesquisando…' : 'Pesquisar'}
               </Button>
+              {pesquisaEmAndamento && (
+                <Button type="button" variant="outline" onClick={cancelarPesquisa}>
+                  Cancelar pesquisa
+                </Button>
+              )}
             </form>
           </div>
 
+          <p role="status" className="text-xs text-muted-foreground">
+            {progressoPesquisa}
+          </p>
           {consultaExecutada && !pesquisaEmAndamento && (
             <p className="text-xs text-muted-foreground">
               Pesquisa textual em {documentosOrdenados.length} PDF(s) para &quot;{consultaExecutada}
               &quot;.
             </p>
           )}
-          {erroPesquisa && <p className="text-xs text-status-danger">{erroPesquisa}</p>}
+          {erroPesquisa && (
+            <p role="alert" className="text-xs text-status-danger">
+              {erroPesquisa}
+            </p>
+          )}
 
           <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {categorias.map((cat) => (
@@ -551,7 +657,8 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                 type="button"
                 variant={activeTab === cat ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setActiveTab(cat)}
+                aria-pressed={activeTab === cat}
+                onClick={() => updateFilters({ categoria: cat === 'Todos' ? null : cat }, true)}
                 className={`shrink-0 text-xs ${
                   activeTab === cat ? 'bg-ssp-blue hover:bg-ssp-blueDark' : 'text-muted-foreground'
                 }`}
@@ -580,7 +687,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                       setDocumentoArrastado(null);
                       setDocumentoSobreposto(null);
                     }}
-                    className={`p-5 rounded-xl border shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 cursor-grab active:cursor-grabbing ${
+                    className={`p-5 rounded-xl border shadow-sm hover:shadow-md transition-[border-color,box-shadow,opacity] flex flex-col justify-between space-y-4 cursor-grab active:cursor-grabbing ${
                       cores.cartao
                     } ${documentoArrastado === doc.id ? 'opacity-50' : ''} ${
                       documentoSobreposto === doc.id
@@ -591,11 +698,11 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <span
-                          className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${cores.etiqueta}`}
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${cores.etiqueta}`}
                         >
                           {doc.categoria}
                         </span>
-                        <span className="text-[11px] text-muted-foreground font-mono">
+                        <span className="text-xs text-muted-foreground font-mono">
                           {doc.tamanho}
                         </span>
                       </div>
@@ -622,9 +729,9 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                       ) : null}
                     </div>
 
-                    <div className="pt-3 border-t border-border flex items-center justify-between gap-2 text-xs font-semibold">
+                    <div className="pt-3 border-t border-border flex flex-col items-start gap-2 text-xs font-semibold">
                       <span className="text-muted-foreground">Enviado: {doc.dataUpload}</span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           type="button"
                           onClick={() => moverDocumento(doc.id, 'cima')}
@@ -700,12 +807,27 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
             <div className="p-8 text-center bg-card rounded-xl border border-border text-muted-foreground space-y-2">
               <FileText size={40} className="mx-auto text-muted-foreground/40" />
               <p className="font-semibold">
-                Nenhum documento PDF encontrado para o filtro selecionado.
+                {documentos.length
+                  ? 'Nenhum documento encontrado com os filtros atuais.'
+                  : 'Esta pasta ainda não tem documentos.'}
               </p>
               <p className="text-xs">
-                Utilize o botão &quot;Anexar Documento PDF&quot; para incluir novos arquivos nesta
-                pasta.
+                {documentos.length
+                  ? 'Limpe os filtros ou faça outra pesquisa.'
+                  : 'Anexe um documento PDF para iniciar o acervo desta pasta.'}
               </p>
+              {documentos.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    updateFilters({ search: null, categoria: null });
+                    setConsultaExecutada('');
+                    setPaginasEncontradas({});
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

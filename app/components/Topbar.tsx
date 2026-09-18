@@ -7,6 +7,8 @@ import Image from 'next/image';
 
 import { fetchJson, fetchSession } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
+import Sidebar from './Sidebar';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -16,6 +18,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function Topbar() {
+  const [logoutError, setLogoutError] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { data } = useQuery({
@@ -51,16 +54,24 @@ export default function Topbar() {
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
     try {
+      setLogoutError(false);
       await logoutMutation.mutateAsync();
+      router.replace('/login');
     } catch (err) {
       console.error('[Topbar] erro ao encerrar sessão:', err);
+      setLogoutError(true);
     }
-    router.replace('/login');
   };
 
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 sm:px-6 z-10 shrink-0 print:hidden">
-      <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+      <Sidebar mobile />
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4 ml-auto">
+        {logoutError && (
+          <p role="alert" className="text-xs text-status-danger">
+            Não foi possível sair. Tente novamente.
+          </p>
+        )}
         <div className="flex h-auto items-center gap-3 rounded-full p-1 pr-2 text-left">
           <div className="w-9 h-9 overflow-hidden rounded-full bg-ssp-blue flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-background">
             {session?.fotoUrl ? (
@@ -86,13 +97,14 @@ export default function Topbar() {
 
         <Button
           onClick={handleLogout}
+          disabled={logoutMutation.isPending}
           variant="ghost"
           size="icon"
           className="ml-1 rounded-full text-muted-foreground hover:bg-status-danger/10 hover:text-status-danger"
           aria-label="Sair do sistema"
           title="Sair do sistema"
         >
-          <LogOut size={20} />
+          <LogOut aria-hidden="true" size={20} />
         </Button>
       </div>
     </header>

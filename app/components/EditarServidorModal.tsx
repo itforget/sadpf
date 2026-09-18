@@ -145,6 +145,7 @@ export default function EditarServidorModal({
 
   const salvar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (salvando || excluindoFoto) return;
     setSalvando(true);
     setErro('');
     try {
@@ -154,6 +155,7 @@ export default function EditarServidorModal({
 
   const selecionarFoto = (arquivo: File | null) => {
     setFoto(arquivo);
+    if (fotoPreview) URL.revokeObjectURL(fotoPreview);
     setFotoPreview(arquivo ? URL.createObjectURL(arquivo) : null);
   };
 
@@ -161,9 +163,15 @@ export default function EditarServidorModal({
   const processando = salvando || excluindoFoto;
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={true}
+      disablePointerDismissal={processando}
+      onOpenChange={(open) => {
+        if (!open && !processando) onClose();
+      }}
+    >
       <DialogContent
-        className="max-w-xl max-h-[90vh] overflow-y-auto"
+        className="max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto"
         showCloseButton={!processando}
       >
         <DialogHeader>
@@ -177,163 +185,171 @@ export default function EditarServidorModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={salvar} className="space-y-4">
-          {editandoFoto ? (
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-muted/30 p-4">
-                <div className="relative h-36 w-36 overflow-hidden rounded-full border-4 border-card bg-muted shadow-sm">
-                  {fotoExibida ? (
-                    <Image
-                      src={fotoExibida}
-                      alt={`Foto de ${servidor.nome}`}
-                      width={144}
-                      height={144}
-                      unoptimized
-                      className="h-full w-full object-cover"
+          <fieldset disabled={processando} className="space-y-4">
+            {editandoFoto ? (
+              <div className="space-y-4">
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                  <div className="relative h-36 w-36 overflow-hidden rounded-full border-4 border-card bg-muted shadow-sm">
+                    {fotoExibida ? (
+                      <Image
+                        src={fotoExibida}
+                        alt={`Foto de ${servidor.nome}`}
+                        width={144}
+                        height={144}
+                        unoptimized
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
+                        Nenhuma foto cadastrada
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-center text-sm text-muted-foreground">
+                    {fotoPreview ? 'Pré-visualização da nova foto' : 'Foto atual do servidor'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="foto">Escolher nova foto</Label>
+                  <Input
+                    id="foto"
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={(event) => selecionarFoto(event.target.files?.[0] || null)}
+                    required={!servidor.fotoUrl}
+                    disabled={processando}
+                  />
+                  <p className="text-xs text-muted-foreground">PNG ou JPEG, até 5 MB.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Campo
+                  id="nome"
+                  label="Nome completo"
+                  value={dados.nome}
+                  onChange={(value) => atualizar('nome', value)}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Campo
+                    id="matricula"
+                    label="Matrícula SSP-DF"
+                    value={dados.matricula}
+                    onChange={(value) => atualizar('matricula', value)}
+                  />
+                  <Campo
+                    id="matriculaCargoEfetivo"
+                    label="Matrícula do cargo efetivo"
+                    value={dados.matriculaCargoEfetivo}
+                    onChange={(value) => atualizar('matriculaCargoEfetivo', value)}
+                  />
+                  <Campo
+                    id="cpf"
+                    label="CPF"
+                    value={dados.cpf}
+                    onChange={(value) => atualizar('cpf', formatarCpf(value))}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Campo
+                    id="cargoOcupado"
+                    required={false}
+                    label="Cargo SSP-DF"
+                    value={dados.cargoOcupado}
+                    onChange={(value) => atualizar('cargoOcupado', value)}
+                  />
+                  <Campo
+                    id="cargoEfetivo"
+                    label="Cargo efetivo"
+                    value={dados.cargoEfetivo}
+                    onChange={(value) => atualizar('cargoEfetivo', value)}
+                  />
+                </div>
+                <Campo
+                  id="lotacao"
+                  label="Lotação"
+                  value={dados.lotacao}
+                  onChange={(value) => atualizar('lotacao', value)}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Campo
+                    id="email"
+                    label="E-mail institucional"
+                    type="email"
+                    value={dados.email}
+                    onChange={(value) => atualizar('email', value)}
+                  />
+                  <Campo
+                    id="telefone"
+                    label="Telefone"
+                    type="tel"
+                    value={dados.telefone}
+                    onChange={(value) => atualizar('telefone', value)}
+                  />
+                </div>
+                <Campo
+                  id="dataIngresso"
+                  label="Data de admissão"
+                  value={dados.dataIngresso}
+                  onChange={(value) => atualizar('dataIngresso', value)}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Selecao
+                    id="status"
+                    label="Status"
+                    value={dados.status}
+                    opcoes={['Ativo', 'Inativo', 'Aposentado']}
+                    onChange={(value) => atualizar('status', value as Servidor['status'])}
+                  />
+                  {podeEditarPerfil ? (
+                    <Selecao
+                      id="role"
+                      label="Perfil"
+                      value={dados.role}
+                      opcoes={['ADMIN', 'OPERADOR', 'PASTA']}
+                      onChange={(value) => atualizar('role', value as Servidor['role'])}
                     />
                   ) : (
-                    <span className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
-                      Nenhuma foto cadastrada
-                    </span>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Perfil</Label>
+                      <Input id="role" value={dados.role} disabled />
+                      <p className="text-xs text-muted-foreground">
+                        Apenas administradores podem alterar este campo.
+                      </p>
+                    </div>
                   )}
                 </div>
-                <p className="text-center text-sm text-muted-foreground">
-                  {fotoPreview ? 'Pré-visualização da nova foto' : 'Foto atual do servidor'}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="foto">Escolher nova foto</Label>
-                <Input
-                  id="foto"
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  onChange={(event) => selecionarFoto(event.target.files?.[0] || null)}
-                  required={!servidor.fotoUrl}
-                  disabled={processando}
-                />
-                <p className="text-xs text-muted-foreground">PNG ou JPEG, até 5 MB.</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <Campo
-                id="nome"
-                label="Nome completo"
-                value={dados.nome}
-                onChange={(value) => atualizar('nome', value)}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Campo
-                  id="matricula"
-                  label="Matrícula SSP-DF"
-                  value={dados.matricula}
-                  onChange={(value) => atualizar('matricula', value)}
-                />
-                <Campo
-                  id="matriculaCargoEfetivo"
-                  label="Matrícula do cargo efetivo"
-                  value={dados.matriculaCargoEfetivo}
-                  onChange={(value) => atualizar('matriculaCargoEfetivo', value)}
-                />
-                <Campo
-                  id="cpf"
-                  label="CPF"
-                  value={dados.cpf}
-                  onChange={(value) => atualizar('cpf', formatarCpf(value))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Campo
-                  id="cargoOcupado"
-                  label="Cargo SSP-DF"
-                  value={dados.cargoOcupado}
-                  onChange={(value) => atualizar('cargoOcupado', value)}
-                />
-                <Campo
-                  id="cargoEfetivo"
-                  label="Cargo efetivo"
-                  value={dados.cargoEfetivo}
-                  onChange={(value) => atualizar('cargoEfetivo', value)}
-                />
-              </div>
-              <Campo
-                id="lotacao"
-                label="Lotação"
-                value={dados.lotacao}
-                onChange={(value) => atualizar('lotacao', value)}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Campo
-                  id="email"
-                  label="E-mail institucional"
-                  type="email"
-                  value={dados.email}
-                  onChange={(value) => atualizar('email', value)}
-                />
-                <Campo
-                  id="telefone"
-                  label="Telefone"
-                  value={dados.telefone}
-                  onChange={(value) => atualizar('telefone', value)}
-                />
-              </div>
-              <Campo
-                id="dataIngresso"
-                label="Data de admissão"
-                value={dados.dataIngresso}
-                onChange={(value) => atualizar('dataIngresso', value)}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Selecao
-                  id="status"
-                  label="Status"
-                  value={dados.status}
-                  opcoes={['Ativo', 'Inativo', 'Aposentado']}
-                  onChange={(value) => atualizar('status', value as Servidor['status'])}
-                />
-                {podeEditarPerfil ? (
-                  <Selecao
-                    id="role"
-                    label="Perfil"
-                    value={dados.role}
-                    opcoes={['ADMIN', 'OPERADOR', 'PASTA']}
-                    onChange={(value) => atualizar('role', value as Servidor['role'])}
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Perfil</Label>
-                    <Input id="role" value={dados.role} disabled />
-                    <p className="text-xs text-muted-foreground">
-                      Apenas administradores podem alterar este campo.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-          {erro && <p className="text-sm text-status-danger">{erro}</p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={processando}>
-              Cancelar
-            </Button>
-            {editandoFoto && servidor.fotoUrl && (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={excluirFoto}
-                disabled={processando}
-              >
-                {excluindoFoto ? 'Excluindo...' : 'Excluir foto'}
-              </Button>
+              </>
             )}
-            <Button
-              type="submit"
-              disabled={processando || (editandoFoto && !foto)}
-              className="bg-ssp-blue hover:bg-ssp-blueDark"
-            >
-              {salvando ? 'Salvando...' : 'Salvar alterações'}
-            </Button>
-          </DialogFooter>
+            {erro && (
+              <p role="alert" className="text-sm text-status-danger">
+                {erro}
+              </p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={processando}>
+                Cancelar
+              </Button>
+              {editandoFoto && servidor.fotoUrl && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={excluirFoto}
+                  disabled={processando}
+                >
+                  {excluindoFoto ? 'Excluindo…' : 'Excluir foto'}
+                </Button>
+              )}
+              <Button
+                type="submit"
+                disabled={processando || (editandoFoto && !foto)}
+                className="bg-ssp-blue hover:bg-ssp-blueDark"
+              >
+                {salvando ? 'Salvando…' : 'Salvar alterações'}
+              </Button>
+            </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>
@@ -346,12 +362,14 @@ function Campo({
   value,
   onChange,
   type = 'text',
+  required = true,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  required?: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -361,7 +379,7 @@ function Campo({
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required
+        required={required}
       />
     </div>
   );
@@ -390,7 +408,13 @@ function Selecao({
         <SelectContent>
           {opcoes.map((opcao) => (
             <SelectItem key={opcao} value={opcao}>
-              {opcao}
+              {opcao === 'ADMIN'
+                ? 'Administrador'
+                : opcao === 'OPERADOR'
+                ? 'Operador'
+                : opcao === 'PASTA'
+                ? 'Somente pasta funcional'
+                : opcao}
             </SelectItem>
           ))}
         </SelectContent>

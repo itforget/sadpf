@@ -7,9 +7,10 @@ import { ArrowLeft, BadgeCheck, FileText, Send, Download } from 'lucide-react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 
+import QueryError from '@/app/components/QueryError';
 import PDFViewer from '@/app/components/PDFViewer';
 import EncaminharModal from '@/app/components/EncaminharModal';
-import { fetchDocumentoById, fetchServidores } from '@/lib/client/api';
+import { ApiError, fetchDocumentoById, fetchServidorProfile } from '@/lib/client/api';
 import { queryKeys } from '@/lib/client/query-keys';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,22 +26,39 @@ export default function DocumentoDetailPage() {
     queryFn: () => fetchDocumentoById(id),
     enabled: Boolean(id),
   });
-  const servidoresQuery = useQuery({
-    queryKey: queryKeys.servidores(),
-    queryFn: () => fetchServidores(),
-    enabled: Boolean(id),
+  const servidorId = documentoQuery.data?.servidorId;
+  const servidorQuery = useQuery({
+    queryKey: queryKeys.servidor(servidorId ?? ''),
+    queryFn: () => fetchServidorProfile(servidorId!),
+    enabled: Boolean(servidorId),
   });
-
   const documento = documentoQuery.data ?? null;
-  const servidores = servidoresQuery.data ?? [];
-  const servidor = servidores.find((s) => s.id === documento?.servidorId) ?? null;
-  const loading = !id || documentoQuery.isLoading || servidoresQuery.isLoading;
+  const servidor = servidorQuery.data?.servidor ?? null;
+  const loading =
+    !id || documentoQuery.isLoading || (Boolean(servidorId) && servidorQuery.isLoading);
+  const queryError = documentoQuery.error ?? servidorQuery.error;
+  if (queryError && !(queryError instanceof ApiError && queryError.status === 404)) {
+    return (
+      <QueryError
+        message={
+          queryError instanceof Error
+            ? queryError.message
+            : 'Não foi possível carregar o documento.'
+        }
+        onRetry={() => {
+          documentoQuery.refetch();
+          if (servidorId) servidorQuery.refetch();
+        }}
+        pending={documentoQuery.isFetching || servidorQuery.isFetching}
+      />
+    );
+  }
 
   if (loading) {
     return (
       <div className="p-12 text-center text-muted-foreground space-y-3">
         <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <p className="text-sm font-semibold">Carregando visualizador de PDF...</p>
+        <p className="text-sm font-semibold">Carregando visualizador de PDF…</p>
       </div>
     );
   }
@@ -68,14 +86,15 @@ export default function DocumentoDetailPage() {
       )}
 
       <div className="flex flex-wrap justify-between items-center gap-4 border-b border-border pb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
             href={`/servidores/${servidor.id}`}
+            aria-label="Voltar à pasta do servidor"
             className={buttonVariants({ variant: 'ghost', size: 'icon' })}
           >
             <ArrowLeft size={20} />
           </Link>
-          <div>
+          <div className="min-w-0 break-words">
             <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
               <FileText size={22} className="text-ssp-blue" /> {documento.titulo}
             </h1>
@@ -94,16 +113,14 @@ export default function DocumentoDetailPage() {
             </div>
           ) : (
             <Button onClick={() => setShowEncaminharModal(true)} variant="outline">
-              <Send size={16} className="text-ssp-blue" /> Encaminhar
+              <Send size={16} className="text-ssp-blue" /> Solicitar assinatura
             </Button>
           )}
           <a
-            href={documento.arquivoUrl}
-            target="_blank"
-            rel="noreferrer"
+            href={`/api/documentos/${documento.id}/arquivo?download=1`}
             className={buttonVariants({ className: 'bg-ssp-blue hover:bg-ssp-blueDark' })}
           >
-            <Download size={16} /> Salvar PDF
+            <Download size={16} /> Baixar PDF
           </a>
         </div>
       </div>
@@ -123,16 +140,16 @@ export default function DocumentoDetailPage() {
 
         <div className="space-y-6">
           <div className="bg-card p-5 rounded-2xl border border-border shadow-corporate space-y-4 text-xs">
-            <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+            <h2 className="font-bold text-sm text-foreground flex items-center gap-2">
               <Image
                 src="/logo-sspdf.png"
                 alt="Logo SSP-DF"
-                width={120}
-                height={120}
-                className="mb-6 h-auto w-auto"
+                width={24}
+                height={24}
+                className="h-6 w-6 shrink-0 object-contain"
               />{' '}
               Metadados do Assentamento
-            </h3>
+            </h2>
 
             <div className="space-y-2 divide-y divide-border">
               <div className="pt-2 flex justify-between">

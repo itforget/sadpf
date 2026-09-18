@@ -1,3 +1,4 @@
+import type { PaginatedResult } from '@/lib/pagination';
 import type { DocumentoPDF, LogAuditoria, Servidor, ServidorComDocumentos } from '@/lib/types';
 import type {
   ConfiguracoesSummary,
@@ -128,4 +129,27 @@ export async function fetchLogs(): Promise<LogResult[]> {
 
 export async function fetchDocumentoById(id: string): Promise<DocumentoSearchResult | null> {
   return fetchJson<DocumentoSearchResult | null>(`/api/documentos/${id}`);
+}
+
+export type ServidoresPage = PaginatedResult<Servidor> & {
+  counts: { total: number; admin: number; operador: number; pasta: number };
+};
+
+export async function fetchServidoresPage(
+  filters: ServidoresFilters & { page: number }
+): Promise<ServidoresPage> {
+  const url = new URL('/api/servidores', window.location.origin);
+  url.searchParams.set('page', String(filters.page));
+  if (filters.status && filters.status !== 'Todos') url.searchParams.set('status', filters.status);
+  if (filters.search) url.searchParams.set('search', filters.search);
+  if (filters.role) url.searchParams.set('role', filters.role);
+  return fetchJson<ServidoresPage>(url);
+}
+
+export async function fetchLogsPage(filters: { page: number; search: string; action: string }) {
+  const url = new URL('/api/logs', window.location.origin);
+  url.searchParams.set('page', String(filters.page));
+  if (filters.search) url.searchParams.set('search', filters.search);
+  if (filters.action !== 'TODAS') url.searchParams.set('action', filters.action);
+  return fetchJson<PaginatedResult<LogResult>>(url);
 }

@@ -22,6 +22,8 @@ const emptyDashboard = {
 export default function DashboardPage() {
   const {
     data = emptyDashboard,
+    isLoading,
+    refetch,
     error,
     isError,
   } = useQuery({
@@ -79,6 +81,9 @@ export default function DashboardPage() {
       {isError && (
         <Alert variant="destructive">
           <AlertDescription>
+            <button type="button" className="underline" onClick={() => refetch()}>
+              Tentar novamente
+            </button>
             {error instanceof Error
               ? error.message
               : 'Não foi possível carregar os indicadores do painel.'}
@@ -86,109 +91,119 @@ export default function DashboardPage() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <Card key={kpi.title} className="transition-shadow hover:shadow-md">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <div className={`rounded-lg p-3 ${kpi.bg}`}>
-                  <kpi.icon className={kpi.color} size={24} aria-hidden="true" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{kpi.title}</p>
-                  <h3 className="text-2xl font-bold tracking-tight">
-                    {kpi.value.toLocaleString('pt-BR')}
-                  </h3>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isLoading ? (
+        <div role="status" className="rounded-xl bg-muted p-8 text-muted-foreground">
+          Carregando indicadores…
+        </div>
+      ) : (
+        !isError && (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {kpis.map((kpi) => (
+                <Card key={kpi.title} className="transition-shadow hover:shadow-md">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-4">
+                      <div className={`rounded-lg p-3 ${kpi.bg}`}>
+                        <kpi.icon className={kpi.color} size={24} aria-hidden="true" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">{kpi.title}</p>
+                        <p className="tabular-nums text-2xl font-bold tracking-tight">
+                          {kpi.value.toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-semibold">Últimas inserções</CardTitle>
-            <Link
-              href="/servidores"
-              className={buttonVariants({
-                variant: 'ghost',
-                size: 'sm',
-                className: 'text-xs text-ssp-blue',
-              })}
-            >
-              Ver documentos →
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {data.ultimasInsercoes.length ? (
-              <div className="divide-y divide-border">
-                {data.ultimasInsercoes.map((documento) => (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg font-semibold">Últimas inserções</CardTitle>
                   <Link
-                    key={documento.id}
-                    href={`/servidores/${documento.servidorId}`}
-                    className="flex items-center gap-3 py-3 first:pt-1 hover:text-ssp-blue"
+                    href="/servidores"
+                    className={buttonVariants({
+                      variant: 'ghost',
+                      size: 'sm',
+                      className: 'text-xs text-ssp-blue',
+                    })}
                   >
-                    <div className="rounded-md bg-ssp-blue/10 p-2 text-ssp-blue">
-                      <FileText size={18} aria-hidden="true" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {documento.titulo}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {documento.servidorNome} · {documento.categoria}
-                      </p>
-                    </div>
-                    <time className="shrink-0 text-xs text-muted-foreground">
-                      {documento.dataUpload}
-                    </time>
+                    Ver documentos →
                   </Link>
-                ))}
-              </div>
-            ) : (
-              <MensagemVazia texto="Nenhum documento foi anexado até o momento." />
-            )}
-          </CardContent>
-        </Card>
+                </CardHeader>
+                <CardContent>
+                  {data.ultimasInsercoes.length ? (
+                    <div className="divide-y divide-border">
+                      {data.ultimasInsercoes.map((documento) => (
+                        <Link
+                          key={documento.id}
+                          href={`/documentos/${documento.id}`}
+                          className="flex items-center gap-3 py-3 first:pt-1 hover:text-ssp-blue"
+                        >
+                          <div className="rounded-md bg-ssp-blue/10 p-2 text-ssp-blue">
+                            <FileText size={18} aria-hidden="true" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-foreground">
+                              {documento.titulo}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {documento.servidorNome} · {documento.categoria}
+                            </p>
+                          </div>
+                          <time className="shrink-0 text-xs text-muted-foreground">
+                            {documento.dataUpload}
+                          </time>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <MensagemVazia texto="Nenhum documento foi anexado até o momento." />
+                  )}
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Volume por servidor</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data.volumePorServidor.length ? (
-              <div className="space-y-4">
-                {data.volumePorServidor.map((item) => (
-                  <Link
-                    key={item.servidorId}
-                    href={`/servidores/${item.servidorId}`}
-                    className="block"
-                  >
-                    <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                      <span className="truncate font-medium text-foreground">
-                        {item.servidorNome}
-                      </span>
-                      <span className="shrink-0 text-muted-foreground">
-                        {item.documentos} docs.
-                      </span>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Volume por servidor</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.volumePorServidor.length ? (
+                    <div className="space-y-4">
+                      {data.volumePorServidor.map((item) => (
+                        <Link
+                          key={item.servidorId}
+                          href={`/servidores/${item.servidorId}`}
+                          className="block"
+                        >
+                          <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                            <span className="truncate font-medium text-foreground">
+                              {item.servidorNome}
+                            </span>
+                            <span className="shrink-0 text-muted-foreground">
+                              {item.documentos} docs.
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-ssp-blue"
+                              style={{ width: `${(item.documentos / maiorVolume) * 100}%` }}
+                            />
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-ssp-blue"
-                        style={{ width: `${Math.max((item.documentos / maiorVolume) * 100, 4)}%` }}
-                      />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <MensagemVazia texto="Nenhum documento para consolidar." />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  ) : (
+                    <MensagemVazia texto="Nenhum documento para consolidar." />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )
+      )}
     </div>
   );
 }

@@ -4,9 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Users, User, Search, Plus, Filter, ChevronRight, UserPlus } from 'lucide-react';
 import Image from 'next/image';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,11 @@ import {
 } from '@/components/ui/select';
 import { servidorSchema, type ServidorFormData } from '@/lib/validations/servidor';
 import { formatarCpf } from '@/lib/cpf';
-import { fetchJson, fetchServidores } from '@/lib/client/api';
+import { fetchJson, fetchServidoresPage, type ServidoresFilters } from '@/lib/client/api';
+import Pagination from '@/app/components/Pagination';
+import { parsePage } from '@/lib/pagination';
+import { useUrlFilters } from '@/lib/client/use-url-filters';
+import { useDebouncedValue } from '@/lib/client/use-debounced-value';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -42,10 +46,19 @@ import {
 } from '@/components/ui/table';
 
 export default function ServidoresListPage() {
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Inativo' | 'Aposentado'>(
-    'Todos'
-  );
-  const [searchQuery, setSearchQuery] = useState('');
+  const { params, updateFilters } = useUrlFilters();
+  const rawStatus = params.get('status');
+  const statusFilter =
+    rawStatus === 'Ativo' || rawStatus === 'Inativo' || rawStatus === 'Aposentado'
+      ? rawStatus
+      : 'Todos';
+  const searchQuery = params.get('search') ?? '';
+  const search = useDebouncedValue(searchQuery);
+  const filters: ServidoresFilters & { page: number } = {
+    status: statusFilter,
+    search,
+    page: parsePage(params.get('page')),
+  };
   const [showAddModal, setShowAddModal] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -76,21 +89,21 @@ export default function ServidoresListPage() {
     },
   });
 
-  const status = useWatch({ control, name: 'status' });
   const {
-    data: servidores = [],
+    data: result,
+    isFetching,
+    isPlaceholderData,
     isLoading,
     isError,
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.servidores({ status: statusFilter, search: searchQuery }),
-    queryFn: () =>
-      fetchServidores({
-        status: statusFilter,
-        search: searchQuery,
-      }),
+    queryKey: queryKeys.servidoresPage(filters),
+    queryFn: () => fetchServidoresPage(filters),
+    placeholderData: keepPreviousData,
   });
+
+  const servidores = result?.items ?? [];
 
   const createMutation = useMutation({
     mutationFn: async (data: ServidorFormData) => {
@@ -117,6 +130,8 @@ export default function ServidoresListPage() {
   });
 
   const onSubmit = async (data: ServidorFormData) => {
+    if (createMutation.isPending) return;
+    setCreateError(null);
     try {
       await createMutation.mutateAsync(data);
     } catch (error: unknown) {
@@ -136,12 +151,17 @@ export default function ServidoresListPage() {
     <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
       <Dialog
         open={showAddModal}
+        disablePointerDismissal={createMutation.isPending}
         onOpenChange={(open) => {
+          if (createMutation.isPending) return;
           setShowAddModal(open);
-          if (!open) setCreateError(null);
+          if (!open) {
+            setCreateError(null);
+            reset();
+          }
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" showCloseButton={!createMutation.isPending}>
           <DialogHeader>
             <div className="flex items-center gap-3">
               <UserPlus size={24} className="text-ssp-blue" />
@@ -155,163 +175,242 @@ export default function ServidoresListPage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome Completo *</Label>
-                <Input
-                  id="nome"
-                  {...register('nome')}
-                  placeholder="Ex.: Mariana Alves de Souza"
-                  className={errors.nome ? 'border-destructive' : ''}
-                />
-                {errors.nome && <p className="text-sm text-destructive">{errors.nome.message}</p>}
+            <fieldset disabled={createMutation.isPending} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Nome Completo *</Label>
+                  <Input
+                    id="nome"
+                    {...register('nome')}
+                    placeholder="Ex.: Mariana Alves de Souza"
+                    className={errors.nome ? 'border-destructive' : ''}
+                    aria-invalid={!!errors.nome}
+                    aria-describedby={errors.nome ? 'nome-error' : undefined}
+                  />
+                  {errors.nome && (
+                    <p id="nome-error" role="alert" className="text-sm text-destructive">
+                      {errors.nome.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="matricula">Matrícula SSP-DF *</Label>
+                  <Input
+                    id="matricula"
+                    {...register('matricula')}
+                    placeholder="Ex.: 987.654-3"
+                    className={`font-mono ${errors.matricula ? 'border-destructive' : ''}`}
+                    aria-invalid={!!errors.matricula}
+                    aria-describedby={errors.matricula ? 'matricula-error' : undefined}
+                  />
+                  {errors.matricula && (
+                    <p id="matricula-error" role="alert" className="text-sm text-destructive">
+                      {errors.matricula.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="matriculaCargoEfetivo">Matrícula do Cargo Efetivo *</Label>
+                  <Input
+                    id="matriculaCargoEfetivo"
+                    {...register('matriculaCargoEfetivo')}
+                    placeholder="Ex.: 987.654-3"
+                    className={`font-mono ${
+                      errors.matriculaCargoEfetivo ? 'border-destructive' : ''
+                    }`}
+                    aria-invalid={!!errors.matriculaCargoEfetivo}
+                    aria-describedby={
+                      errors.matriculaCargoEfetivo ? 'matriculaCargoEfetivo-error' : undefined
+                    }
+                  />
+                  {errors.matriculaCargoEfetivo && (
+                    <p
+                      id="matriculaCargoEfetivo-error"
+                      role="alert"
+                      className="text-sm text-destructive"
+                    >
+                      {errors.matriculaCargoEfetivo.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF *</Label>
+                  <Input
+                    id="cpf"
+                    {...register('cpf')}
+                    onChange={(event) =>
+                      setValue('cpf', formatarCpf(event.target.value), { shouldValidate: true })
+                    }
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
+                    maxLength={14}
+                    className={`font-mono ${errors.cpf ? 'border-destructive' : ''}`}
+                    aria-invalid={!!errors.cpf}
+                    aria-describedby={errors.cpf ? 'cpf-error' : undefined}
+                  />
+                  {errors.cpf && (
+                    <p id="cpf-error" role="alert" className="text-sm text-destructive">
+                      {errors.cpf.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail institucional *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register('email')}
+                    placeholder="nome@ssp.df.gov.br"
+                    className={errors.email ? 'border-destructive' : ''}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
+                    autoComplete="email"
+                  />
+                  {errors.email && (
+                    <p id="email-error" role="alert" className="text-sm text-destructive">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telefone">Telefone *</Label>
+                  <Input
+                    id="telefone"
+                    type="tel"
+                    {...register('telefone')}
+                    placeholder="(61) 99999-9999"
+                    className={errors.telefone ? 'border-destructive' : ''}
+                    aria-invalid={!!errors.telefone}
+                    aria-describedby={errors.telefone ? 'telefone-error' : undefined}
+                  />
+                  {errors.telefone && (
+                    <p id="telefone-error" role="alert" className="text-sm text-destructive">
+                      {errors.telefone.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status *</Label>
+                  <Controller
+                    control={control}
+                    name="status"
+                    render={({ field }) => (
+                      <Select name={field.name} value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger
+                          aria-invalid={!!errors.status}
+                          aria-describedby={errors.status ? 'status-error' : undefined}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          id="status"
+                          className={errors.status ? 'border-destructive' : ''}
+                        >
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Ativo">Ativo</SelectItem>
+                          <SelectItem value="Inativo">Inativo</SelectItem>
+                          <SelectItem value="Aposentado">Aposentado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.status && (
+                    <p id="status-error" role="alert" className="text-sm text-destructive">
+                      {errors.status.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dataIngresso">Data de admissão *</Label>
+                  <Input
+                    id="dataIngresso"
+                    {...register('dataIngresso')}
+                    placeholder="DD/MM/AAAA"
+                    className={errors.dataIngresso ? 'border-destructive' : ''}
+                    aria-invalid={!!errors.dataIngresso}
+                    aria-describedby={errors.dataIngresso ? 'dataIngresso-error' : undefined}
+                  />
+                  {errors.dataIngresso && (
+                    <p id="dataIngresso-error" role="alert" className="text-sm text-destructive">
+                      {errors.dataIngresso.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cargoOcupado">Cargo SSP-DF</Label>
+                  <Input
+                    id="cargoOcupado"
+                    {...register('cargoOcupado')}
+                    placeholder="Ex.: Agente de Polícia"
+                    aria-invalid={!!errors.cargoOcupado}
+                    aria-describedby={errors.cargoOcupado ? 'cargoOcupado-error' : undefined}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cargoEfetivo">Cargo Efetivo *</Label>
+                  <Input
+                    id="cargoEfetivo"
+                    {...register('cargoEfetivo')}
+                    className={errors.cargoEfetivo ? 'border-destructive' : ''}
+                    aria-invalid={!!errors.cargoEfetivo}
+                    aria-describedby={errors.cargoEfetivo ? 'cargoEfetivo-error' : undefined}
+                  />
+                  {errors.cargoEfetivo && (
+                    <p id="cargoEfetivo-error" role="alert" className="text-sm text-destructive">
+                      {errors.cargoEfetivo.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="matricula">Matrícula SSP-DF *</Label>
+                <Label htmlFor="lotacao">Lotação Atual *</Label>
                 <Input
-                  id="matricula"
-                  {...register('matricula')}
-                  placeholder="Ex.: 987.654-3"
-                  className={`font-mono ${errors.matricula ? 'border-destructive' : ''}`}
+                  id="lotacao"
+                  {...register('lotacao')}
+                  className={errors.lotacao ? 'border-destructive' : ''}
+                  aria-invalid={!!errors.lotacao}
+                  aria-describedby={errors.lotacao ? 'lotacao-error' : undefined}
                 />
-                {errors.matricula && (
-                  <p className="text-sm text-destructive">{errors.matricula.message}</p>
+                {errors.lotacao && (
+                  <p id="lotacao-error" role="alert" className="text-sm text-destructive">
+                    {errors.lotacao.message}
+                  </p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="matriculaCargoEfetivo">Matrícula do Cargo Efetivo *</Label>
-                <Input
-                  id="matriculaCargoEfetivo"
-                  {...register('matriculaCargoEfetivo')}
-                  placeholder="Ex.: 987.654-3"
-                  className={`font-mono ${
-                    errors.matriculaCargoEfetivo ? 'border-destructive' : ''
-                  }`}
-                />
-                {errors.matriculaCargoEfetivo && (
-                  <p className="text-sm text-destructive">{errors.matriculaCargoEfetivo.message}</p>
+              <DialogFooter>
+                {createError && (
+                  <p role="alert" className="mr-auto text-sm text-destructive">
+                    {createError}
+                  </p>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cpf">CPF *</Label>
-                <Input
-                  id="cpf"
-                  {...register('cpf')}
-                  onChange={(event) =>
-                    setValue('cpf', formatarCpf(event.target.value), { shouldValidate: true })
-                  }
-                  placeholder="000.000.000-00"
-                  inputMode="numeric"
-                  maxLength={14}
-                  className={`font-mono ${errors.cpf ? 'border-destructive' : ''}`}
-                />
-                {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail institucional *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...register('email')}
-                  placeholder="nome@ssp.df.gov.br"
-                  className={errors.email ? 'border-destructive' : ''}
-                />
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone *</Label>
-                <Input
-                  id="telefone"
-                  type="tel"
-                  {...register('telefone')}
-                  placeholder="(61) 99999-9999"
-                  className={errors.telefone ? 'border-destructive' : ''}
-                />
-                {errors.telefone && (
-                  <p className="text-sm text-destructive">{errors.telefone.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={status}
-                  onValueChange={(value) => {
-                    if (value) setValue('status', value);
-                  }}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseModal}
+                  disabled={createMutation.isPending}
                 >
-                  <SelectTrigger className={errors.status ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Inativo">Inativo</SelectItem>
-                    <SelectItem value="Aposentado">Aposentado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dataIngresso">Data de admissão *</Label>
-                <Input
-                  id="dataIngresso"
-                  {...register('dataIngresso')}
-                  placeholder="DD/MM/AAAA"
-                  className={errors.dataIngresso ? 'border-destructive' : ''}
-                />
-                {errors.dataIngresso && (
-                  <p className="text-sm text-destructive">{errors.dataIngresso.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cargoOcupado">Cargo SSP-DF</Label>
-                <Input
-                  id="cargoOcupado"
-                  {...register('cargoOcupado')}
-                  placeholder="Ex.: Agente de Polícia"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cargoEfetivo">Cargo Efetivo *</Label>
-                <Input
-                  id="cargoEfetivo"
-                  {...register('cargoEfetivo')}
-                  className={errors.cargoEfetivo ? 'border-destructive' : ''}
-                />
-                {errors.cargoEfetivo && (
-                  <p className="text-sm text-destructive">{errors.cargoEfetivo.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lotacao">Lotação Atual *</Label>
-              <Input
-                id="lotacao"
-                {...register('lotacao')}
-                className={errors.lotacao ? 'border-destructive' : ''}
-              />
-              {errors.lotacao && (
-                <p className="text-sm text-destructive">{errors.lotacao.message}</p>
-              )}
-            </div>
-
-            <DialogFooter>
-              {createError && <p className="mr-auto text-sm text-destructive">{createError}</p>}
-              <Button type="button" variant="outline" onClick={handleCloseModal}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-ssp-blue hover:bg-ssp-blueDark">
-                Criar Pasta Funcional
-              </Button>
-            </DialogFooter>
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  className="bg-ssp-blue hover:bg-ssp-blueDark"
+                >
+                  {createMutation.isPending ? 'Criando…' : 'Criar pasta funcional'}
+                </Button>
+              </DialogFooter>
+            </fieldset>
           </form>
         </DialogContent>
       </Dialog>
@@ -340,14 +439,16 @@ export default function ServidoresListPage() {
           />
           <Input
             type="search"
-            placeholder="Buscar por nome, matrícula, CPF ou cargo..."
+            aria-label="Buscar servidores por nome, matrícula, CPF ou cargo"
+            name="search"
+            placeholder="Buscar por nome, matrícula, CPF ou cargo…"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => updateFilters({ search: e.target.value, page: null })}
             className="pl-10"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <Filter size={16} className="text-muted-foreground shrink-0" />
           <span className="text-xs font-semibold text-muted-foreground">Status:</span>
           {(['Todos', 'Ativo', 'Inativo', 'Aposentado'] as const).map((st) => (
@@ -355,7 +456,10 @@ export default function ServidoresListPage() {
               key={st}
               variant={statusFilter === st ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setStatusFilter(st)}
+              aria-pressed={statusFilter === st}
+              onClick={() =>
+                updateFilters({ status: st === 'Todos' ? null : st, page: null }, true)
+              }
               className={statusFilter === st ? 'bg-ssp-blue hover:bg-ssp-blueDark' : ''}
             >
               {st}
@@ -368,7 +472,7 @@ export default function ServidoresListPage() {
         {isLoading ? (
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-sm font-semibold">Carregando acervo de servidores...</p>
+            <p className="text-sm font-semibold">Carregando acervo de servidores…</p>
           </div>
         ) : isError ? (
           <div className="p-6">
@@ -393,7 +497,7 @@ export default function ServidoresListPage() {
                 <TableHead className="px-6 py-4">Matrículas</TableHead>
                 <TableHead className="px-6 py-4">Cargo SSP-DF / Efetivo</TableHead>
                 <TableHead className="px-6 py-4">Lotação Atual</TableHead>
-                <TableHead className="px-6 py-4">Role</TableHead>
+                <TableHead className="px-6 py-4">Perfil de acesso</TableHead>
                 <TableHead className="px-6 py-4">Status</TableHead>
                 <TableHead className="px-6 py-4 text-right">Ação</TableHead>
               </TableRow>
@@ -450,7 +554,11 @@ export default function ServidoresListPage() {
                           : 'bg-muted text-muted-foreground border-border'
                       }`}
                     >
-                      {s.role}
+                      {
+                        { ADMIN: 'Administrador', OPERADOR: 'Operador do RH', PASTA: 'Pasta' }[
+                          s.role
+                        ]
+                      }
                     </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-4">
@@ -487,6 +595,15 @@ export default function ServidoresListPage() {
           </div>
         )}
       </div>
+      {result && !isError && (
+        <Pagination
+          page={result.page}
+          pageSize={result.pageSize}
+          total={result.total}
+          pending={isFetching || isPlaceholderData}
+          onPageChange={(page) => updateFilters({ page: String(page) }, true)}
+        />
+      )}
     </div>
   );
 }

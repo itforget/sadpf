@@ -53,8 +53,24 @@ export default function RedefinirSenhaForm({ token }: Props) {
     }
   };
 
+  if (token.length < 32)
+    return (
+      <div className="mx-auto max-w-md space-y-4 p-6">
+        <h1 className="text-2xl font-bold">Link de redefinição inválido</h1>
+        <p role="alert" className="text-sm text-status-danger">
+          Este endereço não contém um convite válido. Volte ao login e solicite um novo link de
+          redefinição.
+        </p>
+        <Link
+          href="/login"
+          className="inline-block text-sm font-medium text-ssp-blue hover:underline"
+        >
+          Solicitar novo link no login
+        </Link>
+      </div>
+    );
   return (
-    <div className="fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-background p-6">
+    <div className="flex min-h-full items-center justify-center bg-background p-6">
       <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
         <h1 className="text-2xl font-bold text-foreground">Definir senha</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -71,9 +87,13 @@ export default function RedefinirSenhaForm({ token }: Props) {
               autoComplete="new-password"
               {...register('password')}
               className={errors.password ? 'border-destructive' : ''}
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p id="password-error" role="alert" className="text-sm text-destructive">
+                {errors.password.message}
+              </p>
             )}
           </div>
 
@@ -85,21 +105,33 @@ export default function RedefinirSenhaForm({ token }: Props) {
               autoComplete="new-password"
               {...register('confirmPassword')}
               className={errors.confirmPassword ? 'border-destructive' : ''}
+              aria-invalid={!!errors.confirmPassword}
+              aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
             />
             {errors.confirmPassword && (
-              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+              <p id="confirmPassword-error" role="alert" className="text-sm text-destructive">
+                {errors.confirmPassword.message}
+              </p>
             )}
           </div>
 
-          {errors.token && <p className="text-sm text-destructive">{errors.token.message}</p>}
-          {message && <p className="text-sm text-status-danger">{message}</p>}
+          {errors.token && (
+            <p id="token-error" role="alert" className="text-sm text-destructive">
+              {errors.token.message}
+            </p>
+          )}
+          {message && (
+            <p role="alert" className="text-sm text-status-danger">
+              {message}
+            </p>
+          )}
 
           <Button
             type="submit"
             disabled={resetMutation.isPending || !token}
             className="w-full bg-ssp-blue hover:bg-ssp-blueDark"
           >
-            {resetMutation.isPending ? 'Salvando...' : 'Salvar senha'}
+            {resetMutation.isPending ? 'Salvando…' : 'Salvar senha'}
           </Button>
         </form>
 

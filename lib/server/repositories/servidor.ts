@@ -10,6 +10,7 @@ export {
   getFotoServidorById,
   getServidorById,
   getServidores,
+  getServidoresPage,
   updateFotoServidor,
   updateServidor,
 } from '@/lib/server/db';

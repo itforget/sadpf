@@ -1,3 +1,4 @@
+import { AUTH_POLICY } from '@/lib/auth-policy';
 import { z } from 'zod';
 import { cpfEstaCompleto, formatarCpf } from '@/lib/cpf';
 
@@ -20,7 +21,11 @@ export const servidorSchema = z.object({
   role: z.enum(['ADMIN', 'OPERADOR', 'PASTA'], {
     message: 'Função de acesso é obrigatória',
   }),
-  senha: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres').optional().or(z.literal('')),
+  senha: z
+    .string()
+    .min(AUTH_POLICY.minimumPasswordLength, 'Senha deve ter no mínimo 12 caracteres')
+    .optional()
+    .or(z.literal('')),
   email: z.email('Email inválido'),
   telefone: z.string().min(1, 'Telefone é obrigatório'),
 });
@@ -50,7 +55,7 @@ export const usuarioOperacionalSchema = z
     }),
     senha: z
       .string()
-      .min(12, 'Senha deve ter no mínimo 12 caracteres')
+      .min(AUTH_POLICY.minimumPasswordLength, 'Senha deve ter no mínimo 12 caracteres')
       .optional()
       .or(z.literal('')),
     confirmarSenha: z.string().optional().or(z.literal('')),

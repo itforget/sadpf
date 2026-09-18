@@ -1,3 +1,4 @@
+import type { AUTH_POLICY } from './auth-policy';
 import type { DocumentoPDF, Servidor } from './types';
 
 export type DashboardSummary = {
@@ -51,6 +52,7 @@ export type RelatoriosSummary = {
 };
 
 export type ConfiguracoesSummary = {
+  authPolicy: typeof AUTH_POLICY;
   dbOk: boolean;
   servidoresCount: number;
   documentosCount: number;

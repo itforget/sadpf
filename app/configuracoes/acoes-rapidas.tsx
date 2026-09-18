@@ -1,85 +1,101 @@
 'use client';
 
 import { useState } from 'react';
-import { Eraser, Download, CheckCircle2, Loader2 } from 'lucide-react';
+import { Download, RefreshCw, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { queryKeys } from '@/lib/client/query-keys';
+import type { ConfiguracoesSummary } from '@/lib/summary-types';
+import { SYSTEM_NAME, SYSTEM_VERSION } from '@/lib/auth-policy';
 
-export default function AcoesRapidas() {
-  const [clearing, setClearing] = useState(false);
-  const [cleared, setCleared] = useState(false);
-
-  const handleLimparCache = () => {
-    setClearing(true);
-    window.setTimeout(() => {
-      setClearing(false);
-      setCleared(true);
-      window.setTimeout(() => setCleared(false), 3000);
-    }, 1200);
+export default function AcoesRapidas({ summary }: { summary: ConfiguracoesSummary }) {
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const refresh = async () => {
+    setRefreshing(true);
+    setFeedback('');
+    try {
+      await queryClient.refetchQueries(
+        { queryKey: queryKeys.configuracoes, type: 'active' },
+        { throwOnError: true }
+      );
+      setFeedback('Dados desta tela atualizados.');
+    } catch {
+      setFeedback('Não foi possível atualizar. Verifique sua conexão e tente novamente.');
+    } finally {
+      setRefreshing(false);
+    }
   };
-
-  const handleExportar = () => {
+  const exportConfig = () => {
     const config = {
-      sistema: 'SADPF - Sistema de Acompanhamento de Documentos e Pastas Funcionais',
+      sistema: `SADPF — ${SYSTEM_NAME}`,
       org: 'SSP-DF',
-      versao: '2.0.0',
+      versao: SYSTEM_VERSION,
       seguranca: {
-        sessaoExpiracaoHoras: 8,
-        senhaMinima: 6,
-        cookie: 'HTTP-only, SameSite=Strict, Secure em produção',
+        sessaoExpiracaoHoras: summary.authPolicy.sessionDurationHours,
+        senhaMinima: summary.authPolicy.minimumPasswordLength,
+        cookie: `HTTP-only, SameSite=${summary.authPolicy.cookieSameSite}, Secure em produção`,
       },
       acessos: {
         ADMIN: 'Acesso total a todos os módulos',
-        OPERADOR: 'Acesso operacional, exceto logs, usuários e configurações',
+        OPERADOR: 'Acesso operacional, exceto trilha de auditoria, usuários e configurações',
         PASTA: 'Registro de pasta funcional, sem acesso ao painel',
       },
+      ambiente: summary.ambiente,
+      documentos: summary.documentosCount,
+      servidores: summary.servidoresCount,
       exportadoEm: new Date().toISOString(),
     };
-
-    const blob = new Blob([JSON.stringify(config, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sadpf-configuracoes.json';
-    a.click();
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
+    );
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sadpf-configuracoes.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
     URL.revokeObjectURL(url);
   };
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Button
-        variant="outline"
-        onClick={handleLimparCache}
-        disabled={clearing}
-        className="justify-start h-auto py-5 px-5"
-      >
-        {cleared ? (
-          <CheckCircle2 size={18} className="mr-3 text-status-success shrink-0" />
-        ) : clearing ? (
-          <Loader2 size={18} className="mr-3 text-ssp-blue animate-spin shrink-0" />
-        ) : (
-          <Eraser size={18} className="mr-3 text-ssp-blue shrink-0" />
-        )}
-        <span className="text-left">
-          <span className="block font-semibold">Limpar Cache</span>
-          <span className="block text-sm text-muted-foreground font-normal">
-            {cleared
-              ? 'Cache limpo com sucesso.'
-              : 'Remove dados temporários em memória do sistema.'}
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Button
+          variant="outline"
+          onClick={refresh}
+          disabled={refreshing}
+          className="h-auto justify-start whitespace-normal px-4 py-4"
+        >
+          {refreshing ? (
+            <Loader2 aria-hidden="true" className="animate-spin" />
+          ) : (
+            <RefreshCw aria-hidden="true" />
+          )}
+          <span className="min-w-0 text-left">
+            <span className="block font-semibold">Atualizar dados</span>
+            <span className="block text-sm font-normal text-muted-foreground">
+              Consulta novamente os indicadores desta tela.
+            </span>
           </span>
-        </span>
-      </Button>
-
-      <Button variant="outline" onClick={handleExportar} className="justify-start h-auto py-5 px-5">
-        <Download size={18} className="mr-3 text-ssp-blue shrink-0" />
-        <span className="text-left">
-          <span className="block font-semibold">Exportar Configurações</span>
-          <span className="block text-sm text-muted-foreground font-normal">
-            Baixa um JSON com as políticas e parâmetros atuais do sistema.
+        </Button>
+        <Button
+          variant="outline"
+          onClick={exportConfig}
+          className="h-auto justify-start whitespace-normal px-4 py-4"
+        >
+          <Download aria-hidden="true" />
+          <span className="min-w-0 text-left">
+            <span className="block font-semibold">Exportar configurações</span>
+            <span className="block text-sm font-normal text-muted-foreground">
+              Baixa os parâmetros e indicadores exibidos em JSON.
+            </span>
           </span>
-        </span>
-      </Button>
+        </Button>
+      </div>
+      <p role="status" className="text-sm text-muted-foreground">
+        {feedback}
+      </p>
     </div>
   );
 }

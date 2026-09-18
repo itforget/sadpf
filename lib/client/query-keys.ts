@@ -7,6 +7,10 @@ export const queryKeys = {
   configuracoes: ['configuracoes'] as const,
   servidor: (id: string) => ['servidor', id] as const,
   servidores: (filters: ServidoresFilters = {}) => ['servidores', filters] as const,
+  servidoresPage: (filters: ServidoresFilters & { page: number }) =>
+    ['servidores', 'page', filters] as const,
+  logsPage: (filters: { page: number; search: string; action: string }) =>
+    ['logs', filters] as const,
   encaminhamentos: ['encaminhamentos'] as const,
   logs: ['logs'] as const,
   documento: (id: string) => ['documento', id] as const,

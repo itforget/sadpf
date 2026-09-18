@@ -1,6 +1,10 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { getFotoServidorById, getServidorById, updateFotoServidor } from '@/lib/server/repositories/servidor';
+import {
+  getFotoServidorById,
+  getServidorById,
+  updateFotoServidor,
+} from '@/lib/server/repositories/servidor';
 import { addLog } from '@/lib/server/repositories/auditoria';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { getStorage } from '@/lib/storage';

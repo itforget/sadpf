@@ -28,10 +28,12 @@ export async function GET(
         ? new URL(`/autenticidade/${documento.tokenAssinatura}`, request.url).toString()
         : undefined,
     });
+    const disposition =
+      request.nextUrl.searchParams.get('download') === '1' ? 'attachment' : 'inline';
     return new NextResponse(Buffer.from(artifact.bytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${artifact.fileName}"`,
+        'Content-Disposition': `${disposition}; filename="${artifact.fileName}"`,
         'Cache-Control': 'private, no-store, max-age=0',
         'X-Content-Type-Options': 'nosniff',
       },

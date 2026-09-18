@@ -1,10 +1,11 @@
+import { AUTH_POLICY } from '@/lib/auth-policy';
 import { z } from 'zod';
 
 export const loginSchema = z.object({
   email: z.email('Informe um e-mail válido'),
   password: z
     .string()
-    .min(12, 'Senha deve ter no mínimo 12 caracteres')
+    .min(AUTH_POLICY.minimumPasswordLength, 'Senha deve ter no mínimo 12 caracteres')
     .optional()
     .or(z.literal('')),
 });
@@ -18,7 +19,9 @@ export const passwordResetRequestSchema = z.object({
 export const passwordResetSchema = z
   .object({
     token: z.string().min(32, 'Link de redefinição inválido.'),
-    password: z.string().min(12, 'Senha deve ter no mínimo 12 caracteres'),
+    password: z
+      .string()
+      .min(AUTH_POLICY.minimumPasswordLength, 'Senha deve ter no mínimo 12 caracteres'),
     confirmPassword: z.string().min(1, 'Repita a nova senha'),
   })
   .refine((data) => data.password === data.confirmPassword, {

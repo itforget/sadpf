@@ -13,7 +13,7 @@ export default async function AutenticidadePage({ params }: PageProps<'/autentic
   } as const;
 
   return (
-    <main className="min-h-screen bg-muted/40 px-4 py-10 sm:px-6">
+    <div className="min-h-full bg-muted/40 px-4 py-10 sm:px-6">
       <section className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-corporate">
         <div className="border-b border-border bg-ssp-blue px-6 py-7 text-white sm:px-10">
           <div className="flex items-center gap-3">
@@ -104,6 +104,6 @@ export default async function AutenticidadePage({ params }: PageProps<'/autentic
           )}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

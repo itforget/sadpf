@@ -1,3 +1,4 @@
+import { AUTH_POLICY } from '@/lib/auth-policy';
 import { createHmac, timingSafeEqual, randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
@@ -30,7 +31,7 @@ function signJWT(data: string): string {
 
 export function generateJWT(
   payload: Record<string, unknown>,
-  expiresInSeconds = 60 * 60 * 8
+  expiresInSeconds = 60 * 60 * AUTH_POLICY.sessionDurationHours
 ): string {
   if (SECRET.length < 32) {
     throw new Error(
@@ -112,9 +113,9 @@ export function setSessionCookie(response: NextResponse, token: string): NextRes
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: AUTH_POLICY.cookieSameSite,
     path: '/',
-    maxAge: 60 * 60 * 8,
+    maxAge: 60 * 60 * AUTH_POLICY.sessionDurationHours,
   });
   return response;
 }
@@ -123,7 +124,7 @@ export function clearSessionCookie(response: NextResponse): NextResponse {
   response.cookies.set(SESSION_COOKIE, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: AUTH_POLICY.cookieSameSite,
     path: '/',
     maxAge: 0,
   });

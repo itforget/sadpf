@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { fetchEncaminhamentos } from '@/lib/client/api';
@@ -34,19 +34,19 @@ export default function EncaminhamentosPage() {
     <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Send size={26} className="text-ssp-blue" /> Gestão de Encaminhamentos Seguros
-          </CardTitle>
+          <h1 className="flex items-center gap-2 text-xl font-bold">
+            <Send size={26} className="text-ssp-blue" /> Solicitações de assinatura
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Controle de links de acesso temporário e auditável gerados para comissões e órgãos de
-            controle.
+            Acompanhe os convites individuais enviados aos titulares para revisão e assinatura dos
+            documentos.
           </p>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="p-12 text-center text-muted-foreground space-y-3">
               <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-sm font-semibold">Carregando encaminhamentos...</p>
+              <p className="text-sm font-semibold">Carregando encaminhamentos…</p>
             </div>
           ) : isError ? (
             <Alert variant="destructive">
@@ -66,7 +66,7 @@ export default function EncaminhamentosPage() {
               <Send size={48} className="mx-auto opacity-40" />
               <p className="font-semibold text-base">Nenhum encaminhamento registrado.</p>
               <p className="text-xs">
-                Os encaminhamentos gerados através das pastas funcionais aparecerão aqui.
+                As solicitações criadas nas páginas dos documentos aparecerão aqui.
               </p>
             </div>
           ) : (
@@ -74,7 +74,7 @@ export default function EncaminhamentosPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Data de Geração</TableHead>
-                  <TableHead>Unidade Destinatária</TableHead>
+                  <TableHead>Destinatário</TableHead>
                   <TableHead>Pasta / Servidor</TableHead>
                   <TableHead>Validade</TableHead>
                   <TableHead>Status</TableHead>
@@ -93,7 +93,7 @@ export default function EncaminhamentosPage() {
                       <Badge
                         variant={enc.status === 'Expirado' ? 'destructive' : 'default'}
                         className={
-                          enc.status !== 'Expirado'
+                          enc.status === 'Assinado'
                             ? 'bg-status-success/15 text-status-success border-status-success/20'
                             : ''
                         }

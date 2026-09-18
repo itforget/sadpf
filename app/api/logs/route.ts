@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLogs, addLog } from '@/lib/server/repositories/auditoria';
+import { getLogs, getLogsPage, addLog } from '@/lib/server/repositories/auditoria';
 import { auditLogSchema } from '@/lib/validations/log';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
+import { parsePage } from '@/lib/pagination';
+import { AcaoAuditoria } from '@/prisma/generated';
 import { getRequestIp } from '@/lib/server/request-ip';
 
 export async function GET(request: NextRequest) {
@@ -14,6 +16,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Acesso restrito a administradores.' }, { status: 403 });
     }
 
+    if (request.nextUrl.searchParams.has('page')) {
+      const action = request.nextUrl.searchParams.get('action');
+      if (action && !Object.values(AcaoAuditoria).includes(action as AcaoAuditoria)) {
+        return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 });
+      }
+      return NextResponse.json(
+        await getLogsPage({
+          page: parsePage(request.nextUrl.searchParams.get('page')),
+          search: request.nextUrl.searchParams.get('search') ?? undefined,
+          action: action ? (action as AcaoAuditoria) : undefined,
+        })
+      );
+    }
     const logs = await getLogs();
     return NextResponse.json(logs);
   } catch (error: unknown) {

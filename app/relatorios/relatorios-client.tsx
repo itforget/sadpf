@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
+import Link from 'next/link';
+import QueryError from '@/app/components/QueryError';
 import ExportButton from '@/app/components/ExportButton';
 import type { RelatoriosSummary } from '@/lib/summary-types';
 import { fetchRelatoriosSummary } from '@/lib/client/api';
@@ -34,7 +36,7 @@ function BarItem({
   subtitle?: string;
   tone?: string;
 }) {
-  const width = total > 0 ? Math.max((value / total) * 100, value > 0 ? 4 : 0) : 0;
+  const width = total > 0 ? (value / total) * 100 : 0;
 
   return (
     <div className="space-y-1.5">
@@ -55,7 +57,12 @@ function BarItem({
 }
 
 export default function RelatoriosClient({ initialData }: { initialData: RelatoriosSummary }) {
-  const { data = initialData } = useQuery({
+  const {
+    data = initialData,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: queryKeys.relatorios,
     queryFn: fetchRelatoriosSummary,
     initialData,
@@ -76,14 +83,15 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         <ExportButton />
       </div>
 
+      {isError && <QueryError onRetry={() => refetch()} pending={isFetching} />}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <div className="bg-card p-6 rounded-2xl border border-border shadow-corporate space-y-3">
           <div className="p-3 bg-ssp-blue/10 text-ssp-blue w-fit rounded-xl">
             <Users size={24} />
           </div>
-          <h3 className="text-sm font-semibold text-muted-foreground">
+          <h2 className="text-sm font-semibold text-muted-foreground">
             Cobertura de Digitalização
-          </h3>
+          </h2>
           <p className="text-3xl font-extrabold text-foreground">{formatPercent(data.cobertura)}</p>
           <p className="text-xs text-status-success font-medium">
             {data.servidoresComPasta} de {data.totalServidores} servidores com pasta digitalizada
@@ -94,9 +102,9 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
           <div className="w-fit rounded-xl bg-ssp-blue/10 p-3 text-ssp-blue">
             <FileText size={24} />
           </div>
-          <h3 className="text-sm font-semibold text-muted-foreground">
+          <h2 className="text-sm font-semibold text-muted-foreground">
             Volume de Documentos em PDF
-          </h3>
+          </h2>
           <p className="text-3xl font-extrabold text-foreground">
             {data.totalDocumentos.toLocaleString('pt-BR')}
           </p>
@@ -109,7 +117,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
           <div className="w-fit rounded-xl bg-status-warning/10 p-3 text-status-warning">
             <Gauge size={24} />
           </div>
-          <h3 className="text-sm font-semibold text-muted-foreground">Média por Servidor</h3>
+          <h2 className="text-sm font-semibold text-muted-foreground">Média por Servidor</h2>
           <p className="text-3xl font-extrabold text-foreground">
             {data.mediaDocsPorServidor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
           </p>
@@ -122,8 +130,10 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
           <div className="w-fit rounded-xl bg-status-success/10 p-3 text-status-success">
             <ShieldCheck size={24} />
           </div>
-          <h3 className="text-sm font-semibold text-muted-foreground">Conformidade LGPD</h3>
-          <p className="text-3xl font-extrabold text-foreground">{formatPercent(data.cobertura)}</p>
+          <h2 className="text-sm font-semibold text-muted-foreground">Servidores ativos</h2>
+          <p className="text-3xl font-extrabold text-foreground">
+            {data.servidoresAtivos.toLocaleString('pt-BR')}
+          </p>
           <p className="text-xs text-status-success font-medium">
             {data.servidoresAtivos} ativos, {data.servidoresInativos} inativos
           </p>
@@ -134,10 +144,10 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         <section className="bg-card rounded-2xl border border-border shadow-corporate p-6 space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+              <h2 className="font-bold text-lg text-foreground flex items-center gap-2">
                 <Layers3 size={20} className="text-ssp-blue" />
                 Distribuição por Categoria
-              </h3>
+              </h2>
               <p className="text-sm text-muted-foreground">
                 Visão da composição documental do acervo.
               </p>
@@ -175,10 +185,10 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         <section className="bg-card rounded-2xl border border-border shadow-corporate p-6 space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+              <h2 className="font-bold text-lg text-foreground flex items-center gap-2">
                 <Building2 size={20} className="text-ssp-blue" />
                 Documentos por Lotação
-              </h3>
+              </h2>
               <p className="text-sm text-muted-foreground">
                 Mostra onde o acervo está mais concentrado.
               </p>
@@ -214,10 +224,10 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
         <section className="bg-card rounded-2xl border border-border shadow-corporate p-6 space-y-5 xl:col-span-2">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+              <h2 className="font-bold text-lg text-foreground flex items-center gap-2">
                 <FileText size={20} className="text-ssp-blue" />
                 Pastas com Maior Volume
-              </h3>
+              </h2>
               <p className="text-sm text-muted-foreground">
                 Ranking das pastas com mais documentos e páginas indexadas.
               </p>
@@ -241,9 +251,12 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-foreground line-clamp-1">
+                      <Link
+                        href={`/servidores/${item.servidor.id}`}
+                        className="block font-semibold text-foreground line-clamp-1 hover:text-ssp-blue"
+                      >
                         {index + 1}. {item.servidor.nome}
-                      </p>
+                      </Link>
                       <p className="text-xs text-muted-foreground font-mono">
                         Mat. {item.servidor.matricula} • {item.servidor.lotacao}
                       </p>
@@ -261,10 +274,9 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
                     <div
                       className="h-full rounded-full bg-ssp-blue"
                       style={{
-                        width: `${Math.max(
-                          (item.quantidade / Math.max(data.topServidores[0].quantidade, 1)) * 100,
-                          4
-                        )}%`,
+                        width: `${
+                          (item.quantidade / Math.max(data.topServidores[0].quantidade, 1)) * 100
+                        }%`,
                       }}
                     />
                   </div>
@@ -280,7 +292,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
           <div className="w-fit rounded-xl bg-ssp-blue/10 p-3 text-ssp-blue">
             <ShieldCheck size={24} />
           </div>
-          <h3 className="text-sm font-semibold text-muted-foreground">Páginas indexadas</h3>
+          <h2 className="text-sm font-semibold text-muted-foreground">Páginas indexadas</h2>
           <p className="text-3xl font-extrabold text-foreground">
             {data.totalPaginas.toLocaleString('pt-BR')}
           </p>
@@ -295,7 +307,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
           <div className="w-fit rounded-xl bg-status-warning/10 p-3 text-status-warning">
             <FolderOpen size={24} />
           </div>
-          <h3 className="text-sm font-semibold text-muted-foreground">Pastas sem acervo</h3>
+          <h2 className="text-sm font-semibold text-muted-foreground">Pastas sem acervo</h2>
           <p className="text-3xl font-extrabold text-foreground">
             {data.totalServidoresSemPasta.toLocaleString('pt-BR')}
           </p>
@@ -306,7 +318,7 @@ export default function RelatoriosClient({ initialData }: { initialData: Relator
           <div className="w-fit rounded-xl bg-status-success/10 p-3 text-status-success">
             <Users size={24} />
           </div>
-          <h3 className="text-sm font-semibold text-muted-foreground">Servidores ativos</h3>
+          <h2 className="text-sm font-semibold text-muted-foreground">Servidores ativos</h2>
           <p className="text-3xl font-extrabold text-foreground">
             {data.servidoresAtivos.toLocaleString('pt-BR')}
           </p>

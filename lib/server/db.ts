@@ -8,6 +8,7 @@ import type {
 } from '@/prisma/generated';
 import type { Servidor, DocumentoPDF, LogAuditoria, NovoDocumentoPDF } from '../types';
 import { formatarCpf } from '@/lib/cpf';
+import { PAGE_SIZE } from '@/lib/pagination';
 
 const SERVIDOR_SELECT = {
   id: true,
@@ -44,11 +45,13 @@ export interface EncaminhamentoCriado extends EncaminhamentoResumo {
   token: string;
 }
 
-export async function getServidores(filter?: {
+type ServidorFilter = {
   status?: StatusServidor | 'Todos';
   search?: string;
   role?: Servidor['role'];
-}): Promise<Servidor[]> {
+};
+
+function servidorWhere(filter?: ServidorFilter) {
   const where: Prisma.ServidorWhereInput = {};
 
   if (filter?.status && filter.status !== 'Todos') {
@@ -67,10 +70,17 @@ export async function getServidores(filter?: {
       { matriculaCargoEfetivo: { contains: q, mode: 'insensitive' } },
       { cpf: { contains: q, mode: 'insensitive' } },
       { cargoEfetivo: { contains: q, mode: 'insensitive' } },
+      { cargoOcupado: { contains: q, mode: 'insensitive' } },
+      { email: { contains: q, mode: 'insensitive' } },
       { lotacao: { contains: q, mode: 'insensitive' } },
     ];
   }
 
+  return where;
+}
+
+export async function getServidores(filter?: ServidorFilter): Promise<Servidor[]> {
+  const where = servidorWhere(filter);
   const list = await prisma.servidor.findMany({
     where,
     orderBy: { createdAt: 'desc' },
@@ -84,6 +94,38 @@ export async function getServidores(filter?: {
     status: s.status as Servidor['status'],
     role: s.role as Servidor['role'],
   }));
+}
+
+export async function getServidoresPage(filter: ServidorFilter, requestedPage: number) {
+  const where = servidorWhere(filter);
+  const [total, all, admin, operador, pasta] = await Promise.all([
+    prisma.servidor.count({ where }),
+    prisma.servidor.count(),
+    prisma.servidor.count({ where: { role: 'ADMIN' } }),
+    prisma.servidor.count({ where: { role: 'OPERADOR' } }),
+    prisma.servidor.count({ where: { role: 'PASTA' } }),
+  ]);
+  const page = Math.min(requestedPage, Math.max(1, Math.ceil(total / PAGE_SIZE)));
+  const rows = await prisma.servidor.findMany({
+    where,
+    select: SERVIDOR_SELECT,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
+  return {
+    items: rows.map((s) => ({
+      ...s,
+      cpf: formatarCpf(s.cpf),
+      fotoUrl: s.fotoStorageKey ? `/api/servidores/${s.id}/foto` : s.fotoUrl ?? '',
+      status: s.status as Servidor['status'],
+      role: s.role as Servidor['role'],
+    })),
+    total,
+    page,
+    pageSize: PAGE_SIZE,
+    counts: { total: all, admin, operador, pasta },
+  };
 }
 
 export async function getServidorById(id: string): Promise<Servidor | null> {

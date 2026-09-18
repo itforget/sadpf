@@ -72,7 +72,13 @@ export default function EditarDocumentoModal({
   };
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={true}
+      disablePointerDismissal={salvando}
+      onOpenChange={(open) => {
+        if (!open && !salvando) onClose();
+      }}
+    >
       <DialogContent className="max-w-md" showCloseButton={!salvando}>
         <DialogHeader>
           <DialogTitle>Editar documento</DialogTitle>
@@ -81,50 +87,60 @@ export default function EditarDocumentoModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={salvar} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="tituloDocumento">Título</Label>
-            <Input
-              id="tituloDocumento"
-              value={titulo}
-              onChange={(event) => setTitulo(event.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="categoriaDocumento">Categoria</Label>
-            <Select
-              value={categoria}
-              onValueChange={(value) => setCategoria(value as DocumentoPDF['categoria'])}
-            >
-              <SelectTrigger id="categoriaDocumento" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categorias.map((opcao) => (
-                  <SelectItem key={opcao} value={opcao}>
-                    {opcao}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="processoSEI">Processo SEI</Label>
-            <Input
-              id="processoSEI"
-              value={processoSEI}
-              onChange={(event) => setProcessoSEI(event.target.value)}
-            />
-          </div>
-          {erro && <p className="text-sm text-status-danger">{erro}</p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={salvando}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={salvando} className="bg-ssp-blue hover:bg-ssp-blueDark">
-              {salvando ? 'Salvando...' : 'Salvar alterações'}
-            </Button>
-          </DialogFooter>
+          <fieldset disabled={salvando} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tituloDocumento">Título</Label>
+              <Input
+                id="tituloDocumento"
+                value={titulo}
+                onChange={(event) => setTitulo(event.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="categoriaDocumento">Categoria</Label>
+              <Select
+                value={categoria}
+                onValueChange={(value) => setCategoria(value as DocumentoPDF['categoria'])}
+              >
+                <SelectTrigger id="categoriaDocumento" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categorias.map((opcao) => (
+                    <SelectItem key={opcao} value={opcao}>
+                      {opcao}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="processoSEI">Processo SEI</Label>
+              <Input
+                id="processoSEI"
+                value={processoSEI}
+                onChange={(event) => setProcessoSEI(event.target.value)}
+              />
+            </div>
+            {erro && (
+              <p role="alert" className="text-sm text-status-danger">
+                {erro}
+              </p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={salvando}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={salvando}
+                className="bg-ssp-blue hover:bg-ssp-blueDark"
+              >
+                {salvando ? 'Salvando…' : 'Salvar alterações'}
+              </Button>
+            </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>

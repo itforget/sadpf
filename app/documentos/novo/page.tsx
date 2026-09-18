@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UploadCloud, FileText, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { documentoSchema, type DocumentoFormData } from '@/lib/validations/documento';
 import { fetchJson, fetchServidorProfile, fetchServidores } from '@/lib/client/api';
+import QueryError from '@/app/components/QueryError';
 import { queryKeys } from '@/lib/client/query-keys';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 import { uploadSupabaseSignedFile } from '@/lib/storage/supabase-browser';
@@ -55,19 +56,24 @@ function NovoDocumentoForm() {
   });
 
   const servidorId = useWatch({ control, name: 'servidorId' });
-  const categoria = useWatch({ control, name: 'categoria' });
 
-  const { data: servidores = [] } = useQuery({
+  const servidoresQuery = useQuery({
     queryKey: queryKeys.servidores(),
     queryFn: () => fetchServidores(),
+    enabled: !defaultServidorId,
   });
 
-  const { data: servidorDaPasta } = useQuery({
+  const pastaQuery = useQuery({
     queryKey: queryKeys.servidor(defaultServidorId),
     queryFn: () => fetchServidorProfile(defaultServidorId),
     enabled: Boolean(defaultServidorId),
   });
 
+  const servidores = servidoresQuery.data ?? [];
+  const servidorDaPasta = pastaQuery.data;
+  const destinationQuery = defaultServidorId ? pastaQuery : servidoresQuery;
+  const destinationPending = destinationQuery.isLoading;
+  const destinationError = destinationQuery.isError;
   const servidorSelecionado =
     servidorDaPasta?.servidor ?? servidores.find((servidor) => servidor.id === defaultServidorId);
   const servidoresDisponiveis = defaultServidorId
@@ -75,17 +81,6 @@ function NovoDocumentoForm() {
       ? [servidorSelecionado]
       : []
     : servidores;
-
-  useEffect(() => {
-    if (defaultServidorId) {
-      setValue('servidorId', defaultServidorId);
-      return;
-    }
-
-    if (!servidorId && servidores.length > 0) {
-      setValue('servidorId', servidores[0].id);
-    }
-  }, [defaultServidorId, servidorId, servidores, setValue]);
 
   const uploadMutation = useMutation({
     mutationFn: async (data: DocumentoFormData) => {
@@ -131,6 +126,7 @@ function NovoDocumentoForm() {
   });
 
   const onSubmit = async (data: DocumentoFormData) => {
+    if (loading || successMsg || destinationPending || destinationError) return;
     setLoading(true);
     setUploadProgress(0);
     setSuccessMsg('');
@@ -146,7 +142,6 @@ function NovoDocumentoForm() {
       console.error('Erro durante o envio do arquivo:', err);
       const msg = err instanceof Error ? err.message : 'Erro ao enviar arquivo.';
       setErrorMsg(msg);
-      setValue('file', undefined as unknown as File);
     } finally {
       setLoading(false);
       setUploadProgress(null);
@@ -157,7 +152,7 @@ function NovoDocumentoForm() {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setValue('file', file);
+      setValue('file', file, { shouldValidate: true });
     }
   };
 
@@ -167,6 +162,7 @@ function NovoDocumentoForm() {
         <Link
           href={servidorId ? `/servidores/${servidorId}` : '/servidores'}
           title="Voltar"
+          aria-label="Voltar à pasta do servidor"
           className={buttonVariants({ variant: 'ghost', size: 'icon' })}
         >
           <ArrowLeft size={20} />
@@ -176,7 +172,8 @@ function NovoDocumentoForm() {
             Anexar Documento PDF na Pasta Digital
           </h1>
           <p className="text-sm text-muted-foreground">
-            Apenas arquivos PDF são aceitos. A pesquisa textual fica disponível na pasta funcional.
+            Apenas arquivos PDF são aceitos. Para pesquisar o conteúdo, o PDF precisa conter texto
+            selecionável; digitalizações de imagem precisam de OCR.
           </p>
         </div>
       </div>
@@ -194,162 +191,231 @@ function NovoDocumentoForm() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Card>
-          <CardContent className="p-6 sm:p-8 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="servidorId">
-                Servidor / Pasta Funcional Destino <span className="text-destructive">*</span>
-              </Label>
-              {defaultServidorId ? (
-                <>
-                  <input type="hidden" {...register('servidorId')} />
-                  <div className="flex min-h-8 items-center rounded-lg border border-input bg-muted/40 px-3 py-2 text-sm text-foreground">
-                    {servidorSelecionado
-                      ? `${servidorSelecionado.nome} (Matrícula: ${servidorSelecionado.matricula}) - ${servidorSelecionado.cargoEfetivo}`
-                      : 'Carregando servidor...'}
-                  </div>
-                </>
-              ) : (
-                <Select
-                  value={servidorId}
-                  onValueChange={(value) => {
-                    if (value) setValue('servidorId', value);
-                  }}
-                >
-                  <SelectTrigger className={errors.servidorId ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Selecione um servidor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servidoresDisponiveis.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.nome} (Matrícula: {s.matricula}) - {s.cargoEfetivo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {errors.servidorId && (
-                <p className="text-sm text-destructive">{errors.servidorId.message}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {destinationError && (
+        <QueryError
+          message="Não foi possível carregar a pasta de destino. Tente novamente."
+          onRetry={() => destinationQuery.refetch()}
+          pending={destinationQuery.isFetching}
+        />
+      )}
+      <form onSubmit={handleSubmit(onSubmit)} aria-busy={loading}>
+        <fieldset disabled={loading || !!successMsg}>
+          <Card>
+            <CardContent className="p-6 sm:p-8 space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="titulo">Título do Documento</Label>
-                <Input
-                  id="titulo"
-                  {...register('titulo')}
-                  placeholder="Ex.: Portaria_Nomeacao_2026.pdf"
-                  className={errors.titulo ? 'border-destructive' : ''}
-                />
-                {errors.titulo && (
-                  <p className="text-sm text-destructive">{errors.titulo.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="categoria">
-                  Categoria Documental <span className="text-destructive">*</span>
+                <Label htmlFor="servidorId">
+                  Servidor / Pasta Funcional Destino <span className="text-destructive">*</span>
                 </Label>
-                <Select
-                  value={categoria}
-                  onValueChange={(value) => {
-                    if (value) setValue('categoria', value as DocumentoFormData['categoria']);
-                  }}
-                >
-                  <SelectTrigger className={errors.categoria ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIAS_DOCUMENTO.map((categoria) => (
-                      <SelectItem key={categoria} value={categoria}>
-                        {categoria}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="processoSEI">Número do Processo SEI-DF (Opcional)</Label>
-              <Input
-                id="processoSEI"
-                {...register('processoSEI')}
-                placeholder="Ex.: 00050-0001234/2026-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="file">
-                Arquivo Digital (Apenas PDF) <span className="text-destructive">*</span>
-              </Label>
-              <div className="border-2 border-dashed border-border hover:border-ssp-blue/50 transition-colors rounded-xl p-6 text-center bg-muted/20 flex flex-col items-center justify-center cursor-pointer relative">
-                <Input
-                  id="file"
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
-                <UploadCloud size={40} className="text-ssp-blue mb-2" />
-                {selectedFile ? (
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground bg-card px-3 py-1.5 rounded-md border border-border shadow-sm">
-                    <FileText size={18} className="text-ssp-blue" />
-                    <span>{selectedFile.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Clique ou arraste um arquivo PDF para anexar
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">Tamanho máximo: 50 MB.</p>
-                  </div>
-                )}
-              </div>
-              {errors.file && <p className="text-sm text-destructive">{errors.file.message}</p>}
-            </div>
-
-            <div className="p-4 bg-muted/40 rounded-lg border border-border text-xs text-muted-foreground space-y-1">
-              <p className="font-semibold text-foreground">
-                Aviso de Governança do Setor de Gestão de Pessoas:
-              </p>
-              <p>
-                Ao realizar o envio deste documento, sua ação será registrada no log auditável
-                (LGPD) com a matrícula do operador do RH.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Link
-                href={servidorId ? `/servidores/${servidorId}` : '/servidores'}
-                className={buttonVariants({ variant: 'outline' })}
-              >
-                Cancelar
-              </Link>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-ssp-blue hover:bg-ssp-blueDark"
-              >
-                {loading ? (
+                {defaultServidorId ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                    {uploadProgress === null || uploadProgress === 100
-                      ? 'Processando documento...'
-                      : `Enviando arquivo: ${uploadProgress}%`}
+                    <input type="hidden" {...register('servidorId')} />
+                    <div className="flex min-h-8 items-center rounded-lg border border-input bg-muted/40 px-3 py-2 text-sm text-foreground">
+                      {servidorSelecionado
+                        ? `${servidorSelecionado.nome} (Matrícula: ${servidorSelecionado.matricula}) - ${servidorSelecionado.cargoEfetivo}`
+                        : destinationError
+                        ? 'Pasta indisponível. Tente novamente.'
+                        : 'Carregando servidor…'}
+                    </div>
                   </>
                 ) : (
-                  'Confirmar Inserção em PDF'
+                  <Controller
+                    control={control}
+                    name="servidorId"
+                    render={({ field }) => (
+                      <Select name={field.name} value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger
+                          aria-invalid={!!errors.servidorId}
+                          aria-describedby={errors.servidorId ? 'servidorId-error' : undefined}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          id="servidorId"
+                          className={errors.servidorId ? 'border-destructive' : ''}
+                        >
+                          <SelectValue placeholder="Selecione um servidor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {servidoresDisponiveis.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.nome} (Matrícula: {s.matricula}) - {s.cargoEfetivo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                {errors.servidorId && (
+                  <p id="servidorId-error" role="alert" className="text-sm text-destructive">
+                    {errors.servidorId.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="titulo">Título do Documento</Label>
+                  <Input
+                    id="titulo"
+                    {...register('titulo')}
+                    placeholder="Ex.: Portaria_Nomeacao_2026.pdf"
+                    className={errors.titulo ? 'border-destructive' : ''}
+                    aria-invalid={!!errors.titulo}
+                    aria-describedby={errors.titulo ? 'titulo-error' : undefined}
+                  />
+                  {errors.titulo && (
+                    <p id="titulo-error" role="alert" className="text-sm text-destructive">
+                      {errors.titulo.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="categoria">
+                    Categoria Documental <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    control={control}
+                    name="categoria"
+                    render={({ field }) => (
+                      <Select name={field.name} value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger
+                          aria-invalid={!!errors.categoria}
+                          aria-describedby={errors.categoria ? 'categoria-error' : undefined}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          id="categoria"
+                          className={errors.categoria ? 'border-destructive' : ''}
+                        >
+                          <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIAS_DOCUMENTO.map((categoria) => (
+                            <SelectItem key={categoria} value={categoria}>
+                              {categoria}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.categoria && (
+                    <p id="categoria-error" role="alert" className="text-sm text-destructive">
+                      {errors.categoria.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="processoSEI">Número do Processo SEI-DF (Opcional)</Label>
+                <Input
+                  id="processoSEI"
+                  {...register('processoSEI')}
+                  placeholder="Ex.: 00050-0001234/2026-11"
+                  aria-invalid={!!errors.processoSEI}
+                  aria-describedby={errors.processoSEI ? 'processoSEI-error' : undefined}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="file">
+                  Arquivo Digital (Apenas PDF) <span className="text-destructive">*</span>
+                </Label>
+                <div
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    if (loading || successMsg) return;
+                    const file = event.dataTransfer.files[0];
+                    if (file) {
+                      setSelectedFile(file);
+                      setValue('file', file, { shouldValidate: true });
+                    }
+                  }}
+                  className="border-2 border-dashed border-border hover:border-ssp-blue/50 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring rounded-xl p-6 text-center bg-muted/20 flex flex-col items-center justify-center cursor-pointer relative"
+                >
+                  <Input
+                    id="file"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    aria-invalid={!!errors.file}
+                    aria-describedby={errors.file ? 'file-error' : undefined}
+                    onChange={handleFileChange}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                  <UploadCloud size={40} className="text-ssp-blue mb-2" />
+                  {selectedFile ? (
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground bg-card px-3 py-1.5 rounded-md border border-border shadow-sm">
+                      <FileText size={18} className="text-ssp-blue" />
+                      <span className="min-w-0 break-all">{selectedFile.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        (
+                        {(selectedFile.size / 1024 / 1024).toLocaleString('pt-BR', {
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        MB)
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Clique ou arraste um arquivo PDF para anexar
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Tamanho máximo: 50 MB.</p>
+                    </div>
+                  )}
+                </div>
+                {errors.file && (
+                  <p id="file-error" role="alert" className="text-sm text-destructive">
+                    {errors.file.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="p-4 bg-muted/40 rounded-lg border border-border text-xs text-muted-foreground space-y-1">
+                <p className="font-semibold text-foreground">
+                  Aviso de Governança do Setor de Gestão de Pessoas:
+                </p>
+                <p>
+                  Ao realizar o envio deste documento, sua ação será registrada no log auditável
+                  (LGPD) com a matrícula do operador do RH.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Link
+                  href={servidorId ? `/servidores/${servidorId}` : '/servidores'}
+                  aria-disabled={loading || !!successMsg}
+                  tabIndex={loading || successMsg ? -1 : undefined}
+                  onClick={(event) => {
+                    if (loading || successMsg) event.preventDefault();
+                  }}
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  Cancelar
+                </Link>
+                <Button
+                  type="submit"
+                  disabled={loading || !!successMsg || destinationPending || destinationError}
+                  className="bg-ssp-blue hover:bg-ssp-blueDark"
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                      {uploadProgress === null || uploadProgress === 100
+                        ? 'Processando documento…'
+                        : `Enviando arquivo: ${uploadProgress}%`}
+                    </>
+                  ) : successMsg ? (
+                    'Documento anexado'
+                  ) : (
+                    'Anexar documento'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </fieldset>
       </form>
     </div>
   );
@@ -360,7 +426,7 @@ export default function NovoDocumentoPage() {
     <div className="max-w-3xl mx-auto py-6 px-4 animate-in fade-in duration-300">
       <Suspense
         fallback={
-          <div className="p-8 text-center text-muted-foreground">Carregando formulário...</div>
+          <div className="p-8 text-center text-muted-foreground">Carregando formulário…</div>
         }
       >
         <NovoDocumentoForm />

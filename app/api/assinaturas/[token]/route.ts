@@ -24,5 +24,8 @@ export async function POST(
     indisponivel: 'Esta solicitação já foi processada.',
     cpf_invalido: 'O CPF informado não corresponde ao servidor destinatário.',
   };
-  return NextResponse.json({ error: messages[result.status] }, { status: 400 });
+  return NextResponse.json(
+    { error: messages[result.status] },
+    { status: result.status === 'expirado' ? 410 : 400 }
+  );
 }

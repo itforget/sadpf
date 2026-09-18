@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -24,6 +25,7 @@ export default function LoginPage() {
     handleSubmit,
     getValues,
     trigger,
+    setFocus,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -66,6 +68,7 @@ export default function LoginPage() {
 
       if (result?.passwordRequired) {
         setPasswordRequired(true);
+        requestAnimationFrame(() => setFocus('password'));
         return;
       }
 
@@ -97,7 +100,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex min-h-screen bg-background">
+    <div className="flex min-h-full flex-col bg-background lg:flex-row">
       <div className="hidden lg:flex lg:w-1/2 bg-ssp-blueDark flex-col justify-center items-center p-12 text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
         <Image
@@ -107,19 +110,19 @@ export default function LoginPage() {
           height={120}
           className="mb-6 h-auto w-auto"
         />
-        <h1 className="text-4xl font-bold mb-4 z-10 tracking-tight">SADPF</h1>
+        <p className="text-4xl font-bold mb-4 z-10 tracking-tight">SADPF</p>
         <p className="z-10 max-w-md text-center text-xl font-light leading-relaxed text-white/80">
           Sistema de Arquivo Digital de Pastas Funcionais da Secretaria de Estado de Segurança
           Pública do Distrito Federal - SSP DF
         </p>
       </div>
 
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 bg-card shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.1)] z-10">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-4 py-8 sm:p-8 bg-card shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.1)] z-10">
         <div className="w-full max-w-sm">
           <div className="mb-10 text-center lg:text-left">
-            <h2 className="text-3xl font-bold text-foreground tracking-tight mb-2">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
               Acesso Restrito
-            </h2>
+            </h1>
             <p className="text-muted-foreground text-sm">
               Insira suas credenciais corporativas GDF.
             </p>
@@ -131,12 +134,19 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
+                spellCheck={false}
                 {...register('email')}
                 autoComplete="email"
                 placeholder="nome@ssp.df.gov.br"
                 className={errors.email ? 'border-destructive' : ''}
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'email-error' : undefined}
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              {errors.email && (
+                <p id="email-error" role="alert" className="text-sm text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             {passwordRequired && (
@@ -149,6 +159,8 @@ export default function LoginPage() {
                     {...register('password')}
                     autoComplete="current-password"
                     className={`pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? 'password-error' : undefined}
                   />
                   <Button
                     type="button"
@@ -162,13 +174,23 @@ export default function LoginPage() {
                   </Button>
                 </div>
                 {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                  <p id="password-error" role="alert" className="text-sm text-destructive">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
             )}
 
-            {error && <p className="text-sm text-status-danger">{error}</p>}
-            {notice && <p className="text-sm text-status-success">{notice}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-status-danger">
+                {error}
+              </p>
+            )}
+            {notice && (
+              <p role="status" className="text-sm text-status-success">
+                {notice}
+              </p>
+            )}
 
             <p className="text-xs text-muted-foreground">
               Informe seu e-mail para continuar. No primeiro acesso, enviaremos um link para você
@@ -181,7 +203,7 @@ export default function LoginPage() {
               className="w-full bg-ssp-blue hover:bg-ssp-blueDark mt-4"
             >
               {loginMutation.isPending
-                ? 'Verificando...'
+                ? 'Verificando…'
                 : passwordRequired
                 ? 'Entrar no Sistema'
                 : 'Continuar'}
@@ -194,21 +216,27 @@ export default function LoginPage() {
               disabled={resetRequestMutation.isPending}
               onClick={requestPasswordReset}
             >
-              {resetRequestMutation.isPending ? 'Enviando link...' : 'Redefinir senha'}
+              {resetRequestMutation.isPending ? 'Enviando link…' : 'Redefinir senha'}
             </Button>
           </form>
 
           <div className="mt-8 p-4 bg-muted border border-border rounded-lg">
-            <p className="text-[11px] text-muted-foreground leading-relaxed text-justify">
+            <p className="text-xs text-muted-foreground leading-relaxed text-left">
               <strong className="text-foreground">Aviso de Privacidade (LGPD):</strong> O acesso é
-              restrito a servidores autorizados. Todas as ações (visualização, download, pesquisa)
-              são registradas (logs inalteráveis) para auditoria. Ao autenticar, você concorda em
-              manter o sigilo das informações processados nos termos da Lei nº 13.709/2018.
+              restrito a servidores autorizados. O sistema utiliza dados funcionais e registra
+              eventos para auditoria. Mantenha o sigilo das informações acessadas e consulte o aviso
+              de privacidade para conhecer as informações disponíveis sobre esse uso.
             </p>
+            <Link
+              href="/privacidade"
+              className="mt-3 inline-block text-sm font-medium text-ssp-blue hover:underline"
+            >
+              Consultar aviso de privacidade
+            </Link>
           </div>
         </div>
 
-        <div className="absolute bottom-6 right-8 text-xs font-medium text-muted-foreground">
+        <div className="mt-6 text-xs font-medium text-muted-foreground">
           SADPF {new Date().getFullYear()}
         </div>
       </div>

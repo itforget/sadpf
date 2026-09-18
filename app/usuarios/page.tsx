@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { UserCog, Search, Pencil, Power, Trash2, Users, KeyRound } from 'lucide-react';
 import type { Servidor } from '@/lib/types';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { fetchJson, fetchServidores } from '@/lib/client/api';
+import { fetchJson, fetchServidoresPage, type ServidoresFilters } from '@/lib/client/api';
+import Pagination from '@/app/components/Pagination';
+import { parsePage } from '@/lib/pagination';
+import { useUrlFilters } from '@/lib/client/use-url-filters';
+import { useDebouncedValue } from '@/lib/client/use-debounced-value';
 import { queryKeys, summaryQueryKeys } from '@/lib/client/query-keys';
 
 import { usuarioOperacionalSchema, type UsuarioOperacionalData } from '@/lib/validations/servidor';
@@ -56,8 +60,16 @@ const ROLE_BADGE: Record<Servidor['role'], string> = {
 const ROLE_FILTERS = ['Todos', 'ADMIN', 'OPERADOR', 'PASTA'] as const;
 
 export default function UsuariosPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('Todos');
+  const { params, updateFilters } = useUrlFilters();
+  const searchQuery = params.get('search') ?? '';
+  const rawRole = params.get('role');
+  const roleFilter =
+    rawRole === 'ADMIN' || rawRole === 'OPERADOR' || rawRole === 'PASTA' ? rawRole : 'Todos';
+  const filters: ServidoresFilters & { page: number } = {
+    search: useDebouncedValue(searchQuery),
+    role: roleFilter === 'Todos' ? undefined : roleFilter,
+    page: parsePage(params.get('page')),
+  };
   const [editingUser, setEditingUser] = useState<Servidor | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(
@@ -69,18 +81,18 @@ export default function UsuariosPage() {
     resolver: zodResolver(usuarioOperacionalSchema),
   });
 
-  const editStatus = useWatch({ control: editForm.control, name: 'status' });
-  const editRole = useWatch({ control: editForm.control, name: 'role' });
-
   const {
-    data: usuarios = [],
+    data: result,
+    isFetching,
+    isPlaceholderData,
     isLoading,
     isError,
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.servidores(),
-    queryFn: () => fetchServidores(),
+    queryKey: queryKeys.servidoresPage(filters),
+    queryFn: () => fetchServidoresPage(filters),
+    placeholderData: keepPreviousData,
   });
 
   const invalidateUsuarios = async () => {
@@ -124,27 +136,8 @@ export default function UsuariosPage() {
     },
   });
 
-  const filteredUsuarios = useMemo(() => {
-    return usuarios.filter((user) => {
-      const fitsRole = roleFilter === 'Todos' || user.role === roleFilter;
-      const matchesText =
-        !searchQuery ||
-        user.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.matricula.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase());
-      return fitsRole && matchesText;
-    });
-  }, [usuarios, roleFilter, searchQuery]);
-
-  const counts = useMemo(
-    () => ({
-      total: usuarios.length,
-      admin: usuarios.filter((u) => u.role === 'ADMIN').length,
-      operador: usuarios.filter((u) => u.role === 'OPERADOR').length,
-      pasta: usuarios.filter((u) => u.role === 'PASTA').length,
-    }),
-    [usuarios]
-  );
+  const filteredUsuarios = result?.items ?? [];
+  const counts = result?.counts ?? { total: 0, admin: 0, operador: 0, pasta: 0 };
 
   const showFeedback = (kind: 'success' | 'error', message: string) => {
     setFeedback({ kind, message });
@@ -169,7 +162,7 @@ export default function UsuariosPage() {
   };
 
   const onSubmitEdit = async (data: UsuarioOperacionalData) => {
-    if (!editingUser) return;
+    if (!editingUser || editMutation.isPending) return;
     try {
       await editMutation.mutateAsync(data);
       showFeedback('success', `Acesso de ${editingUser.nome} atualizado com sucesso.`);
@@ -184,6 +177,13 @@ export default function UsuariosPage() {
 
   const toggleStatus = async (user: Servidor) => {
     const nextStatus = user.status === 'Ativo' ? 'Inativo' : 'Ativo';
+    if (
+      nextStatus === 'Inativo' &&
+      !window.confirm(
+        `Desativar o acesso de ${user.nome}? O usuário não poderá acessar o sistema enquanto estiver inativo.`
+      )
+    )
+      return;
     setBusyId(user.id);
     try {
       await toggleMutation.mutateAsync({ user, nextStatus });
@@ -235,52 +235,54 @@ export default function UsuariosPage() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Total de usuários
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-foreground">{counts.total}</p>
-            <p className="text-xs text-muted-foreground mt-2">Contas cadastradas no sistema.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Administradores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-ssp-blue">{counts.admin}</p>
-            <p className="text-xs text-muted-foreground mt-2">Acesso total a todos os módulos.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Operadores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-status-warning">{counts.operador}</p>
-            <p className="text-xs text-muted-foreground mt-2">Acesso operacional, sem gestão.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Pastas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-muted-foreground">{counts.pasta}</p>
-            <p className="text-xs text-muted-foreground mt-2">Registros sem acesso ao painel.</p>
-          </CardContent>
-        </Card>
-      </div>
+      {!isLoading && !isError && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Total de usuários
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-foreground">{counts.total}</p>
+              <p className="text-xs text-muted-foreground mt-2">Contas cadastradas no sistema.</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Administradores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-ssp-blue">{counts.admin}</p>
+              <p className="text-xs text-muted-foreground mt-2">Acesso total a todos os módulos.</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Operadores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-status-warning">{counts.operador}</p>
+              <p className="text-xs text-muted-foreground mt-2">Acesso operacional, sem gestão.</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Pastas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-muted-foreground">{counts.pasta}</p>
+              <p className="text-xs text-muted-foreground mt-2">Registros sem acesso ao painel.</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-4">
@@ -292,9 +294,11 @@ export default function UsuariosPage() {
               />
               <Input
                 type="search"
+                aria-label="Buscar usuários por nome, matrícula ou e-mail"
+                name="search"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nome, matrícula ou email..."
+                onChange={(e) => updateFilters({ search: e.target.value, page: null })}
+                placeholder="Buscar por nome, matrícula ou email…"
                 className="pl-10"
               />
             </div>
@@ -304,7 +308,10 @@ export default function UsuariosPage() {
                   key={option}
                   variant={roleFilter === option ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setRoleFilter(option)}
+                  aria-pressed={roleFilter === option}
+                  onClick={() =>
+                    updateFilters({ role: option === 'Todos' ? null : option, page: null }, true)
+                  }
                   className={roleFilter === option ? 'bg-ssp-blue hover:bg-ssp-blueDark' : ''}
                 >
                   {option === 'Todos' ? 'Todos' : ROLE_LABELS[option]}
@@ -331,7 +338,7 @@ export default function UsuariosPage() {
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="p-8 text-center text-muted-foreground">
-                    Carregando usuários...
+                    Carregando usuários…
                   </TableCell>
                 </TableRow>
               ) : isError ? (
@@ -402,7 +409,7 @@ export default function UsuariosPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={busyId === user.id}
+                          disabled={busyId !== null}
                           onClick={() => toggleStatus(user)}
                           title={user.status === 'Ativo' ? 'Desativar acesso' : 'Reativar acesso'}
                           aria-label={`${user.status === 'Ativo' ? 'Desativar' : 'Reativar'} ${
@@ -419,7 +426,7 @@ export default function UsuariosPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={busyId === user.id}
+                          disabled={busyId !== null}
                           onClick={() => deleteUser(user)}
                           title="Excluir usuário"
                           aria-label={`Excluir ${user.nome}`}
@@ -446,8 +453,23 @@ export default function UsuariosPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={Boolean(editingUser)} onOpenChange={handleCloseEdit}>
-        <DialogContent className="max-w-2xl">
+      {result && !isError && (
+        <Pagination
+          page={result.page}
+          pageSize={result.pageSize}
+          total={result.total}
+          pending={isFetching || isPlaceholderData}
+          onPageChange={(page) => updateFilters({ page: String(page) }, true)}
+        />
+      )}
+      <Dialog
+        open={Boolean(editingUser)}
+        disablePointerDismissal={editMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open && !editMutation.isPending) handleCloseEdit();
+        }}
+      >
+        <DialogContent className="max-w-2xl" showCloseButton={!editMutation.isPending}>
           <DialogHeader>
             <div className="flex items-center gap-3">
               <UserCog size={24} className="text-ssp-blue" />
@@ -462,88 +484,150 @@ export default function UsuariosPage() {
           </DialogHeader>
 
           <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Perfil de acesso</Label>
-                <Select
-                  value={editRole}
-                  onValueChange={(value) => {
-                    if (value) editForm.setValue('role', value as Servidor['role']);
-                  }}
+            <fieldset disabled={editMutation.isPending} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Perfil de acesso</Label>
+                  <Controller
+                    control={editForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <Select name={field.name} value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger
+                          aria-invalid={!!editForm.formState.errors.role}
+                          aria-describedby={
+                            editForm.formState.errors.role ? 'edit-role-error' : undefined
+                          }
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          id="edit-role"
+                          className="w-full"
+                        >
+                          <SelectValue placeholder="Selecione o perfil" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ADMIN">Administrador</SelectItem>
+                          <SelectItem value="OPERADOR">Operador</SelectItem>
+                          <SelectItem value="PASTA">Pasta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {editForm.formState.errors.role && (
+                    <p id="edit-role-error" role="alert" className="text-sm text-destructive">
+                      {editForm.formState.errors.role.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Controller
+                    control={editForm.control}
+                    name="status"
+                    render={({ field }) => (
+                      <Select name={field.name} value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger
+                          aria-invalid={!!editForm.formState.errors.status}
+                          aria-describedby={
+                            editForm.formState.errors.status ? 'edit-status-error' : undefined
+                          }
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          id="edit-status"
+                          className="w-full"
+                        >
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Ativo">Ativo</SelectItem>
+                          <SelectItem value="Inativo">Inativo</SelectItem>
+                          <SelectItem value="Aposentado">Aposentado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {editForm.formState.errors.status && (
+                    <p id="edit-status-error" role="alert" className="text-sm text-destructive">
+                      {editForm.formState.errors.status.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="edit-senha" className="flex items-center gap-2">
+                    <KeyRound size={14} /> Nova senha (opcional)
+                  </Label>
+                  <Input
+                    id="edit-senha"
+                    type="password"
+                    placeholder="Deixe em branco para manter a senha atual"
+                    {...editForm.register('senha')}
+                    className={editForm.formState.errors.senha ? 'border-destructive' : ''}
+                    aria-invalid={!!editForm.formState.errors.senha}
+                    aria-describedby={
+                      editForm.formState.errors.senha ? 'edit-senha-error' : undefined
+                    }
+                    autoComplete="new-password"
+                  />
+                  {editForm.formState.errors.senha && (
+                    <p id="edit-senha-error" role="alert" className="text-sm text-destructive">
+                      {editForm.formState.errors.senha.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="edit-confirmarSenha">Repita a nova senha</Label>
+                  <Input
+                    id="edit-confirmarSenha"
+                    type="password"
+                    placeholder="Repita a nova senha para confirmar"
+                    {...editForm.register('confirmarSenha')}
+                    className={editForm.formState.errors.confirmarSenha ? 'border-destructive' : ''}
+                    aria-invalid={!!editForm.formState.errors.confirmarSenha}
+                    aria-describedby={
+                      editForm.formState.errors.confirmarSenha
+                        ? 'edit-confirmarSenha-error'
+                        : undefined
+                    }
+                    autoComplete="new-password"
+                  />
+                  {editForm.formState.errors.confirmarSenha && (
+                    <p
+                      id="edit-confirmarSenha-error"
+                      role="alert"
+                      className="text-sm text-destructive"
+                    >
+                      {editForm.formState.errors.confirmarSenha.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {feedback?.kind === 'error' && (
+                <Alert variant="destructive">
+                  <AlertDescription>{feedback.message}</AlertDescription>
+                </Alert>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseEdit}
+                  disabled={editMutation.isPending}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o perfil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ADMIN">Administrador</SelectItem>
-                    <SelectItem value="OPERADOR">Operador</SelectItem>
-                    <SelectItem value="PASTA">Pasta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={editStatus}
-                  onValueChange={(value) => {
-                    if (value) editForm.setValue('status', value as Servidor['status']);
-                  }}
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={editMutation.isPending}
+                  className="bg-ssp-blue hover:bg-ssp-blueDark"
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Inativo">Inativo</SelectItem>
-                    <SelectItem value="Aposentado">Aposentado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="edit-senha" className="flex items-center gap-2">
-                  <KeyRound size={14} /> Nova senha (opcional)
-                </Label>
-                <Input
-                  id="edit-senha"
-                  type="password"
-                  placeholder="Deixe em branco para manter a senha atual"
-                  {...editForm.register('senha')}
-                  className={editForm.formState.errors.senha ? 'border-destructive' : ''}
-                />
-                {editForm.formState.errors.senha && (
-                  <p className="text-sm text-destructive">
-                    {editForm.formState.errors.senha.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="edit-confirmarSenha">Repita a nova senha</Label>
-                <Input
-                  id="edit-confirmarSenha"
-                  type="password"
-                  placeholder="Repita a nova senha para confirmar"
-                  {...editForm.register('confirmarSenha')}
-                  className={editForm.formState.errors.confirmarSenha ? 'border-destructive' : ''}
-                />
-                {editForm.formState.errors.confirmarSenha && (
-                  <p className="text-sm text-destructive">
-                    {editForm.formState.errors.confirmarSenha.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseEdit}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-ssp-blue hover:bg-ssp-blueDark">
-                Salvar Alterações
-              </Button>
-            </DialogFooter>
+                  {editMutation.isPending ? 'Salvando…' : 'Salvar alterações'}
+                </Button>
+              </DialogFooter>
+            </fieldset>
           </form>
         </DialogContent>
       </Dialog>

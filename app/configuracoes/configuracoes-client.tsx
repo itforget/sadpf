@@ -17,6 +17,8 @@ import {
 import { buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import QueryError from '@/app/components/QueryError';
+import { SYSTEM_NAME, SYSTEM_VERSION } from '@/lib/auth-policy';
 import AcoesRapidas from './acoes-rapidas';
 import type { ConfiguracoesSummary } from '@/lib/summary-types';
 import { fetchConfiguracoesSummary } from '@/lib/client/api';
@@ -26,7 +28,7 @@ function formatBytes(bytes: number) {
   if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
+  return `${(bytes / 1024 ** i).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${units[i]}`;
 }
 
 export default function ConfiguracoesClient({
@@ -34,7 +36,12 @@ export default function ConfiguracoesClient({
 }: {
   initialData: ConfiguracoesSummary;
 }) {
-  const { data = initialData } = useQuery({
+  const {
+    data = initialData,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: queryKeys.configuracoes,
     queryFn: fetchConfiguracoesSummary,
     initialData,
@@ -59,6 +66,7 @@ export default function ConfiguracoesClient({
         </Link>
       </div>
 
+      {isError && <QueryError onRetry={() => refetch()} pending={isFetching} />}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -71,7 +79,7 @@ export default function ConfiguracoesClient({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Banco de dados (PostgreSQL)</span>
               <Badge
                 variant={data.dbOk ? 'default' : 'destructive'}
@@ -81,14 +89,14 @@ export default function ConfiguracoesClient({
                 {data.dbOk ? 'Online' : 'Indisponível'}
               </Badge>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Tempo de atividade</span>
               <span className="flex items-center gap-1.5 font-semibold text-foreground">
                 <Clock size={14} className="text-ssp-blue" />
                 {data.uptime}
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Ambiente</span>
               <span className="font-mono text-xs uppercase font-semibold text-foreground">
                 {data.ambiente}
@@ -108,13 +116,13 @@ export default function ConfiguracoesClient({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Espaço utilizado</span>
               <span className="font-semibold text-foreground">
                 {data.storage.measured ? formatBytes(data.storage.bytes) : 'Não disponível'}
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Arquivos armazenados</span>
               <span className="flex items-center gap-1.5 font-semibold text-foreground">
                 <FileText size={14} className="text-ssp-blue" />
@@ -123,7 +131,7 @@ export default function ConfiguracoesClient({
                   : 'Não disponível'}
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Documentos registrados</span>
               <span className="font-semibold text-foreground">{data.documentosCount}</span>
             </div>
@@ -141,17 +149,19 @@ export default function ConfiguracoesClient({
             <CardDescription>Como as sessões JWT são emitidas e protegidas.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Expiração do token</span>
-              <span className="font-semibold text-foreground">8 horas</span>
+              <span className="font-semibold text-foreground">
+                {data.authPolicy.sessionDurationHours} horas
+              </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Cookie da sessão</span>
               <span className="font-mono text-xs font-semibold text-foreground">
                 HTTP-only · SameSite=Strict
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Chave de assinatura</span>
               <Badge
                 variant={data.secretConfigurado ? 'default' : 'destructive'}
@@ -172,15 +182,17 @@ export default function ConfiguracoesClient({
             <CardDescription>Políticas de acesso e proteção de dados pessoais.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Tamanho mínimo de senha</span>
-              <span className="font-semibold text-foreground">12 caracteres</span>
+              <span className="font-semibold text-foreground">
+                {data.authPolicy.minimumPasswordLength} caracteres
+              </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Perfis de acesso</span>
               <span className="font-semibold text-foreground">Admin · Operador · Pasta</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-muted-foreground">Registro de auditoria</span>
               <span className="font-semibold text-foreground">{data.logsCount} eventos</span>
             </div>
@@ -194,7 +206,7 @@ export default function ConfiguracoesClient({
           <CardDescription>Ferramentas de manutenção e exportação de parâmetros.</CardDescription>
         </CardHeader>
         <CardContent>
-          <AcoesRapidas />
+          <AcoesRapidas summary={data} />
         </CardContent>
       </Card>
 
@@ -207,21 +219,21 @@ export default function ConfiguracoesClient({
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            Sistema de Acompanhamento de Documentos e Pastas Funcionais da Secretaria de Estado de
-            Segurança Pública do Distrito Federal (SSP-DF). Plataforma destinada à digitalização,
-            busca e auditoria de pastas funcionais de servidores.
+            {SYSTEM_NAME} da Secretaria de Estado de Segurança Pública do Distrito Federal (SSP-DF).
+            Plataforma destinada à digitalização, busca e auditoria de pastas funcionais de
+            servidores.
           </p>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-muted-foreground">Versão do sistema</span>
-            <span className="font-mono font-semibold text-foreground">v2.0.0</span>
+            <span className="font-mono font-semibold text-foreground">v{SYSTEM_VERSION}</span>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-muted-foreground">Órgão responsável</span>
             <span className="font-semibold text-foreground">
               SSP-DF · Coordenação de Gestão de Pessoas
             </span>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-muted-foreground">Cadastros no sistema</span>
             <span className="font-semibold text-foreground">{data.servidoresCount} servidores</span>
           </div>

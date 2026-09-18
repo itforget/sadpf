@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { ScrollText, Search, RefreshCw, Lock } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchLogs } from '@/lib/client/api';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { fetchLogsPage } from '@/lib/client/api';
+import Pagination from '@/app/components/Pagination';
+import { parsePage } from '@/lib/pagination';
+import { useUrlFilters } from '@/lib/client/use-url-filters';
+import { useDebouncedValue } from '@/lib/client/use-debounced-value';
+import { AUDIT_ACTION_LABELS } from '@/lib/audit-labels';
 import { queryKeys } from '@/lib/client/query-keys';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,28 +23,30 @@ import {
 } from '@/components/ui/table';
 
 export default function LogsPage() {
-  const [filterAction, setFilterAction] = useState('TODAS');
-  const [search, setSearch] = useState('');
+  const { params, updateFilters } = useUrlFilters();
+  const rawAction = params.get('action') ?? 'TODAS';
+  const filterAction = Object.hasOwn(AUDIT_ACTION_LABELS, rawAction) ? rawAction : 'TODAS';
+  const search = params.get('search') ?? '';
+  const filters = {
+    action: filterAction,
+    search: useDebouncedValue(search),
+    page: parsePage(params.get('page')),
+  };
   const {
-    data: logs = [],
+    data: result,
+    isFetching,
+    isPlaceholderData,
     isLoading,
     isError,
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.logs,
-    queryFn: fetchLogs,
+    queryKey: queryKeys.logsPage(filters),
+    queryFn: () => fetchLogsPage(filters),
+    placeholderData: keepPreviousData,
   });
 
-  const filteredLogs = logs.filter((log) => {
-    const matchAction = filterAction === 'TODAS' || log.acao === filterAction;
-    const matchSearch =
-      !search ||
-      log.operador.toLowerCase().includes(search.toLowerCase()) ||
-      log.detalhes.toLowerCase().includes(search.toLowerCase()) ||
-      log.operadorMatricula.toLowerCase().includes(search.toLowerCase());
-    return matchAction && matchSearch;
-  });
+  const filteredLogs = result?.items ?? [];
 
   const getBadgeClass = (acao: string) => {
     switch (acao) {
@@ -70,8 +76,7 @@ export default function LogsPage() {
             Segurança (LGPD)
           </h1>
           <p className="text-sm text-muted-foreground">
-            Registro imutável de todas as operações de visualização, download, impressão e
-            encaminhamento do RH, reunido em uma única página.
+            Consulte os eventos registrados pelo sistema, com filtros por ação e operador.
           </p>
         </div>
 
@@ -83,13 +88,10 @@ export default function LogsPage() {
       <div className="p-4 bg-ssp-blueDark text-white rounded-2xl flex items-center gap-4 shadow-corporate">
         <Lock size={32} className="text-white/70 shrink-0" />
         <div className="text-xs space-y-1">
-          <p className="font-bold text-sm">
-            Garantia de Integridade e Sigilo - Lei nº 13.709/2018 (LGPD)
-          </p>
+          <p className="font-bold text-sm">Acompanhamento de eventos e proteção de dados</p>
           <p className="text-white/80">
-            Todas as pesquisas, acessos a assentamentos funcionais, exportações em PDF, impressões e
-            demais eventos registrados no SADPF são auditados individualmente com carimbo de
-            data/hora, matrícula do operador e endereço IP.
+            Os registros exibem a ação, a data e hora, a matrícula do operador e o endereço IP.
+            Utilize estas informações para acompanhar as operações registradas no SADPF.
           </p>
         </div>
       </div>
@@ -102,9 +104,11 @@ export default function LogsPage() {
           />
           <Input
             type="search"
-            placeholder="Filtrar por operador, matrícula ou evento..."
+            name="search"
+            aria-label="Buscar eventos por operador, matrícula ou detalhes"
+            placeholder="Filtrar por operador, matrícula ou evento…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => updateFilters({ search: e.target.value, page: null })}
             className="h-9 pl-10"
           />
         </div>
@@ -122,16 +126,19 @@ export default function LogsPage() {
             'ENCAMINHAMENTO',
           ].map((ac) => (
             <Button
-              key={ac}
+              key={AUDIT_ACTION_LABELS[ac as keyof typeof AUDIT_ACTION_LABELS]}
               type="button"
               variant={filterAction === ac ? 'default' : 'secondary'}
               size="sm"
-              onClick={() => setFilterAction(ac)}
+              aria-pressed={filterAction === ac}
+              onClick={() =>
+                updateFilters({ action: ac === 'TODAS' ? null : ac, page: null }, true)
+              }
               className={`shrink-0 text-xs ${
                 filterAction === ac ? 'bg-ssp-blue hover:bg-ssp-blueDark' : 'text-muted-foreground'
               }`}
             >
-              {ac}
+              {AUDIT_ACTION_LABELS[ac as keyof typeof AUDIT_ACTION_LABELS]}
             </Button>
           ))}
         </div>
@@ -141,7 +148,7 @@ export default function LogsPage() {
         {isLoading ? (
           <div className="p-12 text-center text-muted-foreground space-y-3">
             <div className="w-8 h-8 border-4 border-ssp-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-sm font-semibold">Carregando trilha de auditoria...</p>
+            <p className="text-sm font-semibold">Carregando trilha de auditoria…</p>
           </div>
         ) : isError ? (
           <div className="p-6">
@@ -188,11 +195,16 @@ export default function LogsPage() {
                         log.acao
                       )}`}
                     >
-                      {log.acao}
+                      {AUDIT_ACTION_LABELS[log.acao]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-md px-6 py-4 font-sans text-foreground/90 whitespace-normal line-clamp-2">
-                    {log.detalhes}
+                  <TableCell className="max-w-md px-6 py-4 font-sans text-foreground/90 whitespace-normal">
+                    <details>
+                      <summary className="cursor-pointer rounded-sm text-ssp-blue focus-visible:outline-2 focus-visible:outline-ring">
+                        Ver detalhes do evento
+                      </summary>
+                      <p className="mt-2 break-words">{log.detalhes}</p>
+                    </details>
                   </TableCell>
                   <TableCell className="px-6 py-4 text-right font-mono text-muted-foreground">
                     {log.ip}
@@ -210,6 +222,15 @@ export default function LogsPage() {
           </div>
         )}
       </div>
+      {result && !isError && (
+        <Pagination
+          page={result.page}
+          pageSize={result.pageSize}
+          total={result.total}
+          pending={isFetching || isPlaceholderData}
+          onPageChange={(page) => updateFilters({ page: String(page) }, true)}
+        />
+      )}
     </div>
   );
 }

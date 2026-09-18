@@ -47,4 +47,4 @@ next-env.d.ts
 
 .agents
 .codex
-
+.playwright-mcp/
