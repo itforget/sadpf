@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:integration": "node --import tsx --test tests/subcategorias.integration.ts",
     "format": "prettier --write .",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

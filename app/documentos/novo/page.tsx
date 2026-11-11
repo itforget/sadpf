@@ -23,6 +23,7 @@ import {
 import { documentoSchema, type DocumentoFormData } from '@/lib/validations/documento';
 import { fetchJson, fetchServidorProfile, fetchServidores } from '@/lib/client/api';
 import QueryError from '@/app/components/QueryError';
+import SubcategoriaDocumentoSelect from '@/app/components/SubcategoriaDocumentoSelect';
 import { queryKeys } from '@/lib/client/query-keys';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
 import { uploadSupabaseSignedFile } from '@/lib/storage/supabase-browser';
@@ -45,17 +46,20 @@ function NovoDocumentoForm() {
     control,
     formState: { errors },
     setValue,
+    clearErrors,
   } = useForm<DocumentoFormData>({
     resolver: zodResolver(documentoSchema),
     defaultValues: {
       servidorId: defaultServidorId,
       titulo: '',
       categoria: 'Pasta Física Digitalizada',
+      subcategoria: '',
       processoSEI: '',
     },
   });
 
   const servidorId = useWatch({ control, name: 'servidorId' });
+  const categoriaSelecionada = useWatch({ control, name: 'categoria' });
 
   const servidoresQuery = useQuery({
     queryKey: queryKeys.servidores(),
@@ -94,6 +98,7 @@ function NovoDocumentoForm() {
           servidorId: data.servidorId,
           titulo: data.titulo,
           categoria: data.categoria,
+          subcategoria: data.subcategoria || undefined,
           processoSEI: data.processoSEI || undefined,
           fileName: data.file.name,
           fileSize: data.file.size,
@@ -113,6 +118,7 @@ function NovoDocumentoForm() {
           servidorId: data.servidorId,
           titulo: data.titulo,
           categoria: data.categoria,
+          subcategoria: data.subcategoria || undefined,
           processoSEI: data.processoSEI || undefined,
           fileName: data.file.name,
           fileSize: data.file.size,
@@ -277,7 +283,15 @@ function NovoDocumentoForm() {
                     control={control}
                     name="categoria"
                     render={({ field }) => (
-                      <Select name={field.name} value={field.value} onValueChange={field.onChange}>
+                      <Select
+                        name={field.name}
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setValue('subcategoria', '', { shouldDirty: true });
+                          clearErrors('subcategoria');
+                        }}
+                      >
                         <SelectTrigger
                           aria-invalid={!!errors.categoria}
                           aria-describedby={errors.categoria ? 'categoria-error' : undefined}
@@ -305,6 +319,21 @@ function NovoDocumentoForm() {
                   )}
                 </div>
               </div>
+
+              <Controller
+                control={control}
+                name="subcategoria"
+                render={({ field }) => (
+                  <SubcategoriaDocumentoSelect
+                    categoria={categoriaSelecionada}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    onBlur={field.onBlur}
+                    inputRef={field.ref}
+                    erro={errors.subcategoria?.message}
+                  />
+                )}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="processoSEI">Número do Processo SEI-DF (Opcional)</Label>

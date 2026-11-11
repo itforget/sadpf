@@ -352,8 +352,9 @@ function mapCategoria(raw: string): DocumentoPDF['categoria'] {
 }
 
 function mapDocumento(
-  documento: Omit<DocumentoPDF, 'categoria' | 'processoSEI' | 'arquivoUrl'> & {
+  documento: Omit<DocumentoPDF, 'categoria' | 'subcategoria' | 'processoSEI' | 'arquivoUrl'> & {
     categoria: string;
+    subcategoria: string | null;
     processoSEI: string | null;
     arquivoUrl: string;
     encaminhamentos?: { token: string; assinadoEm: Date | null }[];
@@ -365,6 +366,7 @@ function mapDocumento(
   return {
     ...dadosDocumento,
     categoria: mapCategoria(documento.categoria),
+    subcategoria: documento.subcategoria ?? undefined,
     processoSEI: documento.processoSEI ?? undefined,
     arquivoUrl: `/api/documentos/${documento.id}/arquivo`,
     assinatura:
@@ -478,13 +480,14 @@ export async function getDocumentoArquivoById(id: string): Promise<{
 
 export async function updateDocumento(
   id: string,
-  data: Pick<DocumentoPDF, 'titulo' | 'categoria'> & { processoSEI?: string }
+  data: Pick<DocumentoPDF, 'titulo' | 'categoria'> & { processoSEI?: string; subcategoria?: string }
 ): Promise<DocumentoPDF | null> {
   const documento = await prisma.documentoPDF.update({
     where: { id },
     data: {
       titulo: data.titulo,
       categoria: mapCategoriaToEnum(data.categoria),
+      subcategoria: data.subcategoria || null,
       processoSEI: data.processoSEI || null,
     },
   });
@@ -530,6 +533,7 @@ export async function addDocumento(docData: NovoDocumentoPDF): Promise<Documento
         servidorId: docData.servidorId,
         titulo: docData.titulo,
         categoria: catEnum,
+        subcategoria: docData.subcategoria || null,
         dataUpload: docData.dataUpload,
         tamanho: docData.tamanho,
         paginas: docData.paginas || 1,

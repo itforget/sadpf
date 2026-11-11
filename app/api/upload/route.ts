@@ -1,15 +1,13 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import type { DocumentoPDF } from '@/lib/types';
+
 import { getServidorById } from '@/lib/server/repositories/servidor';
 import { getStorage } from '@/lib/storage';
 import { getVerifiedSession, isSameOriginMutation } from '@/lib/server/access';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getRequestIp } from '@/lib/server/request-ip';
-import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
+import { classificacaoDocumentoSchema } from '@/lib/validations/classificacao-documento';
 import { persistUploadedDocument } from '@/lib/server/upload-service';
-
-const categoriasDocumento = CATEGORIAS_DOCUMENTO;
 
 export const runtime = 'nodejs';
 
@@ -35,10 +33,17 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const servidorId = formData.get('servidorId') as string | null;
     const titulo = (formData.get('titulo') as string) || file?.name || 'Documento.pdf';
-    const rawCategoria = (formData.get('categoria') as string) || 'Pasta Física Digitalizada';
-    const categoria = categoriasDocumento.includes(rawCategoria as DocumentoPDF['categoria'])
-      ? (rawCategoria as DocumentoPDF['categoria'])
-      : 'Pasta Física Digitalizada';
+    const classificacao = classificacaoDocumentoSchema.safeParse({
+      categoria: formData.get('categoria') || 'Pasta Física Digitalizada',
+      subcategoria: formData.get('subcategoria') ?? undefined,
+    });
+    if (!classificacao.success) {
+      return NextResponse.json(
+        { error: classificacao.error.issues[0]?.message || 'Classificação inválida.' },
+        { status: 400 }
+      );
+    }
+    const { categoria, subcategoria } = classificacao.data;
     const processoSEI = (formData.get('processoSEI') as string) || undefined;
 
     if (!file) {
@@ -87,6 +92,7 @@ export async function POST(request: NextRequest) {
       servidorMatricula: servidor.matricula,
       titulo,
       categoria,
+      subcategoria,
       processoSEI,
       storageKey: storedFile.key,
       storageBackend: storedFile.backend,

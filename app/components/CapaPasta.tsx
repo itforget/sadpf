@@ -111,6 +111,7 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
     const matchQuery =
       !query ||
       doc.titulo.toLocaleLowerCase('pt-BR').includes(query) ||
+      (doc.subcategoria?.toLocaleLowerCase('pt-BR').includes(query) ?? false) ||
       (consultaExecutada === searchDocQuery.trim() &&
         (paginasEncontradas[doc.id]?.length ?? 0) > 0);
     return matchCategory && matchQuery;
@@ -717,6 +718,11 @@ export default function CapaPasta({ servidor, documentos }: CapaPastaProps) {
                         <span className="line-clamp-2 leading-tight">{doc.titulo}</span>
                       </Link>
 
+                      {doc.subcategoria && (
+                        <p className="text-xs text-muted-foreground mt-2 break-words">
+                          Subcategoria: {doc.subcategoria}
+                        </p>
+                      )}
                       {doc.processoSEI && (
                         <p className="text-xs text-muted-foreground mt-2 font-mono">
                           SEI: {doc.processoSEI}
