@@ -101,6 +101,12 @@ export default function DocumentoDetailPage() {
             <p className="text-xs text-muted-foreground">
               Servidor: <strong>{servidor.nome}</strong> (Matrícula: {servidor.matricula}) •
               Categoria: <strong>{documento.categoria}</strong>
+              {documento.subcategoria && (
+                <>
+                  {' '}
+                  • Subcategoria: <strong>{documento.subcategoria}</strong>
+                </>
+              )}
             </p>
           </div>
         </div>

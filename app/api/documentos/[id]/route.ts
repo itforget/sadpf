@@ -9,11 +9,11 @@ import { addLog } from '@/lib/server/repositories/auditoria';
 import { processPendingStorageDeletionTasks } from '@/lib/server/storage-cleanup';
 import { z } from 'zod';
 import { getRequestIp } from '@/lib/server/request-ip';
-import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
+import { classificacaoDocumentoSchema } from '@/lib/validations/classificacao-documento';
 
-const documentoUpdateSchema = z.object({
+const documentoUpdateSchema = classificacaoDocumentoSchema.safeExtend({
   titulo: z.string().trim().min(1, 'Título é obrigatório'),
-  categoria: z.enum(CATEGORIAS_DOCUMENTO),
+
   processoSEI: z.string().trim().optional(),
 });
 

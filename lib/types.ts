@@ -26,6 +26,7 @@ export interface DocumentoPDF {
   servidorId: string;
   titulo: string;
   categoria: CategoriaDocumentoLabel;
+  subcategoria?: string;
   dataUpload: string;
   tamanho: string;
   paginas: number;

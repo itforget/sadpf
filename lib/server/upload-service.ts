@@ -14,6 +14,7 @@ export type PersistUploadInput = {
   servidorMatricula: string;
   titulo: string;
   categoria: DocumentoPDF['categoria'];
+  subcategoria?: string;
   processoSEI?: string;
   storageKey: string;
   storageBackend: StorageBackend;
@@ -56,6 +57,7 @@ export async function persistUploadedDocument(input: PersistUploadInput): Promis
       servidorId: input.servidorId,
       titulo: input.titulo,
       categoria: input.categoria,
+      subcategoria: input.subcategoria,
       dataUpload: new Date().toLocaleDateString('pt-BR'),
       tamanho: `${(input.fileSize / 1024 / 1024).toFixed(2)} MB`,
       paginas,

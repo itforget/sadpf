@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       servidorMatricula: servidor.matricula,
       titulo: data.titulo,
       categoria: documentCategory(data.categoria),
+      subcategoria: data.subcategoria,
       processoSEI: data.processoSEI || undefined,
       storageKey: data.storageKey,
       storageBackend: storage.backend,

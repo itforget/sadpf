@@ -1,14 +1,14 @@
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import type { DocumentoPDF } from '@/lib/types';
-import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
+import { classificacaoDocumentoSchema } from '@/lib/validations/classificacao-documento';
 
 export const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024;
 
-const uploadMetadataSchema = z.object({
+const uploadMetadataSchema = classificacaoDocumentoSchema.safeExtend({
   servidorId: z.string().min(1, 'servidorId é obrigatório.'),
   titulo: z.string().min(1, 'Título é obrigatório.').max(255),
-  categoria: z.enum(CATEGORIAS_DOCUMENTO, { message: 'Categoria inválida.' }),
+
   processoSEI: z.string().max(255).optional(),
   fileName: z.string().min(1, 'Nome do arquivo é obrigatório.').max(255),
   fileSize: z.number().int().positive().max(MAX_DOCUMENT_SIZE, 'Arquivo deve ter no máximo 50 MB.'),
@@ -16,7 +16,7 @@ const uploadMetadataSchema = z.object({
 
 export const signedUploadSchema = uploadMetadataSchema;
 
-export const completeUploadSchema = uploadMetadataSchema.extend({
+export const completeUploadSchema = uploadMetadataSchema.safeExtend({
   storageKey: z.string().min(1, 'Chave do arquivo é obrigatória.'),
 });
 

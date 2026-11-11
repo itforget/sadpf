@@ -95,6 +95,7 @@ model DocumentoPDF {
   servidorId     String
   titulo         String
   categoria      CategoriaDocumento
+  subcategoria   String?
   dataUpload     String
   tamanho        String
   paginas        Int                @default(1)

@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/dialog';
 import { fetchJson } from '@/lib/client/api';
 import { CATEGORIAS_DOCUMENTO } from '@/lib/documentos';
+import SubcategoriaDocumentoSelect from './SubcategoriaDocumentoSelect';
+import { classificacaoDocumentoSchema } from '@/lib/validations/classificacao-documento';
 
 interface EditarDocumentoModalProps {
   documento: DocumentoPDF;
@@ -39,16 +41,24 @@ export default function EditarDocumentoModal({
 }: EditarDocumentoModalProps) {
   const [titulo, setTitulo] = useState(documento.titulo);
   const [categoria, setCategoria] = useState<DocumentoPDF['categoria']>(documento.categoria);
+  const [subcategoria, setSubcategoria] = useState(documento.subcategoria || '');
   const [processoSEI, setProcessoSEI] = useState(documento.processoSEI || '');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const queryClient = useQueryClient();
   const salvarMutation = useMutation({
     mutationFn: async () => {
+      const classificacao = classificacaoDocumentoSchema.safeParse({ categoria, subcategoria });
+      if (!classificacao.success) throw new Error(classificacao.error.issues[0].message);
       await fetchJson(`/api/documentos/${documento.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo: titulo.trim(), categoria, processoSEI: processoSEI.trim() }),
+        body: JSON.stringify({
+          titulo: titulo.trim(),
+          categoria,
+          subcategoria,
+          processoSEI: processoSEI.trim(),
+        }),
       });
     },
     onSuccess: async () => {
@@ -101,7 +111,11 @@ export default function EditarDocumentoModal({
               <Label htmlFor="categoriaDocumento">Categoria</Label>
               <Select
                 value={categoria}
-                onValueChange={(value) => setCategoria(value as DocumentoPDF['categoria'])}
+                onValueChange={(value) => {
+                  setCategoria(value as DocumentoPDF['categoria']);
+                  setSubcategoria('');
+                  setErro('');
+                }}
               >
                 <SelectTrigger id="categoriaDocumento" className="w-full">
                   <SelectValue />
@@ -115,6 +129,12 @@ export default function EditarDocumentoModal({
                 </SelectContent>
               </Select>
             </div>
+            <SubcategoriaDocumentoSelect
+              categoria={categoria}
+              value={subcategoria}
+              onValueChange={setSubcategoria}
+              id="subcategoriaDocumento"
+            />
             <div className="space-y-2">
               <Label htmlFor="processoSEI">Processo SEI</Label>
               <Input
