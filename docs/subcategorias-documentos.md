@@ -27,6 +27,16 @@ A subcategoria é persistida e exibida nos cartões da pasta e no detalhe do PDF
 
 **Rollback:** retornar ao commit anterior da aplicação e manter a coluna opcional. Isso preserva as classificações já gravadas e é compatível com o código antigo. Não apagar a coluna nem os arquivos para reverter a aplicação.
 
+## Execução pontual pelo ambiente protegido da Vercel
+
+Quando a conexão do banco está marcada como sensível na Vercel e não pode ser lida pela API, o administrador pode executar `node scripts/apply-document-subcategory.mjs` no build do projeto correto, antes do build normal. Não exportar a conexão nem imprimir segredos. Confirmar antes que produção e preview compartilham o mesmo registro de `DATABASE_URL` e que não existe override específico da branch.
+
+O executor confere o hostname Supabase e as tabelas/colunas do SADPF, aplica a alteração em uma transação com limite de espera de lock e compara contagem/hash dos documentos antes e depois. Não registra dados pessoais. A coluna existente é verificada sem reaplicar DDL. Se houver histórico Prisma, a migração é registrada com o checksum do arquivo; histórico ausente exige baselining separado e não é criado artificialmente. Acima de 50 mil documentos, interrompe para planejar uma janela de manutenção.
+
+Qualquer override temporário do comando de build deve ser copiado antes e restaurado por API/readback **antes** do merge na `main`. Não transformar essa execução pontual em uma alteração permanente do pipeline.
+
+Teste do executor: `TEST_DATABASE_URL=<PostgreSQL descartável local, banco terminado em _test> node --test tests/migration-runner.integration.mjs`.
+
 ## Testes reproduzíveis
 
 ```sh
